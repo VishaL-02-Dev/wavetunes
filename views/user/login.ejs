@@ -1,0 +1,100 @@
+<%- include("partials/user/header") %>
+
+
+<body>
+    <div class="h-screen flex justify-center items-center"> 
+    <div class="login-container w-full max-w-md">
+        <form class="login-form p-6 rounded-lg shadow-lg bg-gray-900 text-white" id="login-form" method="POST" action="/user/login" novalidate>
+            <h2 class="text-center text-2xl font-semibold">Login</h2>
+
+            <div id="general-error" class="hidden text-red-500 bg-red-100 p-2 rounded mt-2"></div>
+
+            <div class="mb-4">
+                <label for="email" class="block text-sm font-medium">Email</label>
+                <input type="email" name="email" id="email" class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400" placeholder="Enter your email">
+                <small id="email-error" class="hidden text-red-400"></small>
+            </div>
+
+            <div class="mb-4">
+                <label for="password" class="block text-sm font-medium">Password</label>
+                <input type="password" name="password" id="password" class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400" placeholder="Enter your password">
+                <small id="password-error" class="hidden text-red-400"></small>
+            </div>
+
+            <div class="mb-3 text-right">
+                <a href="/forgotPassword" class="text-blue-400 hover:underline">Forgot Password?</a>
+            </div>
+            <button type="submit" class="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded text-white font-semibold">Login</button>
+            <div class="text-center mt-3">
+                <button class="w-full py-2 bg-red-600 hover:bg-red-700 rounded text-white font-semibold">Sign in with Google</button>
+            </div>
+            <div class="text-center mt-3">
+                <p>Don't have an account? <a href="/user/signup" class="text-blue-400 hover:underline">Sign Up</a></p>
+            </div>
+        </form>
+    </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const loginForm = document.getElementById("login-form");
+            const emailError = document.getElementById("email-error");
+            const passwordError = document.getElementById("password-error");
+            const generalError = document.getElementById("general-error");
+
+            loginForm.addEventListener("submit", async function (event) {
+                event.preventDefault(); // Prevent default form submission
+
+                // Clear previous errors
+                emailError.classList.add("hidden");
+                passwordError.classList.add("hidden");
+                generalError.classList.add("hidden");
+
+                // Get form values
+                const email = document.getElementById("email").value;
+                const password = document.getElementById("password").value;
+
+                try {
+                    const response = await fetch("/user/login", {
+                        method: "POST",
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    const data = await response.json();
+
+                    if (!data.success) {
+                        if (data.field === "email") {
+                            emailError.textContent = data.message;
+                            emailError.classList.remove("hidden");
+                        } else if (data.field === "password") {
+                            passwordError.textContent = data.message;
+                            passwordError.classList.remove("hidden");
+                        } else {
+                            generalError.textContent = data.message;
+                            generalError.classList.remove("hidden");
+                        }
+                    } else {
+                        Swal.fire({
+                            title: 'Login Successful!',
+                            text: 'Welcome back!',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.href = data.redirectUrl;
+                        });
+                    }
+                } catch (error) {
+                    generalError.textContent = "An error occurred. Please try again.";
+                    generalError.classList.remove("hidden");
+                }
+            });
+        });
+    </script>
+
+
+
+        <%- include("partials/user/footer") %>

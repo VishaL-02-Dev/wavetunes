@@ -1,0 +1,430 @@
+<%- include('partials/admin/header') %>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Categories</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@10/dist/sweetalert2.min.css" />
+
+
+  </head>
+
+  <body>
+    <div class="sidebar">
+      <div class="px-3 py-2">
+        <h4>Admin Panel</h4>
+      </div>
+      <ul class="sidebar-menu">
+        <li>
+          <a href="/admin/dashboard" class="<%= currentPage === 'dashboard' ? 'active' : '' %>">
+            <i class="bi bi-speedometer2"></i> Dashboard
+          </a>
+        </li>
+        <li>
+          <a href="/admin/customers" class="<%= currentPage === 'users' ? 'active' : '' %>">
+            <i class="bi bi-people"></i> Users
+          </a>
+        </li>
+        <li>
+          <a href="/admin/products" class="<%= currentPage === 'products' ? 'active' : '' %>">
+            <i class="bi bi-box"></i> Products
+          </a>
+        </li>
+        <li>
+          <a href="/admin/orders" class="<%= currentPage === 'orders' ? 'active' : '' %>">
+            <i class="bi bi-cart"></i> Orders
+          </a>
+        </li>
+        <li>
+          <a href="/admin/categories" class="<%= currentPage === 'categories' ? 'active' : '' %>">
+            <i class="bi bi-tags"></i> Categories
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Header -->
+      <header class="top-header">
+        <div class="header-left"></div>
+        <div class="header-center">
+          <a href="#" class="brand-name">WaveTune</a>
+        </div>
+        <div class="header-right">
+          <a id="logout-button" class="logout-btn" href="/admin/logout">Logout</a>
+        </div>
+      </header>
+      <section class="content-main">
+        <div class="content-header">
+          <div>
+            <h2 class="content-title card-title">Category</h2>
+          </div>
+        </div>
+        <header class="card-header text-center mb-20">
+          <form action="/admin/category/" method="get" class="d-inline">
+
+            <div class="input-group rounded-pill border border-1 border-grey"
+              style="width: 250px; margin: 10px auto; background: var(--bg-sidebar);">
+              <input type="text" class="form-control border-0 rounded-pill text-white" placeholder="Search"
+                name="search"
+                style="background: transparent;  padding: 5px 10px; height: 40px;  font-size: 14px; box-shadow: none;" />
+              <button class="btn text-white" type="submit"
+                style="border-radius: 15px; padding: 5px 10px; font-size: 14px;">
+                Search
+              </button>
+            </div>
+
+
+
+            <!-- <div class="input-group input-group-sm border border-1 border-grey rounded-pill" style="width: 500px; margin-left: 230px">
+          <input type="text" class="form-control border-0 rounded-pill mt-3" placeholder="Search categories" name="search"/>
+          <button class="btn" type="submit">Search</button>
+        </div> -->
+          </form>
+        </header>
+        <div class="card">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-3">
+                <form method="post" onsubmit="return handleFormSubmit(event)">
+                  <div class="mb-4">
+                    <label for="product_name" class="form-label">Name</label>
+                    <input type="text" name="name" placeholder="Type here" class="form-control" id="product_name"
+                      value="<%= editCategory ? editCategory.name : '' %>" />
+                    <div id="name-error" class="error-message"></div>
+                  </div>
+                  <div class="mb-4">
+                    <label class="form-label">Description</label>
+                    <textarea placeholder="Type here" name="description" class="form-control"
+                      id="descriptionId"><%= editCategory ? editCategory.description : '' %></textarea>
+                    <div id="description-error" class="error-message"></div>
+                  </div>
+                  <div class="d-grid">
+                    <button class="btn btn-primary" type="submit">
+                      <%= editCategory ? 'Update Category' : 'Create Category' %>
+                    </button>
+                  </div>
+                </form>
+              </div>
+              <div class="col-md-8 ml-10">
+                <div class="table-responsive">
+                  <table class="table table-hover">
+                    <thead>
+                      <tr>
+                        <th class="text-center"></th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>List/Unlist</th>
+                        <th class="text-start">Edit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% if (cat && cat.length> 0) { %>
+                        <% cat.reverse().forEach((category, index)=> { %>
+                          <tr>
+                            <td></td>
+                            <td class="text-start">
+                              <%= category.name %>
+                            </td>
+                            <td class="text-start">
+                              <%= category.description %>
+                            </td>
+
+
+                            <!-- <td><% if (category.categoryOffer) {%>
+                            <%=category.categoryOffer %>
+                          <%}else{%>
+                            0%
+                            <% } %>
+                         </td>  -->
+
+
+                            <td class="text-start">
+                              <% if (category.status==='Listed' ) { %>
+                                <span id="category-status-<%= category._id %>"
+                                  class="badge rounded-pill alert-success text-success"
+                                  style="width: 60px">Listed</span>
+                                <% } else { %>
+                                  <span id="category-status-<%= category._id %>"
+                                    class="badge rounded-pill alert-danger text-danger"
+                                    style="width: 60px">Unlisted</span>
+                                  <% } %>
+                            </td>
+
+                            <td class="text-start">
+                              <% if (category.status==='Listed' ) { %>
+                                <button id="category-btn-<%= category._id %>" class="btn btn-danger"
+                                  style="width: 70px;" onclick="toggleCategoryStatus('<%= category._id %>', 'Listed')">
+                                  Unlist
+                                </button>
+                                <% } else { %>
+                                  <button id="category-btn-<%= category._id %>" class="btn btn-success"
+                                    style="width: 70px;"
+                                    onclick="toggleCategoryStatus('<%= category._id %>', 'Unlisted')">
+                                    List
+                                  </button>
+                                  <% } %>
+                            </td>
+                            <td class="text-start">
+                              <a href="/admin/categories?id=<%= category._id %> "
+                                class="btn btn-info text-white">Edit</a>
+                            </td>
+                          </tr>
+                          <% }) %>
+                            <% } else { %>
+                              <tr>
+                                <td colspan="6" class="text-center">No categories found.</td>
+                              </tr>
+                              <% } %>
+                    </tbody>
+
+                  </table>
+                  <div class="pagination-container mt-4">
+                    <% if (currentPage> 1) { %>
+                      <a href="?page=<%= currentPage - 1 %>" class="btn btn-sm btn-outline-secondary">&laquo;
+                        Previous</a>
+                      <% } %>
+
+                        <% for (let i=1; i <=totalPages; i++) { %>
+                          <% if (i===currentPage) { %>
+                            <span class="btn btn-sm btn-primary disabled">
+                              <%= i %>
+                            </span>
+                            <% } else { %>
+                              <a href="?page=<%= i %>" class="btn btn-sm btn-outline-secondary">
+                                <%= i %>
+                              </a>
+                              <% } %>
+                                <% } %>
+
+                                  <% if (currentPage < totalPages) { %>
+                                    <a href="?page=<%= currentPage + 1 %>" class="btn btn-sm btn-outline-secondary">Next
+                                      &raquo;</a>
+                                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10/dist/sweetalert2.min.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script> -->
+    <script>
+
+      document.addEventListener('DOMContentLoaded', async function () {
+        const categoryId = new URLSearchParams(window.location.search).get('id');
+        if (categoryId) {
+          const submitButton = document.querySelector('form[onsubmit="return handleFormSubmit(event)"] button[type="submit"]');
+          submitButton.textContent = 'Update Category';
+        }
+      });
+
+      async function handleFormSubmit(event) {
+        event.preventDefault();
+
+        if (!validateForm()) {
+          return false;
+        }
+
+        const categoryId = new URLSearchParams(window.location.search).get('id');
+        const name = document.querySelector('input[name="name"]').value.trim();
+        const description = document.getElementById("descriptionId").value.trim();
+
+        if (categoryId) {
+
+          await handleEditCategory(categoryId, name, description);
+        } else {
+
+          await handleAddCategory(event, name, description);
+        }
+        return false;
+      }
+
+      async function handleAddCategory(event, name, description) {
+        event.preventDefault();
+        try {
+          console.log('function reached adding phase');
+          Swal.fire({
+            title: 'Adding Category',
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+
+          const response = await fetch('/admin/categories', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify({ name, description }),
+            credentials: 'same-origin'
+          });
+
+          const result = await response.json();
+
+          if (!result.success) {
+            // const errorData = await response.json();
+            throw new Error(result.message);
+          }
+
+          // const data = await response.json();
+
+          await Swal.fire({
+            icon: 'success',
+            title: 'Success',
+            text: result.message,
+            timer: 1500,
+            showConfirmButton: false
+          });
+
+          setTimeout(() => {
+            window.location.reload();
+          }, 500)
+
+
+        } catch (error) {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: error.message || "Something went wrong",
+          });
+        }
+      }
+
+      async function handleEditCategory(categoryId, name, description) {
+        try {
+          Swal.fire({
+            title: 'Updating Category',
+            text: 'Please wait...',
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+
+          const response = await fetch(`/admin/categories?id=${categoryId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify({ name, description }),
+            credentials: 'same-origin'
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            await Swal.fire({
+              icon: 'success',
+              title: 'Success',
+              text: result.message,
+              timer: 1500,
+              showConfirmButton: false,
+            });
+
+            setTimeout(() => {
+              window.location.href=result.redirectUrl;
+            }, 1200);
+
+          } else {
+            throw new Error(result.message || 'Failed to update category')
+          }
+
+        } catch (error) {
+          console.error('Error', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: error.message || 'Something went wrong',
+          });
+        }
+      }
+
+
+
+      function validateForm() {
+        const name = document.getElementsByName("name")[0].value.trim();
+        const description = document.getElementById("descriptionId").value.trim();
+
+        if (!name || !description) {
+          displaySwalError("All fields are required.");
+          return false;
+        }
+
+        return true;
+      }
+
+      function displaySwalError(message) {
+        Swal.fire({
+          title: "Error!",
+          text: message,
+          icon: "error",
+          confirmButtonColor: "#d33"
+        });
+      }
+
+
+      function toggleCategoryStatus(categoryId, currentStatus) {
+
+        let newStatus = currentStatus === "Listed" ? "Unlisted" : "Listed";
+        let newButtonClass = currentStatus === "Listed" ? "btn-success" : "btn-danger";
+        let newButtonText = currentStatus === "Listed" ? "List" : "Unlist";
+
+
+        Swal.fire({
+          title: ` Are you sure you want to ${newStatus === 'Listed' ? 'list' : 'unlist'} this category?`,
+          text: "You can change it later if needed.",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#3085d6",
+          cancelButtonColor: "#d33",
+          confirmButtonText: ` Yes, ${newStatus === 'Listed' ? 'list' : 'unlist'} it!`
+        }).then((result) => {
+          if (result.isConfirmed) {
+            fetch(`/admin/categories?id=${categoryId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" }
+            })
+              .then(response => response.json())
+              .then(data => {
+                if (data.success) {
+
+                  Swal.fire("Success", `${newStatus}!, The category has been updated.`, "success");
+
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1500)
+
+                  let button = document.getElementById(`category-btn-${categoryId}`);
+                  let statusBadge = document.getElementById(`category-status-${categoryId}`);
+
+                  button.setAttribute("onclick", ` toggleCategoryStatus('${categoryId}', ${newStatus})`);
+                  button.className = `btn ${newButtonClass}`;
+                  button.innerHTML = `${newButtonText}`;
+
+                  statusBadge.className = `badge rounded-pill alert-${newStatus === "Unlisted" ? "danger" : "success"}`;
+                  statusBadge.innerText = newStatus;
+
+                } else {
+                  Swal.fire("Error!", "Something went wrong.", "error");
+                }
+              })
+
+
+              .catch(error => {
+                console.error("Error:", error);
+                Swal.fire("Error!", "Something went wrong.", "error");
+              });
+          }
+        });
+      }
+
+    </script>
+    <%- include("partials/admin/footer") %>

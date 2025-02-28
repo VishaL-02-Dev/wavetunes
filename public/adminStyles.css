@@ -1,0 +1,142 @@
+:root {
+    --primary-color: #6c63ff;
+    --bg-dark: #1a1b25;
+    --bg-sidebar: #22242f;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+}
+
+
+.login-container {
+    background: #1e1e1e;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+.btn-primary {
+    background-color: #ff6600;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #e65c00;
+}
+
+ /* Header */
+
+
+ .admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: #212529;
+    color: white;
+    padding-top: 1rem;
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+}
+
+.main-content {
+    margin-left: 250px;
+    flex: 1;
+    padding: 20px;
+}
+
+.top-header {
+    background-color: #212529;
+    color: white;
+    padding: 1rem;
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 250px;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.content-wrapper {
+    margin-top: 80px;
+    padding: 20px;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-menu li a {
+    color: white;
+    text-decoration: none;
+    padding: 12px 20px;
+    display: block;
+    transition: background-color 0.3s;
+}
+
+.sidebar-menu li a:hover,
+.sidebar-menu li a.active {
+    background-color: #343a40;
+}
+
+.sidebar-menu i {
+    margin-right: 10px;
+}
+
+.brand-name {
+    color: white;
+    text-decoration: none;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.logout-btn {
+    color: white;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    background-color: #dc3545;
+}
+
+.logout-btn:hover {
+    background-color: #c82333;
+    color: white;
+}
+
+/*Dropdown styles */
+.dropdown-menu {
+    background-color: var(--bg-sidebar);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-left: 1rem; 
+    width: calc(100% - 2rem); 
+    padding: 0.25rem 0; 
+}
+
+.dropdown-item {
+    color: var(--text-secondary);
+    padding: 0.35rem 0.75rem; 
+    font-size: 0.9rem; 
+}
+
+.dropdown-toggle {
+    padding: 0.5rem 1rem; 
+    font-size: 0.95rem; 
+}

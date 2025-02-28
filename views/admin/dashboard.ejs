@@ -1,0 +1,130 @@
+<%- include('partials/admin/header') %>
+    <!-- Add Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    </head>
+
+    <body>
+        <div class="admin-layout">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="px-3 py-2">
+                    <h4>Admin Panel</h4>
+                </div>
+                <ul class="sidebar-menu">
+                    <li>
+                        <a href="/admin/dashboard" class="<%= currentPage === 'dashboard' ? 'active' : '' %>">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin/customers" class="<%= currentPage === 'users' ? 'active' : '' %>">
+                            <i class="bi bi-people"></i> Users
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin/products" class="<%= currentPage === 'products' ? 'active' : '' %>">
+                            <i class="bi bi-box"></i> Products
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin/orders" class="<%= currentPage === 'orders' ? 'active' : '' %>">
+                            <i class="bi bi-cart"></i> Orders
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin/categories" class="<%= currentPage === 'categories' ? 'active' : '' %>">
+                            <i class="bi bi-tags"></i> Categories
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Header -->
+                <header class="top-header">
+                    <div class="header-left"></div>
+                    <div class="header-center">
+                        <a href="#" class="brand-name">WaveTune</a>
+                    </div>
+                    <div class="header-right">
+                        <a id="logout-button" class="logout-btn" href="/admin/logout">Logout</a>
+                    </div>
+                </header>
+
+                <!-- Content Area -->
+                <div class="content-wrapper">
+                    <div class="container-fluid">
+                        <!-- Welcome Section -->
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2>Dashboard</h2>
+                            <div>
+                                <span class="text-white">Welcome, Admin!</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Logout functionality
+            document.addEventListener("DOMContentLoaded", function () {
+
+                const logoutButton = document.getElementById("logout-button");
+
+                if (logoutButton) {
+
+                    logoutButton.addEventListener("click", function (event) {
+                        event.preventDefault();
+                        Swal.fire({
+                            title: "Are you sure?",
+                            text: "You will be logged out!",
+                            icon: "warning",
+                            showCancelButton: true,
+                            confirmButtonText: "Yes, logout!",
+                            cancelButtonText: "Cancel"
+                        }).then((result) => {
+
+                            if (result.isConfirmed) {
+
+                                fetch("/admin/logout", {
+                                    method: "GET",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        "Accept": "application/json"
+                                    },
+                                    credentials: 'include'
+                                })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            Swal.fire({
+                                                title: "Logged Out!",
+                                                text: "You have been successfully logged out.",
+                                                icon: "success",
+                                                timer: 1500,
+                                                showConfirmButton: false
+                                            }).then(() => {
+                                                window.location.href = data.redirectUrl;
+                                            });
+                                        } else {
+                                            Swal.fire("Error", data.message, "error");
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error("Logout Error:", error);
+                                        Swal.fire("Error", "Something went wrong!", "error");
+                                    });
+                            }
+                        });
+                    });
+                }
+            });
+
+        </script>
+        <%- include("partials/admin/footer") %>
+    </body>
+
+    </html>

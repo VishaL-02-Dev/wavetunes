@@ -1,0 +1,671 @@
+<%- include('partials/admin/header') %>
+
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="px-3 py-2">
+                <h4>Admin Panel</h4>
+            </div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="/admin/dashboard" class="<%= currentPage === 'dashboard' ? 'active' : '' %>">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/customers" class="<%= currentPage === 'users' ? 'active' : '' %>">
+                        <i class="bi bi-people"></i> Users
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/products" class="<%= currentPage === 'products' ? 'active' : '' %>">
+                        <i class="bi bi-box"></i> Products
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/orders" class="<%= currentPage === 'orders' ? 'active' : '' %>">
+                        <i class="bi bi-cart"></i> Orders
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/categories" class="<%= currentPage === 'categories' ? 'active' : '' %>">
+                        <i class="bi bi-tags"></i> Categories
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-left"></div>
+                <div class="header-center">
+                    <a href="#" class="brand-name">WaveTune</a>
+                </div>
+                <div class="header-right">
+                    <a id="logout-button" class="logout-btn" href="/admin/logout">Logout</a>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <div class="container-fluid">
+                    <h2>Manage Products</h2>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                        <i class="bi bi-plus-lg"></i> Add Product
+                    </button>
+                </div>
+
+                <div class="content-wrapper">
+                    <div class="container-fluid">
+                        <table class="table table-bordered table-hover mt-3">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Sl.No</th>
+                                    <th>Image</th>
+                                    <th>Name</th>
+                                    <th>Brand</th>
+                                    <th>Category</th>
+                                    <th>Desription</th>
+                                    <th>Specifications</th>
+                                    <th>Price</th>
+                                    <th>Stock</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% products.forEach((product, index)=> { %>
+                                    <tr>
+                                        <td>
+                                            <%= index + 1 %>
+                                        </td>
+                                        <td>
+                                            <% if (product.firstImage) { %>
+                                                <img src="<%= product.firstImage %>" alt="<%= product.name %>"
+                                                    width="200">
+                                                <% } else { %>
+                                                    <p>No image available</p>
+                                                    <% } %>
+                                        </td>
+                                        <td>
+                                            <%= product.name %>
+                                        </td>
+                                        <td>
+                                            <%= product.brand %>
+                                        </td>
+                                        <td>
+                                            <%= product.category ? product.category.name : "No Category" %>
+                                        </td>
+                                        <td>
+                                            <%= product.description %>
+                                        </td>
+                                        <td>
+                                            <%= product.specifications %>
+                                        </td>
+                                        <td>₹<%= product.price %>
+                                        </td>
+                                        <td>
+                                            <%= product.stock %>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-warning btn-sm"
+                                                onclick="editProduct('<%= product._id %>')">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm"
+                                                onclick="deleteProduct('<%= product._id %>')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Product Modal -->
+            <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title text-black" id="addProductModalLabel">Add New Product</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form method="post" action="/admin/products" id="addProductForm"
+                                enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <label for="productName" class="form-label text-black">Product Name</label>
+                                    <input type="text" class="form-control" id="productName" name="name" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="productBrand" class="form-label text-black">Brand</label>
+                                    <input type="text" class="form-control" id="productBrand" name="brand" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="productDescription" class="form-label text-black">Description</label>
+                                    <textarea class="form-control" id="productDescription" name="description"
+                                        required></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="productSpecification"
+                                        class="form-label text-black">Specifications</label>
+                                    <textarea class="form-control" id="productSpecification" name="specifications"
+                                        required></textarea>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="productPrice" class="form-label text-black">Price</label>
+                                        <input type="number" class="form-control" id="productPrice" name="price" min="0"
+                                            required>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label for="productStock" class="form-label text-black">Stock</label>
+                                        <input type="number" class="form-control" id="productStock" name="stock" min="0"
+                                            required>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="productCategory" class="form-label text-black">Category</label>
+                                    <select class="form-control" id="productCategory" name="category" required>
+                                        <option value="">Select Category</option>
+                                        <% categories.forEach(category=> { %>
+                                            <option value="<%= category._id %>">
+                                                <%= category.name %>
+                                            </option>
+                                            <% }) %>
+                                    </select>
+                                </div>
+
+                                <!-- MODIFIED: Image input section with cropping functionality -->
+                                <div class="mb-3">
+                                    <label for="productImages" class="form-label text-black">Product Images (Max
+                                        4)</label>
+                                    <input type="file" class="form-control" id="productImages" accept="image/*"
+                                        multiple>
+                                    <!-- Hidden inputs to store cropped image data -->
+                                    <div id="croppedImagesContainer"></div>
+                                </div>
+
+                                <!-- ADDED: Image preview and cropping section -->
+                                <div class="mb-3 image-cropping-container">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div id="imageCropperContainer" style="display: none; margin-bottom: 15px;">
+                                                <h6 class="text-black">Crop Image</h6>
+                                                <div class="img-container" style="max-height: 300px; overflow: hidden;">
+                                                    <img id="imageToCrop" src="" style="max-width: 100%;">
+                                                </div>
+                                                <div class="mt-2">
+                                                    <button type="button" class="btn btn-sm btn-primary"
+                                                        id="cropImageBtn">Crop & Save</button>
+                                                    <button type="button" class="btn btn-sm btn-secondary"
+                                                        id="cancelCropBtn">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div id="croppedPreviewsContainer">
+                                                <h6 class="text-black">Cropped Images</h6>
+                                                <div id="croppedImagesPreviews" class="d-flex flex-wrap">
+                                                    <!-- Cropped images will appear here -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary"
+                                        data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Add Product</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Edit Product Modal -->
+            <div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title text-black" id="editProductModalLabel">Edit Product</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <!-- Change method to "post" since HTML forms only support GET and POST -->
+                            <!-- The actual PATCH request will be handled by JavaScript -->
+                            <form method="post" id="editProductForm" enctype="multipart/form-data">
+                                <!-- Hidden input to hold the product ID -->
+                                <input type="hidden" id="editProductId" name="id">
+
+                                
+                                <div class="mb-3">
+                                    <label for="editProductName" class="form-label text-black">Product Name</label>
+                                    <input type="text" class="form-control" id="editProductName" name="name" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="editProductBrand" class="form-label text-black">Brand</label>
+                                    <input type="text" class="form-control" id="editProductBrand" name="brand" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="editProductSpecifications"
+                                        class="form-label text-black">Specifications</label>
+                                    <textarea class="form-control" id="editProductSpecification" name="specifications"
+                                        required></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="editProductDescription"
+                                        class="form-label text-black">Description</label>
+                                    <textarea class="form-control" id="editProductDescription" name="description"
+                                        required></textarea>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="editProductPrice" class="form-label text-black">Price</label>
+                                        <input type="number" class="form-control" id="editProductPrice" name="price"
+                                            min="0" required>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label for="editProductStock" class="form-label text-black">Stock</label>
+                                        <input type="number" class="form-control" id="editProductStock" name="stock"
+                                            min="0" required>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="editProductCategory" class="form-label text-black">Category</label>
+                                    <select class="form-control" id="editProductCategory" name="category" required>
+                                        <option value="">Select Category</option>
+                                        <% categories.forEach(category=> { %>
+                                            <option value="<%= category._id %>">
+                                                <%= category.name %>
+                                            </option>
+                                            <% }) %>
+                                    </select>
+                                </div>
+
+                                <!-- Image input section -->
+                                <div class="mb-3">
+                                    <label for="editProductImages" class="form-label text-black">Product Images (Max
+                                        4)</label>
+                                    <input type="file" class="form-control" id="editProductImages" accept="image/*"
+                                        multiple>
+                                    <div id="editCroppedImagesContainer"></div>
+                                </div>
+
+                                <!-- Image preview and cropping section -->
+                                <div class="mb-3 image-cropping-container">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div id="editImageCropperContainer"
+                                                style="display: none; margin-bottom: 15px;">
+                                                <h6 class="text-black">Crop Image</h6>
+                                                <div class="img-container" style="max-height: 300px; overflow: hidden;">
+                                                    <img id="editImageToCrop" src="" style="max-width: 100%;">
+                                                </div>
+                                                <div class="mt-2">
+                                                    <button type="button" class="btn btn-sm btn-primary"
+                                                        id="editCropImageBtn">Crop & Save</button>
+                                                    <button type="button" class="btn btn-sm btn-secondary"
+                                                        id="editCancelCropBtn">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div id="editCroppedPreviewsContainer">
+                                                <h6 class="text-black">Cropped Images</h6>
+                                                <div id="editCroppedImagesPreviews" class="d-flex flex-wrap">
+                                                    <!-- Cropped images will appear here -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary"
+                                        data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Update Product</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <!-- ADDED: Include Cropperjs CSS and JS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+    <script>
+        // Global variables for image handling
+        let cropper;
+        let currentImageIndex = 0;
+        let pendingImages = [];
+        let croppedImages = [];
+        let editCropper;
+        let editCurrentImageIndex = 0;
+        let editPendingImages = [];
+        let editCroppedImages = [];
+
+        // Add Product
+        document.getElementById("addProductForm").addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            // MODIFIED: Use custom submission with cropped images
+            const formData = new FormData(this);
+
+            // Add cropped images to form data
+            if (croppedImages.length === 0) {
+                Swal.fire("Error", "Please add and crop at least one product image", "error");
+                return;
+            }
+
+            // Add each cropped image to the form data
+            croppedImages.forEach((image, index) => {
+                // Convert base64 to blob
+                const blob = dataURItoBlob(image.dataUrl);
+                formData.append('images', blob, `product-image-${index}.jpg`);
+            });
+
+            try {
+                const response = await fetch("/admin/products", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    Swal.fire("Success", "Product added successfully!", "success")
+                        .then(() => window.location.reload());
+                } else {
+                    Swal.fire("Error", result.message, "error");
+                }
+            } catch (error) {
+                Swal.fire("Error", "Something went wrong!", "error");
+            }
+        });
+
+        // ADDED: Helper function to convert base64 to Blob
+        function dataURItoBlob(dataURI) {
+            const byteString = atob(dataURI.split(',')[1]);
+            const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+
+            return new Blob([ab], { type: mimeString });
+        }
+
+        // ADDED: Initialize image cropper for add product
+        document.getElementById('productImages').addEventListener('change', function (e) {
+            const files = e.target.files;
+
+            if (files.length > 4) {
+                Swal.fire("Error", "Maximum 4 images allowed", "error");
+                this.value = '';
+                return;
+            }
+
+            // Reset arrays and prepare for new images
+            pendingImages = Array.from(files);
+            croppedImages = [];
+            currentImageIndex = 0;
+            document.getElementById('croppedImagesPreviews').innerHTML = '';
+
+            // Start processing the first image if available
+            if (pendingImages.length > 0) {
+                processNextImage();
+            }
+        });
+
+        // ADDED: Function to process next image in queue for add product
+        function processNextImage() {
+            if (currentImageIndex < pendingImages.length) {
+                const file = pendingImages[currentImageIndex];
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    const imageToCrop = document.getElementById('imageToCrop');
+                    imageToCrop.src = e.target.result;
+
+                    // Show cropper container
+                    document.getElementById('imageCropperContainer').style.display = 'block';
+
+                    // Initialize cropper
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+
+                    cropper = new Cropper(imageToCrop, {
+                        aspectRatio: 1, // Square crop
+                        viewMode: 1,    // Restrict view to the cropping box
+                        responsive: true,
+                        guides: true,
+                        background: false
+                    });
+                };
+
+                reader.readAsDataURL(file);
+            } else {
+                // Hide cropper when all images are processed
+                document.getElementById('imageCropperContainer').style.display = 'none';
+            }
+        }
+
+        // ADDED: Crop button event handler for add product
+        document.getElementById('cropImageBtn').addEventListener('click', function () {
+            if (!cropper) return;
+
+            // Get cropped canvas
+            const canvas = cropper.getCroppedCanvas({
+                width: 600,  // Output width
+                height: 600, // Output height
+                fillColor: '#fff'
+            });
+
+            // Convert to data URL
+            const dataUrl = canvas.toDataURL('image/jpeg');
+
+            // Add to cropped images array
+            croppedImages.push({
+                index: currentImageIndex,
+                dataUrl: dataUrl,
+                originalName: pendingImages[currentImageIndex].name
+            });
+
+            // Add preview
+            const previewContainer = document.getElementById('croppedImagesPreviews');
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'preview-item position-relative m-1';
+            previewDiv.innerHTML = `
+                <img src="${dataUrl}" alt="Cropped image ${currentImageIndex + 1}" 
+                     style="width: 80px; height: 80px; object-fit: cover;">
+                <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                        style="top: 0; right: 0; padding: 0 5px;" 
+                        onclick="removeImage(${currentImageIndex})">×</button>
+            `;
+            previewContainer.appendChild(previewDiv);
+
+            // Move to next image
+            currentImageIndex++;
+            processNextImage();
+        });
+
+        // ADDED: Cancel crop button event handler for add product
+        document.getElementById('cancelCropBtn').addEventListener('click', function () {
+            // Skip current image and move to next
+            currentImageIndex++;
+            processNextImage();
+        });
+
+        // ADDED: Function to remove a cropped image
+        function removeImage(index) {
+            // Remove from cropped images array
+            croppedImages = croppedImages.filter(image => image.index !== index);
+
+            // Refresh previews
+            const previewContainer = document.getElementById('croppedImagesPreviews');
+            previewContainer.innerHTML = '';
+
+            croppedImages.forEach(image => {
+                const previewDiv = document.createElement('div');
+                previewDiv.className = 'preview-item position-relative m-1';
+                previewDiv.innerHTML = `
+                    <img src="${image.dataUrl}" alt="Cropped image ${image.index + 1}" 
+                         style="width: 80px; height: 80px; object-fit: cover;">
+                    <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                            style="top: 0; right: 0; padding: 0 5px;" 
+                            onclick="removeImage(${image.index})">×</button>
+                `;
+                previewContainer.appendChild(previewDiv);
+            });
+        }
+
+        // Delete Product
+        // Delete Product
+        async function deleteProduct(productId) {
+            Swal.fire({
+                title: "Are you sure?",
+                text: "This action cannot be undone!",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Yes, delete!",
+                cancelButtonText: "Cancel"
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        // Add CSRF token if your server requires it
+                        const headers = {
+                            'Content-Type': 'application/json'
+                            // Uncomment if you use CSRF protection
+                            // 'CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        };
+
+                        const response = await fetch(`/admin/products/${productId}`, {
+                            method: "DELETE",
+                            headers: headers
+                        });
+
+                        const data = await response.json();
+                        if (data.success) {
+                            Swal.fire("Deleted!", "Product has been removed.", "success")
+                                .then(() => window.location.reload());
+                        } else {
+                            Swal.fire("Error", data.message, "error");
+                        }
+                    } catch (error) {
+                        console.error("Error deleting product:", error);
+                        Swal.fire("Error", "Something went wrong!", "error");
+                    }
+                }
+            });
+        }
+
+        // Edit Product (Fetch and display product data)
+        async function editProduct(productId) {
+            try {
+                // Make sure this endpoint exists in your backend
+                const response = await fetch(`/admin/products/${productId}`);
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch product: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const product = data.product;
+
+                // Set the data to the modal fields
+                document.getElementById("editProductId").value = product._id;
+                document.getElementById("editProductName").value = product.name;
+                document.getElementById("editProductBrand").value = product.brand;
+                document.getElementById("editProductDescription").value = product.description;
+                document.getElementById("editProductSpecification").value = product.specifications;
+                document.getElementById("editProductPrice").value = product.price;
+                document.getElementById("editProductStock").value = product.stock;
+                document.getElementById("editProductCategory").value = product.category._id;
+
+                // Reset edit image arrays
+                editPendingImages = [];
+                editCroppedImages = [];
+                editCurrentImageIndex = 0;
+                document.getElementById('editCroppedImagesPreviews').innerHTML = '';
+
+                // Show the modal
+                const editModal = new bootstrap.Modal(document.getElementById('editProductModal'));
+                editModal.show();
+            } catch (error) {
+                console.error("Error fetching product:", error);
+                Swal.fire("Error", "Failed to fetch product details", "error");
+            }
+        }
+
+        // Submit Edit Product Form using fetch with PATCH method
+        document.getElementById("editProductForm").addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const productId = document.getElementById("editProductId").value;
+            const formData = new FormData(this);
+
+            // Add cropped images to form data if any
+            editCroppedImages.forEach((image, index) => {
+                // Convert base64 to blob
+                const blob = dataURItoBlob(image.dataUrl);
+                formData.append('images', blob, `product-image-${index}.jpg`);
+            });
+
+            try {
+                // Add CSRF token if your server requires it
+                // Uncomment if you use CSRF protection
+                // formData.append('_csrf', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+                const response = await fetch(`/admin/products/${productId}`, {
+                    method: "PATCH",
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to update product: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    Swal.fire("Success", "Product updated successfully!", "success")
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire("Error", data.message || "Update failed", "error");
+                }
+            } catch (error) {
+                console.error("Error updating product:", error);
+                Swal.fire("Error", "Something went wrong while updating the product", "error");
+            }
+        });
+    </script>
+
+    <%- include('partials/admin/footer') %>

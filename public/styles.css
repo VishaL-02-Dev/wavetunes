@@ -1,0 +1,233 @@
+/* Header */
+header {
+    background-color: #222;
+    padding: 15px 0;
+    border-bottom: 3px solid #0d6efd;
+}
+
+h1 {
+    font-size: 2rem;
+}
+
+.navbar-custom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+}
+.nav-center {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+}
+
+
+.nav-link {
+    font-size: 1.2rem;
+    transition: color 0.3s;
+}
+
+.nav-link:hover {
+    color: #0d6efd !important;
+}
+
+/* Product Section */
+.products {
+    text-align: center;
+}
+
+.product-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+}
+
+.product {
+    background-color: #333;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    transition: transform 0.3s ease-in-out;
+    width: 300px;
+}
+
+.product:hover {
+    transform: scale(1.05);
+}
+
+.product img {
+    width: 100%;
+    border-radius: 10px;
+}
+
+.card-body {
+    padding: 15px;
+}
+
+.card-title {
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+
+.card-text {
+    font-size: 1.1rem;
+}
+
+
+/* Signup Page Styles */
+.signup-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(to bottom,black,white);
+    color: white;
+}
+
+.signup-container {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(149, 144, 144, 0.5);
+    width: 100%;
+    max-width: 400px;
+    
+}
+
+.signup-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #00aaff;
+}
+
+
+/* OTP Page Styles */
+/* .otp {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+}
+
+.otp-container h2 {
+    margin-bottom: 10px;
+    color: #00aaff;
+}
+
+.otp-container p {
+    font-size: 1rem;
+    margin-bottom: 20px;
+    color: #bbb;
+} */
+
+/* OTP Input Fields */
+/* .otp-inputs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+} */
+
+/* .otp-field {
+    width: 40px;
+    height: 50px;
+    font-size: 20px;
+    text-align: center;
+    border: 1px solid #00aaff;
+    border-radius: 5px;
+    background: transparent;
+    color: white;
+    outline: none;
+    transition: 0.3s ease-in-out;
+} */
+
+
+
+/* Verify Button */
+.verify-btn {
+    background: #00aaff;
+    color: white;
+    border: none;
+    padding: 12px;
+    width: 100%;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: 0.3s ease-in-out;
+}
+
+.verify-btn:hover {
+    background: #024371;
+}
+
+/* Resend OTP Section */
+.resend-text {
+    font-size: 14px;
+    color: #bbb;
+    margin: 15px 0 5px;
+}
+
+#resend-otp {
+    background: #444;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+#resend-otp.active {
+    background: #00aaff;
+    color: white;
+    cursor: pointer;
+}
+
+#resend-otp.active:hover {
+    background: #0077cc;
+}
+
+
+
+/* Lgin Styles */
+.login-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-form h2 {
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+.forgot-password {
+    color: #bbb;
+    text-decoration: none;
+}
+
+.forgot-password:hover {
+    text-decoration: underline;
+}
+
+.btn-primary {
+    background-color: #1db954;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #17a44c;
+}
+
+.btn-danger {
+    background-color: #db4437;
+    border: none;
+}
+
+.btn-danger:hover {
+    background-color: #c1351d;
+}

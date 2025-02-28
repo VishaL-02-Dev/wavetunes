@@ -1,0 +1,487 @@
+<!-- views/product-detail.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>
+        <%= product.name %> | WaveTunes
+    </title>
+    <%- include('./partials/user/header') %>
+        <style>
+            /* Image gallery and zoom functionality */
+            .product-gallery {
+                display: grid;
+                grid-template-columns: 1fr 5fr;
+                gap: 1rem;
+            }
+
+            .thumbnail-container {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+                max-height: 400px;
+                overflow-y: auto;
+            }
+
+            .thumbnail {
+                width: 60px;
+                height: 60px;
+                object-fit: cover;
+                border-radius: 0.25rem;
+                cursor: pointer;
+                border: 2px solid transparent;
+                transition: all 0.2s;
+            }
+
+            .thumbnail.active {
+                border-color: #3b82f6;
+            }
+
+            .main-image-container {
+                position: relative;
+                overflow: hidden;
+                border-radius: 0.5rem;
+                height: 400px;
+            }
+
+            .main-image {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                cursor: crosshair;
+            }
+
+            .zoom-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                display: none;
+                z-index: 10;
+                pointer-events: none;
+            }
+
+            .zoom-result {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-repeat: no-repeat;
+                z-index: 20;
+                pointer-events: none;
+            }
+
+            /* When no thumbnails, show a single image */
+            .single-image-container {
+                width: 100%;
+                height: 400px;
+                overflow: hidden;
+                border-radius: 0.5rem;
+                position: relative;
+            }
+        </style>
+</head>
+
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <nav class="mb-8" aria-label="Breadcrumb">
+            <ol class="flex text-sm">
+                <li><a href="/" class="text-white hover:text-gray-700">Home</a></li>
+                <li class="mx-2 text-white">/</li>
+                <% if (categorySlug) { %>
+                    <li>
+                        <a href="/user/products/<%= categorySlug %>" class="text-white hover:text-gray-700">
+                            <%= categoryName %>
+                        </a>
+                    </li>
+                    <li class="mx-2 text-white">/</li>
+                    <% } %>
+                        <li class="text-white font-medium">
+                            <%= product.name %>
+                        </li>
+            </ol>
+        </nav>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Product Images -->
+            <div>
+                <% if (product.imageBase64 && product.imageBase64.length> 0) { %>
+                    <% if (product.imageBase64.length> 1) { %>
+                        <!-- Multiple images gallery -->
+                        <div class="product-gallery">
+                            <div class="thumbnail-container">
+                                <% product.imageBase64.forEach(function(image, index) { %>
+                                    <img src="<%= image %>" alt="<%= product.name %> thumbnail <%= index + 1 %>"
+                                        class="thumbnail <%= index === 0 ? 'active' : '' %>"
+                                        onclick="changeMainImage('<%= image %>', this, <%= index %>)">
+                                    <% }); %>
+                            </div>
+                            <div class="main-image-container">
+                                <img id="mainImage" src="<%= product.imageBase64[0] %>" alt="<%= product.name %>"
+                                    class="main-image">
+                                <div id="zoomOverlay" class="zoom-overlay">
+                                    <div id="zoomResult" class="zoom-result"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <% } else { %>
+                            <!-- Single image with zoom -->
+                            <div class="single-image-container">
+                                <img id="mainImage" src="<%= product.imageBase64[0] %>" alt="<%= product.name %>"
+                                    class="main-image">
+                                <div id="zoomOverlay" class="zoom-overlay">
+                                    <div id="zoomResult" class="zoom-result"></div>
+                                </div>
+                            </div>
+                            <% } %>
+                                <% } else { %>
+                                    <div class="bg-gray-100 flex items-center justify-center h-64 rounded-lg">
+                                        <p class="text-gray-500">No images available</p>
+                                    </div>
+                                    <% } %>
+            </div>
+
+            <!-- Product Info -->
+            <div>
+                <h1 class="text-3xl font-bold mb-2 text-white">
+                    <%= product.name %>
+                </h1>
+
+                <div class="flex items-center mb-4">
+                    <div class="flex text-yellow">
+                        <% for(let i=1; i <=5; i++) { %>
+                            <% if (i <=Math.floor(product.ratings || 0)) { %>
+                                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                </svg>
+                                <% } else { %>
+                                    <svg class="w-5 h-5 fill-current text-gray-300" viewBox="0 0 24 24">
+                                        <path
+                                            d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                    </svg>
+                                    <% } %>
+                                        <% } %>
+                    </div>
+                    <span class="text-gray-500 text-sm ml-2">
+                        <%= product.numOfReviews || 0 %> reviews
+                    </span>
+                </div>
+
+                <div class="mb-6">
+                    <span class="text-3xl font-bold text-white">$<%= product.price %></span>
+                    <% if (product.originalPrice && product.originalPrice> product.price) { %>
+                        <span class="text-lg text-gray-500 line-through ml-2">$<%= product.originalPrice %></span>
+                        <span class="ml-2 bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                            <%= Math.round((1 - product.price / product.originalPrice) * 100) %>% OFF
+                        </span>
+                        <% } %>
+                </div>
+
+                <div class="mb-6">
+                    <% if (product.stock> 0) { %>
+                        <span class="text-green-600 font-medium">In Stock </span>
+                        <% } else { %>
+                            <span class="text-red-600 font-medium">Out of Stock</span>
+                            <% } %>
+                </div>
+
+                <% if (product.description) { %>
+                    <div class="mb-8">
+                        <h2 class="text-xl font-semibold mb-2">Description</h2>
+                        <div class="text-white">
+                            <%= product.description %>
+                        </div>
+                    </div>
+                    <% } %>
+
+                        <div class="flex items-center mb-8">
+                            <div class="mr-4">
+                                <label for="quantity" class="block text-sm font-medium text-white mb-1">Quantity</label>
+                                <div class="flex items-center border border-gray-300 rounded-md">
+                                    <button type="button" class="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                                        onclick="decrementQuantity()">-</button>
+                                    <input type="number" id="quantity" name="quantity" min="1"
+                                        max="<%= product.stock || 1 %>" value="1"
+                                        class="w-12 text-center border-0 focus:ring-0">
+                                    <button type="button" class="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                                        onclick="incrementQuantity()">+</button>
+                                </div>
+                            </div>
+
+                            <button onclick="addToCart('<%= product._id %>')"
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition"
+                                <%=product.stock <=0 ? 'disabled' : '' %>
+                                <%= product.stock <=0
+                                    ? 'class="flex-1 bg-gray-400 cursor-not-allowed text-white font-medium py-2 px-4 rounded-md"'
+                                    : '' %>>
+                                    Add to Cart
+                            </button>
+                        </div>
+
+                        <div class="border-t border-gray-200 pt-4">
+                            <% if (product.specifications) { %>
+                                <div class="mb-4">
+                                    <h3 class="text-lg font-semibold mb-2">Specifications</h3>
+                                    <p class="text-white">
+                                        <%- product.specifications %>
+                                    </p>
+                                </div>
+                                <% } %>
+                        </div>
+            </div>
+        </div>
+
+        <!-- Reviews Section -->
+        <div class="mt-16">
+            <h2 class="text-2xl font-bold mb-6">Customer Reviews</h2>
+
+            <% if (product.reviews && product.reviews.length> 0) { %>
+                <div class="space-y-6">
+                    <% product.reviews.forEach(review=> { %>
+                        <div class="bg-white rounded-lg shadow p-4">
+                            <div class="flex justify-between mb-2">
+                                <div>
+                                    <h3 class="font-semibold">
+                                        <%= review.name %>
+                                    </h3>
+                                    <div class="flex text-yellow-400">
+                                        <% for(let i=1; i <=5; i++) { %>
+                                            <% if (i <=review.rating) { %>
+                                                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                                    <path
+                                                        d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                                </svg>
+                                                <% } else { %>
+                                                    <svg class="w-4 h-4 fill-current text-gray-300" viewBox="0 0 24 24">
+                                                        <path
+                                                            d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                                    </svg>
+                                                    <% } %>
+                                                        <% } %>
+                                    </div>
+                                </div>
+                                <span class="text-gray-500 text-sm">
+                                    <%= new Date(review.createdAt).toLocaleDateString() %>
+                                </span>
+                            </div>
+                            <p class="text-gray-700">
+                                <%= review.comment %>
+                            </p>
+                        </div>
+                        <% }) %>
+                </div>
+                <% } else { %>
+                    <div class="bg-gray-50 rounded-lg p-8 text-center">
+                        <p class="text-gray-600 mb-4">No reviews yet. Be the first to review this product!</p>
+                        <a href="#writeReview"
+                            class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition">Write
+                            a Review</a>
+                    </div>
+                    <% } %>
+
+                        <!-- Write Review Form -->
+                        <div id="writeReview" class="mt-8 bg-white shadow-md rounded-lg p-6">
+                <h3 class="text-xl font-semibold mb-4">Write a Review</h3>
+                <form action="/product/<%= product._id %>/review" method="POST">
+                    <div class="mb-4">
+                        <label for="rating" class="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                        <div class="flex space-x-1">
+                            <% for(let i = 1; i <= 5; i++) { %>
+                                <button type="button" onclick="setRating(<%= i %>)" class="rating-star text-gray-300 hover:text-yellow-400 focus:outline-none">
+                                    <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                                </button>
+                            <% } %>
+                        </div>
+                        <input type="hidden" id="ratingInput" name="rating" value="5">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="comment" class="block text-sm font-medium text-gray-700 mb-1">Your Review</label>
+                        <textarea id="comment" name="comment" rows="4" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition">
+                            Submit Review
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Related Products -->
+        <!-- <div class="mt-16">
+            <h2 class="text-2xl font-bold mb-6">You May Also Like</h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"> -->
+                <!-- This would be populated by related products from backend -->
+                <!-- Example placeholder for now -->
+                <!-- <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+                    <img src="/images/default.jpg" class="w-full h-48 object-contain" alt="Related product">
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold mb-2">Related product</h3>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-900 font-bold">$99.99</span>
+                            <a href="#"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition">View
+                                Details</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div> -->
+    </div>
+
+    <script>
+        // Track current selected image index
+        let currentImageIndex = 0;
+        let imagesList = [];
+
+        // Set up image array if available
+        window.addEventListener("DOMContentLoaded", function () {
+            const mainImage = document.getElementById("mainImage");
+            if (!mainImage) return;
+            
+            <% if (product.imageBase64 && product.imageBase64.length > 0) { %>
+                imagesList =[
+                    <% product.imageBase64.forEach(function (image, index) { %>
+                    "<%= image %>" <%= index < product.imageBase64.length - 1 ? ',' : '' %>
+                    <% }); %>
+                ];
+            <% } %>
+
+                // Initialize zoom functionality
+                initializeZoom();
+        });
+
+        // Initialize zoom functionality
+        function initializeZoom() {
+            const mainImage = document.getElementById("mainImage");
+            const zoomOverlay = document.getElementById("zoomOverlay");
+            const zoomResult = document.getElementById("zoomResult");
+
+            if (!mainImage || !zoomOverlay || !zoomResult) return;
+
+            // Add event listeners for zoom
+            mainImage.addEventListener("mousemove", handleZoom);
+            mainImage.addEventListener("mouseenter", showZoom);
+            mainImage.addEventListener("mouseleave", hideZoom);
+
+            // Function to show zoom overlay
+            function showZoom() {
+                zoomOverlay.style.display = "block";
+            }
+
+            // Function to hide zoom overlay
+            function hideZoom() {
+                zoomOverlay.style.display = "none";
+            }
+
+            // Function to handle zoom effect
+            function handleZoom(e) {
+                const { left, top, width, height } = mainImage.getBoundingClientRect();
+
+                // Calculate mouse position percentage within the image
+                const x = (e.clientX - left) / width;
+                const y = (e.clientY - top) / height;
+
+                // Zoom factor - higher means more zoom
+                const zoomFactor = 2.5;
+
+                // Set background position and size for zoom result
+                zoomResult.style.backgroundImage = `url('${mainImage.src}')`;
+                zoomResult.style.backgroundSize = `${width * zoomFactor}px ${height * zoomFactor}px`;
+                zoomResult.style.backgroundPosition = `${-x * (width * zoomFactor - width)}px ${-y * (height * zoomFactor - height)}px`;
+            }
+        }
+
+        // Change main image and update active thumbnail
+        function changeMainImage(src, thumbnailElement, index) {
+            const mainImage = document.getElementById("mainImage");
+            if (!mainImage) return;
+
+            // Update image source
+            mainImage.src = src;
+            currentImageIndex = index;
+
+            // Update active thumbnail
+            const thumbnails = document.querySelectorAll(".thumbnail");
+            thumbnails.forEach(thumb => {
+                thumb.classList.remove("active");
+            });
+
+            thumbnailElement.classList.add("active");
+        }
+
+        // Quantity controls
+        function incrementQuantity(max) {
+            const quantityInput = document.getElementById('quantity');
+            const currentValue = parseInt(quantityInput.value);
+            if (currentValue < max) {
+                quantityInput.value = currentValue + 1;
+            }
+        }
+
+        function decrementQuantity() {
+            const quantityInput = document.getElementById('quantity');
+            const currentValue = parseInt(quantityInput.value);
+            if (currentValue > 1) {
+                quantityInput.value = currentValue - 1;
+            }
+        }
+
+        // Rating selection
+        function setRating(rating) {
+            // Update hidden input value
+            document.getElementById('ratingInput').value = rating;
+
+            // Update stars visual
+            const stars = document.querySelectorAll('.rating-star');
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.remove('text-gray-300');
+                    star.classList.add('text-yellow-400');
+                } else {
+                    star.classList.remove('text-yellow-400');
+                    star.classList.add('text-gray-300');
+                }
+            });
+        }
+
+        // Add to cart functionality
+        function addToCart(productId) {
+            const quantity = parseInt(document.getElementById('quantity').value);
+
+            // Add to cart API call
+            fetch('/api/cart/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    productId: productId,
+                    quantity: quantity
+                }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        alert('Product added to cart!');
+                        // Update cart count in navbar if you have one
+                    } else {
+                        alert(data.message || 'Failed to add to cart');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+        }
+    </script>
+    <%- include('./partials/user/footer') %>
