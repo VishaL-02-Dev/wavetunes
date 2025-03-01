@@ -27,12 +27,14 @@ const signup=async(req,res)=>{
 //Adding user to the DB
 const addUser=async(req,res)=>{
     try {
-        console.log("Incoming Signup Request:", req.body); // Debugging
+        // console.log("Incoming Signup Request:", req.body); // Debugging
 
         if (!req.body) {
             console.log("No data received!");
             return res.status(400).json({ error: "No data received" });
         }
+
+      
 
         const { fname, lname, email, phone, password } = req.body;
 
@@ -86,6 +88,7 @@ const addUser=async(req,res)=>{
             password 
         };
 
+        console.log("Session stored",req.session.userData);
        
         console.log("OTP sent successfully:", otp);
         return res.status(200).json({ 
@@ -105,6 +108,7 @@ const verifyOtp = async (req, res) => {
     try {
         const { otp } = req.body;
         const userData=req.session.userData;
+        console.log(userData);
 
         console.log("Received OTP:", otp);
         console.log("Stored OTP:", req.session.userOtp);
@@ -159,8 +163,11 @@ const verifyOtp = async (req, res) => {
         };
 
         // Clear session
-        req.session.userOtp = null;
-        req.session.userData = null;
+        delete req.session.userOtp;
+        // req.session.userOtp = null;
+        // req.session.userData = null;
+
+        
         req.session.save();
 
         return res.status(200).json({ success: true, message:"User registration successful" , redirectUrl: "/" });
@@ -204,13 +211,30 @@ const sendVerificationEmail = async (email, otp) => {
 // Resend OTP
 const resendOtp = async (req, res) => {
     try {
+
+        console.log("Session Data at resend: ",req.session.userData);
+
         if (!req.session.userData || !req.session.userData.email) {
-            return res.status(400).json({ success: false, message: "Email not found in session" });
+            return res.status(400).json({ 
+                success: false, 
+                message: "User data not found" 
+            });
         }
 
         //Generate and send new OTP
         const newOtp = generateOtp();
         req.session.userOtp = newOtp;
+
+        await new Promise((resolve,reject)=>{
+            req.session.save((err)=>{
+                if(err){
+                    console.log("Session save error: ", err);
+                    reject(err);
+                }else{
+                    resolve();
+                }
+            })
+        });
 
         const emailSent = await sendVerificationEmail(req.session.userData.email, newOtp);
 
@@ -219,11 +243,17 @@ const resendOtp = async (req, res) => {
             return res.status(200).json({ success: true, message: "OTP resent successfully" });
         }
 
-        return res.status(500).json({ success: false, message: "Failed to resend OTP. Try again" });
+        return res.status(500).json({ 
+            success: false, 
+            message: "Failed to resend OTP. Try again" 
+        });
 
     } catch (error) {
         console.error("Error resending OTP:", error);
-        res.status(500).json({ success: false, message: "Internal server error. Try again" });
+        res.status(500).json({ 
+            success: false, 
+            message: "Internal server error. Try again" 
+        });
     }
 };
 
@@ -233,6 +263,11 @@ const loadOtp= async(req,res)=>{
         if(!req.session.userOtp || !req.session.userData){
             return res.redirect('/user/signup');
         }
+
+        await new Promise((resolve)=>{
+            req.session.save(resolve);
+        });
+
         res.render('user/otpverify');
     } catch (error) {
         console.log("Error loading OTP page",error);

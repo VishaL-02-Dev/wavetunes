@@ -29,7 +29,7 @@ router.get('/auth/google/callback',passport.authenticate('google',{failureRedire
 //For OTP verification page
 router.get('/otpverify', userController.loadOtp);  
 router.post('/otpverify', userController.verifyOtp);
-router.post('/resendOtp', userController.resendOtp);
+router.post('/otpverify/resendotp', userController.resendOtp);
 
 //Product Page
 // router.get('/products',productController.loadProduct);
