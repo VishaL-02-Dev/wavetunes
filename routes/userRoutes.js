@@ -32,12 +32,9 @@ router.post('/otpverify', userController.verifyOtp);
 router.post('/otpverify/resendotp', userController.resendOtp);
 
 //Product Page
-// router.get('/products',productController.loadProduct);
 router.get('/products',productController.displayProduct);
 router.get('/products/:categorySlug',productController.getCategoryProducts);
 router.get('/product/:id',productController.getProductById);  
-
-
 
 
 

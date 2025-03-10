@@ -33,12 +33,10 @@ const productSchema = new mongoose.Schema({
         ref: 'Category',
         required: true
     },
-    images: [
-        {
-            data: Buffer,   
-            contentType: String 
-        }
-    ],
+    images: [{
+        public_id: { type: String, required: true },
+        url: { type: String, required: true }
+    }],
     ratings: {
         type: Number,
         default: 0

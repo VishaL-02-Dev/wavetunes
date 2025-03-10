@@ -47,32 +47,11 @@ app.set('views',[path.join(__dirname,'views'),path.join(__dirname,'views/admin')
 
 app.get('/', async (req, res) => {
     try {
-      let products = await Product.find({ inStock: true }).sort({ createdAt: -1 }).limit(12);
-
-      let latestProducts= await Product.find().sort({createdAt:-1}).limit(8);
-
-      products = products.map(product => {
-        return {
-            ...product.toObject(),
-            images: product.images.map(img => 
-                `data:${img.contentType};base64,${img.data.toString('base64')}`
-            )
-        };
-    });
-
-        
-      latestProducts = latestProducts.map(product => {
-        return {
-            ...product.toObject(),
-            images: product.images.map(img => 
-                `data:${img.contentType};base64,${img.data.toString('base64')}`
-            )
-        };
-    });
+      let products = await Product.find({ stock: {$gt: 1} }).sort({ createdAt: -1 }).limit(8);
+      console.log('products',products);
 
       res.render('home', { 
-        products,
-        latestProducts 
+        products
     });
     } catch (error) {
       console.error('Error fetching products:', error);

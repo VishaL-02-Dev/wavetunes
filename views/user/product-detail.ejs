@@ -108,40 +108,41 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <!-- Product Images -->
             <div>
-                <% if (product.imageBase64 && product.imageBase64.length> 0) { %>
-                    <% if (product.imageBase64.length> 1) { %>
+                <% if (product.images && product.images.length > 0) { %>
+                    <% if (product.images.length > 1) { %>
                         <!-- Multiple images gallery -->
                         <div class="product-gallery">
                             <div class="thumbnail-container">
-                                <% product.imageBase64.forEach(function(image, index) { %>
-                                    <img src="<%= image %>" alt="<%= product.name %> thumbnail <%= index + 1 %>"
+                                <% product.images.forEach(function(image, index) { %>
+                                    <img src="<%= image.url %>" alt="<%= product.name %> thumbnail <%= index + 1 %>"
                                         class="thumbnail <%= index === 0 ? 'active' : '' %>"
-                                        onclick="changeMainImage('<%= image %>', this, <%= index %>)">
-                                    <% }); %>
+                                        onclick="changeMainImage('<%= image.url %>', this, <%= index %>)">
+                                <% }); %>
                             </div>
                             <div class="main-image-container">
-                                <img id="mainImage" src="<%= product.imageBase64[0] %>" alt="<%= product.name %>"
+                                <img id="mainImage" src="<%= product.images[0].url %>" alt="<%= product.name %>"
                                     class="main-image">
                                 <div id="zoomOverlay" class="zoom-overlay">
                                     <div id="zoomResult" class="zoom-result"></div>
                                 </div>
                             </div>
                         </div>
-                        <% } else { %>
-                            <!-- Single image with zoom -->
-                            <div class="single-image-container">
-                                <img id="mainImage" src="<%= product.imageBase64[0] %>" alt="<%= product.name %>"
-                                    class="main-image">
-                                <div id="zoomOverlay" class="zoom-overlay">
-                                    <div id="zoomResult" class="zoom-result"></div>
-                                </div>
+                    <% } else { %>
+                        <!-- Single image with zoom -->
+                        <div class="single-image-container">
+                            <img id="mainImage" src="<%= product.images[0].url %>" alt="<%= product.name %>"
+                                class="main-image">
+                            <div id="zoomOverlay" class="zoom-overlay">
+                                <div id="zoomResult" class="zoom-result"></div>
                             </div>
-                            <% } %>
-                                <% } else { %>
-                                    <div class="bg-gray-100 flex items-center justify-center h-64 rounded-lg">
-                                        <p class="text-gray-500">No images available</p>
-                                    </div>
-                                    <% } %>
+                        </div>
+                    <% } %>
+                <% } else { %>
+                    <div class="bg-gray-100 flex items-center justify-center h-64 rounded-lg">
+                        <p class="text-gray-500">No images available</p>
+                    </div>
+                <% } %>
+                
             </div>
 
             <!-- Product Info -->

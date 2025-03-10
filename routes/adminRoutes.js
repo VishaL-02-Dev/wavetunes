@@ -27,6 +27,6 @@ router.get('/products',checkSession,productController.adminProduct);
 router.get('/products/:id', checkSession, productController.getProduct);
 router.post('/products',upload.array('images',4),productController.createProduct);
 router.patch('/products/edit/:id',upload.array('images',4),productController.updateProduct);
-
+router.delete('/products/:id', productController.deleteProduct);
 
 module.exports=router;

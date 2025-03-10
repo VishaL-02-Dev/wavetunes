@@ -29,7 +29,7 @@
                 <% products.forEach(product => { %>
                     <div class="bg-white shadow-lg rounded-lg overflow-hidden transition-transform duration-300 transform hover:scale-105 hover:shadow-xl">
                         <% if (product.images && product.images.length > 0) { %>
-                            <img src="<%= product.images[0] %>" class="w-full h-48 object-contain" alt="<%= product.name %>">
+                            <img src="<%= product.images[0].url %>" class="w-full h-48 object-contain" alt="<%= product.name %>">
                         <% } else { %>
                             <img src="/images/default.jpg" class="w-full h-48 object-contain" alt="No Image Available">
                         <% } %>
@@ -37,7 +37,7 @@
                             <h5 class="text-lg font-semibold"><%= product.name %></h5>
                             <p class="text-gray-700">Price: $<%= product.price %></p>
                             <p class="text-gray-600">Rating: <%= product.ratings %> / 5</p>
-                            <a href="/user/product/<%= product._id %>" class="block mt-2 bg-blue-500 text-white text-center py-2 rounded">View Details</a>
+                            <a href="/user/product/<%= product._id %>" class="block mt-2 bg-blue-500 text-white text-center py-2 rounded hover:bg-blue-700">View Details</a>
                         </div>
                     </div>
                 <% }) %>

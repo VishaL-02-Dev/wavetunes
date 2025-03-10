@@ -35,12 +35,12 @@
         </div>
         
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <% if (latestProducts && latestProducts.length > 0) { %>
-                <% latestProducts.forEach(product => { %>
+            <% if (products && products.length > 0) { %>
+                <% products.forEach(product => { %>
                     <div class="bg-white shadow-lg rounded-lg overflow-hidden transition-transform duration-300 transform hover:scale-105 hover:shadow-xl">
                         <div class="relative">
                             <% if (product.images && product.images.length > 0) { %>
-                                <img src="<%= product.images[0] %>" class="w-full h-48 object-contain" alt="<%= product.name %>">
+                                <img src="<%= product.images[0].url %>" class="w-full h-48 object-contain" alt="<%= product.name %>">
                             <% } else { %>
                                 <img src="/images/default.jpg" class="w-full h-48 object-contain" alt="No Image Available">
                             <% } %>
@@ -72,7 +72,7 @@
                 <% for(let i = 0; i < 4; i++) { %>
                     <div class="bg-white shadow-lg rounded-lg overflow-hidden transition-transform duration-300 transform hover:scale-105 hover:shadow-xl">
                         <div class="relative">
-                            <img src="/images/default.jpg" class="w-full h-48 object-contain" alt="Coming Soon">
+                            <img src="/images/defaults.jpg" class="w-full h-48 object-contain" alt="Coming Soon">
                             <div class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">NEW</div>
                         </div>
                         <div class="p-4">

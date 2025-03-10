@@ -51,14 +51,32 @@
             <div class="content-wrapper">
                 <div class="container-fluid">
                     <h2>Manage Products</h2>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                        <i class="bi bi-plus-lg"></i> Add Product
-                    </button>
+                    <span class="text-white">Total Products: <%= totalCount %></span>
+                    <div>
+                        <button class="btn btn-primary mt-4" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                            <i class="bi bi-plus-lg"></i> Add Product
+                        </button>
+                    </div>
                 </div>
-
+                <!-- Search Bar -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <form action="" method="GET" class="d-flex mt-4">
+                            <input type="text" name="search" class="form-control"
+                                placeholder="Search products by name, brand, or description..."
+                                value="<%= typeof search !== 'undefined' ? search : '' %>">
+                            <button type="submit" class="btn btn-primary ms-2">
+                                <i class="bi bi-search"></i>
+                            </button>
+                            <% if (typeof search !=='undefined' && search) { %>
+                                <a href="/admin/products" class="btn btn-outline-secondary ms-2">Clear</a>
+                                <% } %>
+                        </form>
+                    </div>
+                </div>
                 <div class="content-wrapper">
                     <div class="container-fluid">
-                        <table class="table table-bordered table-hover mt-3">
+                        <table class="table table-bordered table-hover ">
                             <thead class="table-dark">
                                 <tr>
                                     <th>Sl.No</th>
@@ -77,7 +95,7 @@
                                 <% products.forEach((product, index)=> { %>
                                     <tr>
                                         <td>
-                                            <%= index + 1 %>
+                                            <%= ((currentPage || 1) - 1) * (itemsPerPage || 5) + index + 1 %>
                                         </td>
                                         <td>
                                             <% if (product.firstImage) { %>
@@ -121,6 +139,31 @@
                                     <% }) %>
                             </tbody>
                         </table>
+                        <% if (totalPages> 1) { %>
+                            <nav aria-label="Page navigation" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
+                                        <a class="page-link"
+                                            href="?page=<%= currentPage - 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %>"
+                                            tabindex="-1">Previous</a>
+                                    </li>
+
+                                    <% for(let i=1; i <=totalPages; i++) { %>
+                                        <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                                            <a class="page-link"
+                                                href="?page=<%= i %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %>">
+                                                <%= i %>
+                                            </a>
+                                        </li>
+                                        <% } %>
+
+                                            <li class="page-item <%= currentPage === totalPages ? 'disabled' : '' %>">
+                                                <a class="page-link"
+                                                    href="?page=<%= currentPage + 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %>">Next</a>
+                                            </li>
+                                </ul>
+                            </nav>
+                            <% } %>
                     </div>
                 </div>
             </div>
@@ -186,12 +229,12 @@
                                     </select>
                                 </div>
 
-                                <!-- MODIFIED: Image input section with cropping functionality -->
+                                <!-- Image input section with cropping functionality -->
                                 <div class="mb-3">
                                     <label for="productImages" class="form-label text-black">Product Images (Max
                                         4)</label>
-                                    <input type="file" class="form-control" id="productImages" accept="image/*"
-                                        multiple>
+                                    <input type="file" class="form-control" id="productImages" name="images"
+                                        accept="image/*" multiple>
                                     <!-- Hidden inputs to store cropped image data -->
                                     <div id="croppedImagesContainer"></div>
                                 </div>
@@ -246,13 +289,8 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <!-- Change method to "post" since HTML forms only support GET and POST -->
-                            <!-- The actual PATCH request will be handled by JavaScript -->
                             <form method="post" id="editProductForm" enctype="multipart/form-data">
-                                <!-- Hidden input to hold the product ID -->
                                 <input type="hidden" id="editProductId" name="id">
-
-                                
                                 <div class="mb-3">
                                     <label for="editProductName" class="form-label text-black">Product Name</label>
                                     <input type="text" class="form-control" id="editProductName" name="name" required>
@@ -301,6 +339,13 @@
                                             </option>
                                             <% }) %>
                                     </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label text-black">Existing Images</label>
+                                    <div id="editExistingImagesContainer" class="d-flex flex-wrap">
+                                        <!-- Existing images will be added dynamically here -->
+                                    </div>
                                 </div>
 
                                 <!-- Image input section -->
@@ -362,36 +407,26 @@
 
     <script>
         // Global variables for image handling
-        let cropper;
-        let currentImageIndex = 0;
-        let pendingImages = [];
-        let croppedImages = [];
-        let editCropper;
-        let editCurrentImageIndex = 0;
-        let editPendingImages = [];
-        let editCroppedImages = [];
+        let imagesToRemove = [];
 
-        // Add Product
         document.getElementById("addProductForm").addEventListener("submit", async function (event) {
             event.preventDefault();
 
-            // MODIFIED: Use custom submission with cropped images
             const formData = new FormData(this);
+            const files = document.getElementById("productImages").files;
 
-            // Add cropped images to form data
-            if (croppedImages.length === 0) {
-                Swal.fire("Error", "Please add and crop at least one product image", "error");
+            if (files.length === 0) {
+                Swal.fire("Error", "Please add at least one product image", "error");
                 return;
             }
 
-            // Add each cropped image to the form data
-            croppedImages.forEach((image, index) => {
-                // Convert base64 to blob
-                const blob = dataURItoBlob(image.dataUrl);
-                formData.append('images', blob, `product-image-${index}.jpg`);
-            });
-
             try {
+                // Upload images to Cloudinary
+                const uploadedImages = await uploadImagesToCloudinary(files);
+                uploadedImages.forEach((imageUrl, index) => {
+                    formData.append('images', imageUrl);
+                });
+
                 const response = await fetch("/admin/products", {
                     method: "POST",
                     body: formData,
@@ -409,21 +444,39 @@
             }
         });
 
-        // ADDED: Helper function to convert base64 to Blob
-        function dataURItoBlob(dataURI) {
-            const byteString = atob(dataURI.split(',')[1]);
-            const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-            const ab = new ArrayBuffer(byteString.length);
-            const ia = new Uint8Array(ab);
+        // Helper function to upload images to Cloudinary
+        // Add these logs to your uploadImagesToCloudinary function
+        async function uploadImagesToCloudinary(files) {
+            console.log("Starting upload to Cloudinary with files:", files);
+            
+            const uploadPromises = Array.from(files).map(file => {
+                console.log("Preparing to upload file:", file.name);
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("upload_preset", "my_upload_preset"); // Make sure this is correct
+                
+                return fetch(`https://api.cloudinary.com/v1_1/drdggqz62/image/upload`, {
+                    method: "POST",
+                    body: formData,
+                })
+                .then(response => {
+                    console.log("Cloudinary response status:", response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Cloudinary response data:", data);
+                    return data.secure_url;
+                })
+                .catch(error => {
+                    console.error("Error uploading to Cloudinary:", error);
+                    throw error;
+                });
+            });
 
-            for (let i = 0; i < byteString.length; i++) {
-                ia[i] = byteString.charCodeAt(i);
-            }
-
-            return new Blob([ab], { type: mimeString });
+            return Promise.all(uploadPromises);
         }
 
-        // ADDED: Initialize image cropper for add product
+        // Handle image selection and preview (no cropping)
         document.getElementById('productImages').addEventListener('change', function (e) {
             const files = e.target.files;
 
@@ -433,122 +486,33 @@
                 return;
             }
 
-            // Reset arrays and prepare for new images
-            pendingImages = Array.from(files);
-            croppedImages = [];
-            currentImageIndex = 0;
-            document.getElementById('croppedImagesPreviews').innerHTML = '';
-
-            // Start processing the first image if available
-            if (pendingImages.length > 0) {
-                processNextImage();
-            }
-        });
-
-        // ADDED: Function to process next image in queue for add product
-        function processNextImage() {
-            if (currentImageIndex < pendingImages.length) {
-                const file = pendingImages[currentImageIndex];
-                const reader = new FileReader();
-
-                reader.onload = function (e) {
-                    const imageToCrop = document.getElementById('imageToCrop');
-                    imageToCrop.src = e.target.result;
-
-                    // Show cropper container
-                    document.getElementById('imageCropperContainer').style.display = 'block';
-
-                    // Initialize cropper
-                    if (cropper) {
-                        cropper.destroy();
-                    }
-
-                    cropper = new Cropper(imageToCrop, {
-                        aspectRatio: 1, // Square crop
-                        viewMode: 1,    // Restrict view to the cropping box
-                        responsive: true,
-                        guides: true,
-                        background: false
-                    });
-                };
-
-                reader.readAsDataURL(file);
-            } else {
-                // Hide cropper when all images are processed
-                document.getElementById('imageCropperContainer').style.display = 'none';
-            }
-        }
-
-        // ADDED: Crop button event handler for add product
-        document.getElementById('cropImageBtn').addEventListener('click', function () {
-            if (!cropper) return;
-
-            // Get cropped canvas
-            const canvas = cropper.getCroppedCanvas({
-                width: 600,  // Output width
-                height: 600, // Output height
-                fillColor: '#fff'
-            });
-
-            // Convert to data URL
-            const dataUrl = canvas.toDataURL('image/jpeg');
-
-            // Add to cropped images array
-            croppedImages.push({
-                index: currentImageIndex,
-                dataUrl: dataUrl,
-                originalName: pendingImages[currentImageIndex].name
-            });
-
-            // Add preview
-            const previewContainer = document.getElementById('croppedImagesPreviews');
-            const previewDiv = document.createElement('div');
-            previewDiv.className = 'preview-item position-relative m-1';
-            previewDiv.innerHTML = `
-                <img src="${dataUrl}" alt="Cropped image ${currentImageIndex + 1}" 
-                     style="width: 80px; height: 80px; object-fit: cover;">
-                <button type="button" class="btn btn-danger btn-sm position-absolute" 
-                        style="top: 0; right: 0; padding: 0 5px;" 
-                        onclick="removeImage(${currentImageIndex})">×</button>
-            `;
-            previewContainer.appendChild(previewDiv);
-
-            // Move to next image
-            currentImageIndex++;
-            processNextImage();
-        });
-
-        // ADDED: Cancel crop button event handler for add product
-        document.getElementById('cancelCropBtn').addEventListener('click', function () {
-            // Skip current image and move to next
-            currentImageIndex++;
-            processNextImage();
-        });
-
-        // ADDED: Function to remove a cropped image
-        function removeImage(index) {
-            // Remove from cropped images array
-            croppedImages = croppedImages.filter(image => image.index !== index);
-
-            // Refresh previews
             const previewContainer = document.getElementById('croppedImagesPreviews');
             previewContainer.innerHTML = '';
 
-            croppedImages.forEach(image => {
-                const previewDiv = document.createElement('div');
-                previewDiv.className = 'preview-item position-relative m-1';
-                previewDiv.innerHTML = `
-                    <img src="${image.dataUrl}" alt="Cropped image ${image.index + 1}" 
-                         style="width: 80px; height: 80px; object-fit: cover;">
-                    <button type="button" class="btn btn-danger btn-sm position-absolute" 
-                            style="top: 0; right: 0; padding: 0 5px;" 
-                            onclick="removeImage(${image.index})">×</button>
-                `;
-                previewContainer.appendChild(previewDiv);
+            Array.from(files).forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const previewDiv = document.createElement('div');
+                    previewDiv.className = 'preview-item position-relative m-1';
+                    previewDiv.innerHTML = `
+                <img src="${e.target.result}" alt="Preview image ${index + 1}" 
+                     style="width: 80px; height: 80px; object-fit: cover;">
+                <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                        style="top: 0; right: 0; padding: 0 5px;" 
+                        onclick="removeImage(${index})">×</button>
+            `;
+                    previewContainer.appendChild(previewDiv);
+                };
+                reader.readAsDataURL(file);
             });
+        });
+
+        // Function to remove a preview image
+        function removeImage(index) {
+            const previewContainer = document.getElementById('croppedImagesPreviews');
+            previewContainer.children[index].remove();
         }
 
-        // Delete Product
         // Delete Product
         async function deleteProduct(productId) {
             Swal.fire({
@@ -561,16 +525,9 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
-                        // Add CSRF token if your server requires it
-                        const headers = {
-                            'Content-Type': 'application/json'
-                            // Uncomment if you use CSRF protection
-                            // 'CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        };
-
                         const response = await fetch(`/admin/products/${productId}`, {
                             method: "DELETE",
-                            headers: headers
+                            headers: { 'Content-Type': 'application/json' },
                         });
 
                         const data = await response.json();
@@ -581,7 +538,6 @@
                             Swal.fire("Error", data.message, "error");
                         }
                     } catch (error) {
-                        console.error("Error deleting product:", error);
                         Swal.fire("Error", "Something went wrong!", "error");
                     }
                 }
@@ -591,68 +547,77 @@
         // Edit Product (Fetch and display product data)
         async function editProduct(productId) {
             try {
-                // Make sure this endpoint exists in your backend
                 const response = await fetch(`/admin/products/${productId}`);
-
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch product: ${response.statusText}`);
-                }
+                if (!response.ok) throw new Error(`Failed to fetch product: ${response.statusText}`);
 
                 const data = await response.json();
                 const product = data.product;
 
-                // Set the data to the modal fields
                 document.getElementById("editProductId").value = product._id;
                 document.getElementById("editProductName").value = product.name;
                 document.getElementById("editProductBrand").value = product.brand;
                 document.getElementById("editProductDescription").value = product.description;
-                document.getElementById("editProductSpecification").value = product.specifications;
+                document.getElementById("editProductSpecification").value = typeof product.specifications === 'string' ? product.specifications : JSON.stringify(product.specifications);
                 document.getElementById("editProductPrice").value = product.price;
                 document.getElementById("editProductStock").value = product.stock;
                 document.getElementById("editProductCategory").value = product.category._id;
 
-                // Reset edit image arrays
-                editPendingImages = [];
-                editCroppedImages = [];
-                editCurrentImageIndex = 0;
-                document.getElementById('editCroppedImagesPreviews').innerHTML = '';
+                document.getElementById('editExistingImagesContainer').innerHTML = '';
+                product.images.forEach((img, index) => {
+                    const imgContainer = document.createElement('div');
+                    imgContainer.classList.add("position-relative", "m-2");
 
-                // Show the modal
+                    const image = document.createElement("img");
+                    image.src = img; // Assuming img is a Cloudinary URL
+                    image.classList.add("existing-image", "img-thumbnail");
+                    image.style.maxWidth = "100px";
+                    imgContainer.appendChild(image);
+
+                    const removeButton = document.createElement("button");
+                    removeButton.classList.add("btn", "btn-danger", "btn-sm", "position-absolute", "top-0", "end-0");
+                    removeButton.innerText = "X";
+                    removeButton.onclick = function () {
+                        removeExistingImage(index);
+                    };
+
+                    imgContainer.appendChild(removeButton);
+                    document.getElementById("editExistingImagesContainer").appendChild(imgContainer);
+                });
+
+                function removeExistingImage(index) {
+                    imagesToRemove.push(index);
+                    document.getElementById("editExistingImagesContainer").children[index].style.display = "none";
+                }
+
                 const editModal = new bootstrap.Modal(document.getElementById('editProductModal'));
                 editModal.show();
             } catch (error) {
-                console.error("Error fetching product:", error);
                 Swal.fire("Error", "Failed to fetch product details", "error");
             }
         }
 
-        // Submit Edit Product Form using fetch with PATCH method
+        // Submit Edit Product Form
         document.getElementById("editProductForm").addEventListener("submit", async function (event) {
             event.preventDefault();
 
             const productId = document.getElementById("editProductId").value;
             const formData = new FormData(this);
+            const files = document.getElementById("editProductImages").files;
 
-            // Add cropped images to form data if any
-            editCroppedImages.forEach((image, index) => {
-                // Convert base64 to blob
-                const blob = dataURItoBlob(image.dataUrl);
-                formData.append('images', blob, `product-image-${index}.jpg`);
-            });
+            if (files.length > 0) {
+                const uploadedImages = await uploadImagesToCloudinary(files);
+                uploadedImages.forEach(url => formData.append("images", url));
+            }
+
+            if (imagesToRemove.length > 0) {
+                formData.append("removeImages", JSON.stringify(imagesToRemove));
+            }
 
             try {
-                // Add CSRF token if your server requires it
-                // Uncomment if you use CSRF protection
-                // formData.append('_csrf', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-
-                const response = await fetch(`/admin/products/${productId}`, {
+                const response = await fetch(`/admin/products/edit/${productId}`, {
                     method: "PATCH",
                     body: formData,
                 });
-
-                if (!response.ok) {
-                    throw new Error(`Failed to update product: ${response.statusText}`);
-                }
 
                 const data = await response.json();
                 if (data.success) {
@@ -662,10 +627,46 @@
                     Swal.fire("Error", data.message || "Update failed", "error");
                 }
             } catch (error) {
-                console.error("Error updating product:", error);
                 Swal.fire("Error", "Something went wrong while updating the product", "error");
             }
         });
+
+        // Handle image selection and preview for edit
+        document.getElementById('editProductImages').addEventListener('change', function (e) {
+            const files = e.target.files;
+
+            if (files.length > 4) {
+                Swal.fire("Error", "Maximum 4 images allowed", "error");
+                this.value = '';
+                return;
+            }
+
+            const previewContainer = document.getElementById('editCroppedImagesPreviews');
+            previewContainer.innerHTML = '';
+
+            Array.from(files).forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const previewDiv = document.createElement('div');
+                    previewDiv.className = 'preview-item position-relative m-1';
+                    previewDiv.innerHTML = `
+                <img src="${e.target.result}" alt="Preview image ${index + 1}" 
+                     style="width: 80px; height: 80px; object-fit: cover;">
+                <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                        style="top: 0; right: 0; padding: 0 5px;" 
+                        onclick="removeEditImage(${index})">×</button>
+            `;
+                    previewContainer.appendChild(previewDiv);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        // Function to remove a cropped edit image preview
+        function removeEditImage(index) {
+            const previewContainer = document.getElementById('editCroppedImagesPreviews');
+            previewContainer.children[index].remove();
+        }
     </script>
 
     <%- include('partials/admin/footer') %>

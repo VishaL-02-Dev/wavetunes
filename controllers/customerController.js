@@ -4,9 +4,6 @@ const getCustomers = async (req, res) => {
     try {
         const itemsPerPage = 5;
         const currentPage = parseInt(req.query.page) || 1;
-
-        // let page=parseInt(req.query.page)||1;
-        // let limit=5;
         let skip = (currentPage - 1) * itemsPerPage;
 
         const totalCount = await User.countDocuments({ isAdmin: false });
