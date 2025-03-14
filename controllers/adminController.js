@@ -1,6 +1,9 @@
 const User=require('../model/userModel');
 const bcrypt=require('bcrypt');
+const jwt=require('jsonwebtoken');
 
+
+// Load login page
 const loadLogin= async(req,res)=>{
     try {
         console.log("login rendered")
@@ -10,7 +13,7 @@ const loadLogin= async(req,res)=>{
     }
 }
 
-
+// Login 
 const login=async(req,res)=>{
     const {email, password} = req.body;
     const user= await User.findOne({email});
@@ -30,16 +33,31 @@ const login=async(req,res)=>{
                 message:"Invalid mail or password"
             })
         }
+       
+        const token = jwt.sign(
+            { 
+                id: user._id, 
+                email: user.email, 
+                fname: user.fname, 
+                lname: user.lname, 
+                role: 'admin' 
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '1d' }
+        );
         
-        req.session.admin={
-            id:user._id,
-            fname:user.fname,
-            lname:user.lname,
-            email:user.email
-        };
-
+        console.log('Token generated',token);
+        
+        // Set the JWT as a cookie
+        res.cookie('jwt', token, {
+            httpOnly: true,
+            secure: false, // Set to true in production with HTTPS
+            maxAge: 24 * 60 * 60 * 1000 // 1 day
+        });
+       
         return res.status(200).json({
             success:true,
+            token,
             message:"Login successful",
             redirectUrl:'/admin/dashboard'
         });
@@ -64,9 +82,13 @@ const login=async(req,res)=>{
 //     }
 // }
 
+// Dashboard
 const getDashboard = async (req, res) => {
     try {
-        res.render('admin/dashboard',{ currentPage: 'dashboard'})
+        res.render('admin/dashboard',{ 
+            currentPage: 'dashboard',
+            admin:req.user
+        })
         
         // , {
         //     currentPage: 'dashboard',
@@ -84,7 +106,10 @@ const getDashboard = async (req, res) => {
 
     } catch (error) {
         console.error('Dashboard Error:', error);
-        res.render('admin/dashboard',{currentPage: 'dashboard'})
+        res.render('admin/dashboard',{
+            currentPage: 'dashboard',
+            admin:req.user
+        })
         // , {
         //     currentPage: 'dashboard',
         //     stats: {
@@ -124,34 +149,53 @@ const getDashboard = async (req, res) => {
 
 
 
-const logout= async(req,res)=>{
-    try {
-        delete req.session.admin;
+// const logout= async(req,res)=>{
+//     try {
+//         delete req.session.admin;
         
-        req.session.save((err) => {
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    message: "Error during logout",
-                });
-            }
+//         req.session.save((err) => {
+//             if (err) {
+//                 return res.status(500).json({
+//                     success: false,
+//                     message: "Error during logout",
+//                 });
+//             }
             
-            return res.status(200).json({
-                success: true,
-                message: "Logout successful",
-                redirectUrl: '/admin/login'
-            });
-        });
+//             return res.status(200).json({
+//                 success: true,
+//                 message: "Logout successful",
+//                 redirectUrl: '/admin/login'
+//             });
+//         });
        
+//     } catch (error) {
+//         console.log("Login error",error);
+//         res.status(500).json({
+//             success:false,
+//             message:"Internal Server error"
+//         });
+//     }
+// }
+
+// Logout 
+const logout = async (req, res) => {
+    try {
+        // Clear the JWT cookie
+        res.clearCookie('jwt');
+        
+        return res.status(200).json({
+            success: true,
+            message: "Logout successful",
+            redirectUrl: '/admin/login'
+        });
     } catch (error) {
-        console.log("Login error",error);
+        console.log("Logout error", error);
         res.status(500).json({
-            success:false,
-            message:"Internal Server error"
+            success: false,
+            message: "Internal Server error"
         });
     }
-}
-
+};
 
 
 module.exports={

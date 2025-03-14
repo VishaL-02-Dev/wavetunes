@@ -4,12 +4,17 @@ const Category = require('../model/categoryModel');
 const loadCategory = async (req, res) => {
     try {
 
-        const { id }= req.query;
+        const { id,search }= req.query;
 
         let editCategory=null;
 
         if(id){
            editCategory= await Category.findById(id);
+        }
+
+        let filter = {};
+        if (search) {
+            filter = { name: { $regex: search, $options: "i" } }; // Case-insensitive search
         }
 
         const itemsPerPage=5;
@@ -29,7 +34,8 @@ const loadCategory = async (req, res) => {
             totalPages:Math.ceil(totalCategories/itemsPerPage),
             itemsPerPage,
             totalCategories,
-            editCategory:editCategory 
+            editCategory:editCategory,
+            search
         });
     } catch (error) {
         console.error('Internal error', error);

@@ -60,43 +60,19 @@
           </div>
         </div>
         <header class="card-header text-center mb-20">
-          <!-- <form action="/admin/category/" method="get" class="d-inline">
-
-            <div class="input-group rounded-pill border border-1 border-grey"
-              style="width: 250px; margin: 10px auto; background: var(--bg-sidebar);">
-              <input type="text" class="form-control border-0 rounded-pill text-white" placeholder="Search"
-                name="search"
-                style="background: transparent;  padding: 5px 10px; height: 40px;  font-size: 14px; box-shadow: none;" />
-              <button class="btn text-white" type="submit"
-                style="border-radius: 15px; padding: 5px 10px; font-size: 14px;">
-                Search
-              </button>
-            </div> -->
           <div class="search-container mb-4">
-            <form action="" method="GET" class="d-flex">
-              <!-- Preserve sort parameter -->
-              <% if (sort) { %>
-                <input type="hidden" name="sort" value="<%= sort %>">
-                <% } %>
-
-                  <input type="text" name="search" class="form-control" placeholder="Search in <%= categoryName %>..."
-                    value="<%= search || '' %>" aria-label="Search">
+            <form action="" method="GET" class="d-flex mt-4">
+              <!-- Search category -->
+                  <input type="text" name="search" class="form-control" placeholder="Search...."
+                    value="<%= search || '' %>">
                   <button class="btn btn-primary ms-2" type="submit">
-                    <i class="bi bi-search"></i> Search
+                    <i class="bi bi-search"></i> 
                   </button>
                   <% if (search) { %>
                     <a href="?<%= sort ? 'sort=' + sort : '' %>" class="btn btn-outline-secondary ms-2">Clear</a>
                     <% } %>
             </form>
           </div>
-
-
-
-          <!-- <div class="input-group input-group-sm border border-1 border-grey rounded-pill" style="width: 500px; margin-left: 230px">
-          <input type="text" class="form-control border-0 rounded-pill mt-3" placeholder="Search categories" name="search"/>
-          <button class="btn" type="submit">Search</button>
-        </div> -->
-          <!-- </form> -->
         </header>
         <div class="card">
           <div class="card-body">

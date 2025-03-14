@@ -2,6 +2,9 @@ const bcrypt=require('bcrypt');
 const User=require('../model/userModel');
 const nodemailer=require('nodemailer');
 const env=require('dotenv').config(); 
+const jwt = require("jsonwebtoken");
+require('dotenv').config();
+
  
 //Password hashing
 const sPass= async(password)=>{
@@ -33,8 +36,6 @@ const addUser=async(req,res)=>{
             console.log("No data received!");
             return res.status(400).json({ error: "No data received" });
         }
-
-      
 
         const { fname, lname, email, phone, password } = req.body;
 
@@ -155,22 +156,26 @@ const verifyOtp = async (req, res) => {
         const savedUser= await newUser.save();
         console.log("User created");
 
-        req.session.user = {
-            _id: savedUser._id.toString(),
-            fname: savedUser.fname,
-            lname:savedUser.lname,
-            email: savedUser.email
-        };
+        const token = jwt.sign(
+            { id: savedUser._id, email: savedUser.email, role: "user" },
+            process.env.JWT_SECRET,
+            { expiresIn: "1h" }
+        );
+
+        // req.session.user = {
+        //     _id: savedUser._id.toString(),
+        //     fname: savedUser.fname,
+        //     lname:savedUser.lname,
+        //     email: savedUser.email
+        // };
 
         // Clear session
         delete req.session.userOtp;
-        // req.session.userOtp = null;
-        // req.session.userData = null;
-
+        delete req.session.userData;
         
-        req.session.save();
+        // req.session.save();
 
-        return res.status(200).json({ success: true, message:"User registration successful" , redirectUrl: "/" });
+        return res.status(200).json({ success: true, message:"User registration successful" ,token, redirectUrl: "/" });
 
     } catch (error) {
         console.error("Error verifying OTP:", error);
@@ -317,15 +322,28 @@ const login = async (req, res) => {
             });
         }
 
-        req.session.user = {
-            id: user._id,
-            fname: user.fname,
-            lname: user.lname,
-            email: user.email
-        };
+        const token = jwt.sign(
+            { 
+                id:user._id, 
+                email:user.email, 
+                fname:user.fname, 
+                lname:user.lname,
+                role:'user'
+            },
+            process.env.JWT_SECRET,
+            {expiresIn:'3d'}
+        );
+        res.cookie('jwt',token, {
+            httpOnly:true, 
+            secure:false,
+            maxAge:3 * 24* 60 * 60 * 1000
+        });
+        // res.cookie('user',user)
 
         return res.status(200).json({
             success: true,
+            token,
+            user,
             message: "Login successful",
             redirectUrl:'/'
         });
@@ -339,6 +357,16 @@ const login = async (req, res) => {
         });
     }
 };
+
+
+//Forgot Password
+const forgotPassword=async(req,res)=>{
+    try {
+        
+    } catch (error) {
+        
+    }
+}
 
 
 //Home page
@@ -355,61 +383,13 @@ const loadHome= async(req,res)=>{
 //Logout
 const logout = async (req, res) => {
     try {
-
-        if (req.isAuthenticated()) {
-            req.logout(function(err) {
-                if (err) {
-                    console.log("Passport logout error", err);
-                    return res.status(500).json({
-                        success: false,
-                        message: 'Error during logout',
-                    });
-                }
-                
-            
-                req.session.destroy((err) => {
-                    if (err) {
-                        console.log("Session destroy error", err);
-                        return res.status(500).json({
-                            success: false,
-                            message: 'Error clearing session',
-                        });
-                    }
-                    
-                    // Successfully logged out
-                    return res.status(200).json({
-                        success: true,
-                        message: "Logout successful",
-                        redirectUrl: '/'
-                    });
-                });
-            });
-        } else if (req.session.user) {
-            
-            delete req.session.user;
-            
-            req.session.save((err) => {
-                if (err) {
-                    return res.status(500).json({
-                        success: false,
-                        message: 'Error during logout',
-                    });
-                }
-                
-                return res.status(200).json({
-                    success: true,
-                    message: "Logout successful",
-                    redirectUrl: '/'
-                });
-            });
-        } else {
-         
-            return res.status(200).json({
-                success: true,
-                message: "Already logged out",
-                redirectUrl: '/'
-            });
-        }
+        //Clear the JWT cookie
+        res.clearCookie('jwt');
+        return res.status(200).json({
+            success: true,
+            message: "Logout successful",
+            redirectUrl: '/'
+        });
     } catch (error) {
         console.log("Logout error", error);
         res.status(500).json({

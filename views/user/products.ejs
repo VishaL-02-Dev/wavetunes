@@ -6,7 +6,7 @@
             <select id="categoryFilter" class="w-full p-2 border border-gray-300 rounded">
                 <option value="">All Categories</option>
                 <% categories.forEach(category => { %>
-                    <option value="<%= category.name %>"><%= category.name %></option>
+                    <option value="<%= category.name %>" <%= category.name === locals.category ? 'selected' : '' %>><%= category.name %></option>
                 <% }); %>
             </select>
             

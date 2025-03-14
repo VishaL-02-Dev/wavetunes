@@ -52,7 +52,8 @@
                     let response= await fetch('/admin/login',{
                         method:'POST',
                         headers:{'Content-Type':'application/json'},
-                        body:JSON.stringify({email,password})
+                        body:JSON.stringify({email,password}),
+                        credentials: 'include'
                     });
 
                     let result=await response.json();

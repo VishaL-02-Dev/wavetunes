@@ -1,7 +1,7 @@
 const express=require('express');
 const router=express.Router();
 const userController=require('../controllers/userController');
-const { loginSession, checkSession }=require('../middleware/userAuth');
+const verifyToken =require('../middleware/auth');
 const productController=require('../controllers/productController');
 const passport = require('passport');
 
@@ -10,21 +10,25 @@ router.use(express.json());
 router.use(express.urlencoded({extended:true}));
 
 
-router.get('/login',loginSession,userController.loadLogin);
+router.get('/login',userController.loadLogin);
 router.post('/login',userController.login);
 router.get('/signup',userController.signup);
 router.post('/signup',userController.addUser);
 router.get('/logout',userController.logout);
 router.get('/auth/google',passport.authenticate('google',{scope:['profile','email']}))
 router.get('/auth/google/callback',passport.authenticate('google',{failureRedirect:'/signup'}),(req,res)=>{
-    req.session.user=req.user;
-    req.session.save((err)=>{
-        if(err){
-            console.error("Session save error: ",err);
-        }
-    })
-    res.redirect('/')
+   const token = jwt.sign(
+    { userId:req.user._id, email:req.user.email},
+    process.env.JWT_SECRET,
+    {expiresIn:'7d'}
+   );
+    res.cookie('authToken',token,{httpOnly: true, secure:false});
+    res.redirect('/');
 });
+
+// router.get('/forgotPassword')
+
+
 
 //For OTP verification page
 router.get('/otpverify', userController.loadOtp);  

@@ -262,22 +262,12 @@ const getProduct = async (req, res) => {
         
         const products = await Product.find().populate("category");
         
-        if (!product) {
+        if (!products) {
             return res.status(404).json({
                 success: false,
                 message: "Product not found"
             });
         }
-        
-        // Convert image buffer to base64 for frontend display if needed
-        // const productWithImages = {
-        //     ...product.toObject(),
-        //     images: product.images.map(img => ({
-        //         ...img,
-        //         data: img.data ? `data:${img.contentType};base64,${img.data.toString('base64')}` : null
-        //     }))
-        // };
-        
         res.status(200).json({
             success: true,
             products
@@ -464,7 +454,7 @@ const getCategoryProducts = async (req, res) => {
         const search = req.query.search || '';
         const sort = req.query.sort || 'newest';
 
-        // 🔹 Use the found category's ObjectId to query products
+        // Use the found category's ObjectId to query products
         const filter = { category: category._id };
 
         if (search) {
@@ -512,7 +502,6 @@ const getCategoryProducts = async (req, res) => {
             totalPages,
             search,
             sort,
-            user: req.session.user || null
         });
     } catch (error) {
         console.error(`Error fetching ${categoryMap[categorySlug]} products:`, error);
