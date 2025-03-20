@@ -273,7 +273,7 @@ const loadOtp= async(req,res)=>{
             req.session.save(resolve);
         });
 
-        res.render('user/otpverify');
+        res.render('user/otpverify',{ context: "registration" });
     } catch (error) {
         console.log("Error loading OTP page",error);
         res.redirect('/user/signup')
@@ -359,16 +359,6 @@ const login = async (req, res) => {
 };
 
 
-//Forgot Password
-const forgotPassword=async(req,res)=>{
-    try {
-        
-    } catch (error) {
-        
-    }
-}
-
-
 //Home page
 const loadHome= async(req,res)=>{
     try {
@@ -379,6 +369,295 @@ const loadHome= async(req,res)=>{
     }
 }
 
+
+//Load Forgot Password Page
+const loadForgotPassword = async(req,res)=>{
+    try {
+        res.render('user/forgotPassword');
+    } catch (error) {
+        console.log('Error loading the forgot password page',error);
+    }
+}
+
+
+//Forgot Password
+const forgotPassword=async(req,res)=>{
+    try {
+        const { email }=req.body;
+        
+        const user= await User.findOne({email});
+
+        if(!user){
+            return res.status(400).json({
+                success: false,
+                field: "email",  
+                message: "Email not found"
+            });
+        }
+
+        const otp= generateOtp();
+        const emailSent= await sendPasswordResetEmail(email,otp);
+
+        if(!emailSent){
+            return res.status(400).json({
+                success:false,
+                field:'general',
+                message:'Failed to send OTP. Please try again'
+            });
+        }
+
+        req.session.resetOtp=otp;
+        req.session.resetEmail=email;
+
+        console.log('Password reset OTP sent: ',otp);
+        return res.status(200).json({
+            success:true,
+            message:"OTP sent successfully",
+            
+        });
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            field: "general",
+            message: "Internal server error"
+        });
+    }
+}
+
+
+//Send OTP for password Reset
+const sendPasswordResetEmail= async(email,otp)=>{
+    try {
+        const transporter= nodemailer.createTransport({
+            service:'gmail',
+            auth:{
+                user:process.env.NODEMAILER_EMAIL,
+                pass:process.env.NODEMAILER_PASSWORD,
+            },
+        });
+
+        const info= await transporter.sendMail({
+            fron: process.env.NODEMAILER_EMAIL,
+            to: email,
+            subject:'Password Reset Request',
+            text:`Your OTP for password reset is ${otp}. This otp will expire in 10 minutes`
+        });
+        
+        return info.accepted.length>0;
+
+    } catch (error) {
+        consol.error('Error sending password reset emial: ',error);
+        return false;
+    }
+}
+
+const loadVerifyResetOtp= async(req,res)=>{
+    try {
+        if(!req.session.resetOtp || !req.session.resetEmail){
+            return res.redirect('/user/forgotPassword');
+        }
+
+        await new Promise((resolve)=>{
+            req.session.save(resolve);
+        });
+
+        res.render('user/otpVerify',{ context: "passwordReset" });
+
+    } catch (error) {
+        console.log('Error loading reset OTP page',error);
+        res.redirect('/user/forgoPassword');
+    }
+};
+
+
+const verifyResetOtp= async(req,res)=>{
+    try {
+        const {otp} = req.body;
+
+        console.log("Recieved OTP: ",otp);
+        console.log('Stored Reset OTP: ',req.session.resetOtp);
+
+        if(!otp){
+            return res.status(400).json({
+                success:false,
+                message:"OTP is required"
+            });
+        }
+
+        if(!req.session.resetOtp){
+            return res.status(400).json({
+                success:false,
+                message:'Expired OTP'
+            });
+        }
+
+        if(req.session.resetOtp !=otp){
+            return res.status(400).json({
+                success:false,
+                message:'Invalid OTP'
+            });   
+        }
+
+        if(!req.session.resetEmail){
+            return res.status(400).json({
+                success:false,
+                message:'User data not found in session'
+            });
+        }
+
+        const resetToken=jwt.sign(
+            {email:req.session.resetEmail},
+            process.env.JWT_SECRET,
+            {expiresIn:'10m'}
+        );
+
+        delete req.session.resetOtp;
+
+        return res.status(200).json({
+            success:true,
+            message:'OTP verified successfully',
+            token:resetToken,
+            // redirectUrl:`/user/resetPassword`,
+            redirectUrl: `/user/resetPassword?token=${resetToken}`
+        });
+
+
+    } catch (error) {
+        console.error('Error verifying reset OTP:',error );
+        return res.status(500).json({
+            success:false,
+            message:'Server error, try again'
+        });
+    }
+}
+
+
+const resendResetOtp= async(req,res)=>{
+    try {
+        if(!req.session.resetEmail){
+            return res.status(400).json({
+                success:false,
+                message:'User data not found'
+            });
+        }
+
+        const newOtp=generateOtp();
+        req.session.resetOtp= newOtp();
+
+        await new Promise((resolve, reject)=>{
+            req.session.save((err)=>{
+                if(err){
+                    console.log('Session save error:', err);
+                    reject(err);
+                }else{
+                    resolve();
+                }
+            });
+        });
+         
+        const emailSent= await sendPasswordResetEmail(req.session.resetEmail, newOtp);
+
+        if(emailSent){
+            console.log('New reset OTP sent:',newOtp);
+            return res.status(200).json({
+                success:true,
+                message:'OTP resent successfully'
+            });
+        }
+
+        return res.status(500).json({
+            success:false,
+            message:'OTP resent succesfully'
+        });
+
+    } catch (error) {
+        console.error('Error resending reset OTP. Tr again'.error);
+        res.status(500).json({
+            success:false,
+            message:'Internal server error. Try again'
+        });
+    }
+}
+
+//Load the reset password page
+const loadResetPassword = async(req,res)=>{
+    try {
+        const{token}=req.query;
+        res.render('user/resetPassword',{token});
+    } catch (error) {
+        console.log('Error loading the reset password page', error);
+        res.redirect('/user/forgotPassword');
+    }
+};
+
+//Reset password
+const resetPassword= async(req,res)=>{
+    try {
+        const {token,password}= req.body;
+
+        if(!token || !password){
+            return res.status(400).json({
+                success:false,
+                field:'general',
+                message:'Missing required fields'
+            });
+        }
+
+        if(password.length<6){
+            return res.status(400).json({
+                success:false,
+                field:'password',
+                message:'Password must be at least 6 characters'
+            });
+        }
+
+        let decodedToken;
+        try {
+            decodedToken=jwt.verify(token,process.env.JWT_SECRET);
+        } catch (error) {
+            return res.status(400).json({
+                succss:false,
+                field:'general',
+                message:'Invalid or expired reset OTP'
+            });
+        }
+
+        const email=decodedToken.email;
+
+        const user= await User.findOne({email});
+
+        if(!user){
+            return res.status(400).json({
+                success:false,
+                field:'general',
+                message:'User not found'
+            });
+        }
+        
+        const hashedPassword= await sPass(password);
+
+        user.password=hashedPassword;
+        await user.save();
+
+        delete req.session.resetEmail;
+        
+        return res.status(200).json({
+            success:true,
+            message:'Password reset successful',
+            redirectUrl:'/user/login'
+        });
+
+    } catch (error) {
+        console.log("Reset password error:", error);
+        return res.status(500).json({
+            success: false,
+            field: "general",
+            message: "Internal server error"
+        });
+    }
+}
 
 //Logout
 const logout = async (req, res) => {
@@ -408,6 +687,13 @@ module.exports={
     addUser,
     loadOtp,
     verifyOtp,
-    resendOtp
+    resendOtp,
+    loadForgotPassword,
+    forgotPassword,
+    loadVerifyResetOtp,
+    verifyResetOtp,
+    resendResetOtp,
+    loadResetPassword,
+    resetPassword
 }
 

@@ -9,8 +9,18 @@ const db= require('./config/db');
 const passport = require('./config/passport');
 const nocache=require('nocache');
 const Product=require('./model/productModel');
+const Category=require('./model/categoryModel');
 db();
 const cookieParser = require('cookie-parser');
+
+const session = require('express-session');
+
+app.use(session({
+  secret: 'your-secret-key',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: process.env.NODE_ENV === 'production' }
+}));
 
 app.use(express.json({limit:'50mb'}));
 app.use(nocache());
@@ -59,7 +69,13 @@ app.set('views',[path.join(__dirname,'views'),path.join(__dirname,'views/admin')
 
 app.get('/', async (req, res) => {
     try {
-      let products = await Product.find({ stock: {$gt: 1} }).sort({ createdAt: -1 }).limit(8);
+
+      const listedCategories = await Category.find({ status: "Listed" }).select('_id');
+
+        // Extract the category IDs
+        const listedCategoryIds = listedCategories.map(category => category._id);
+
+      let products = await Product.find({ stock: {$gt: 1}, category:{$in: listedCategoryIds } }).sort({ createdAt: -1 }).limit(8);
       // console.log('products',products);
       console.log('user passed',req.user);
 

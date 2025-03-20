@@ -19,11 +19,10 @@ const loadCategory = async (req, res) => {
 
         const itemsPerPage=5;
         const currentPage=parseInt(req.query.page) || 1;
-        
         let skip=(currentPage - 1) * itemsPerPage;
 
-        const totalCategories = await Category.countDocuments();
-        const categories = await Category.find()
+        const totalCategories = await Category.countDocuments(filter);
+        const categories = await Category.find(filter)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(itemsPerPage);
@@ -35,7 +34,8 @@ const loadCategory = async (req, res) => {
             itemsPerPage,
             totalCategories,
             editCategory:editCategory,
-            search
+            search,
+            sort:{createdAt:-1}
         });
     } catch (error) {
         console.error('Internal error', error);

@@ -1,178 +1,195 @@
-    <%- include('partials/admin/header') %>
-</head>
+<%- include('partials/admin/header') %>
+    </head>
 
-<body>
-    <div class="admin-layout">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="px-3 py-2">
-                <h4>Admin Panel</h4>
+    <body>
+        <div class="admin-layout">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="px-3 py-2">
+                    <h4>Admin Panel</h4>
+                </div>
+                <ul class="sidebar-menu">
+                    <li>
+                        <a href="/admin/dashboard" class="<%= currentPage === 'dashboard' ? 'active' : '' %>">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin/customers" class="<%= currentPage === 'users' ? 'active' : '' %>">
+                            <i class="bi bi-people"></i> Users
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin/products" class="<%= currentPage === 'products' ? 'active' : '' %>">
+                            <i class="bi bi-box"></i> Products
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin/orders" class="<%= currentPage === 'orders' ? 'active' : '' %>">
+                            <i class="bi bi-cart"></i> Orders
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin/categories" class="<%= currentPage === 'categories' ? 'active' : '' %>">
+                            <i class="bi bi-tags"></i> Categories
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <ul class="sidebar-menu">
-                <li>
-                    <a href="/admin/dashboard" class="<%= currentPage === 'dashboard' ? 'active' : '' %>">
-                        <i class="bi bi-speedometer2"></i> Dashboard
-                    </a>
-                </li>
-                <li>
-                    <a href="/admin/customers" class="<%= currentPage === 'users' ? 'active' : '' %>">
-                        <i class="bi bi-people"></i> Users
-                    </a>
-                </li>
-                <li>
-                    <a href="/admin/products" class="<%= currentPage === 'products' ? 'active' : '' %>">
-                        <i class="bi bi-box"></i> Products
-                    </a>
-                </li>
-                <li>
-                    <a href="/admin/orders" class="<%= currentPage === 'orders' ? 'active' : '' %>">
-                        <i class="bi bi-cart"></i> Orders
-                    </a>
-                </li>
-                <li>
-                    <a href="/admin/categories" class="<%= currentPage === 'categories' ? 'active' : '' %>">
-                        <i class="bi bi-tags"></i> Categories
-                    </a>
-                </li>
-            </ul>
-        </div>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Header -->
-            <header class="top-header">
-                <div class="header-left"></div>
-                <div class="header-center">
-                    <a href="#" class="brand-name">WaveTune</a>
-                </div>
-                <div class="header-right">
-                    <a id="logout-button" class="logout-btn" href="/admin/logout">Logout</a>
-                </div>
-            </header>
-
-            <!-- Content Area -->
-            <div class="content-wrapper">
-                <div class="container-fluid">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h2>Users List</h2>
-                        <div>
-                            <span class="text-white">Total Users: <%= totalCount %></span>
-                        </div>
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Header -->
+                <header class="top-header">
+                    <div class="header-left"></div>
+                    <div class="header-center">
+                        <a href="#" class="brand-name">WaveTune</a>
                     </div>
+                    <div class="header-right">
+                        <a id="logout-button" class="logout-btn" href="/admin/logout">Logout</a>
+                    </div>
+                </header>
 
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Sl. No</th>
-                                            <th>Name</th>
-                                            <th>Email</th>
-                                            <th>Phone</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% users.forEach((user, index)=> { %>
-                                            <tr>
-                                                <td>
-                                                    <%= ((currentPage || 1) - 1) * (itemsPerPage || 5) + index + 1 %>
-                                                </td>
-                                                <td>
-                                                    <%= user.fname %>
-                                                        <%= user.lname %>
-                                                </td>
-                                                <td>
-                                                    <%= user.email %>
-                                                </td>
-                                                <td>
-                                                    <%= user.phone %>
-                                                </td>
-                                                <td>
-                                                    <button
-                                                        onclick="toggleUserStatus('<%= user._id %>', '<%= user.status %>')"
-                                                        class="btn btn-<%= user.status === 'Blocked' ? 'success' : 'danger' %> btn-sm">
-                                                        <%= user.status==='Blocked' ? 'Unblock' : 'Block' %>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                            <% }) %>
-                                    </tbody>
-                                </table>
+                <!-- Content Area -->
+                <div class="content-wrapper">
+                    <div class="container-fluid">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2>Users List</h2>
+                            <div>
+                                <span class="text-white">Total Users: <%= totalCount %></span>
                             </div>
+                        </div>
+                        <div class="d-flex mb-4">
+                            <form action="/admin/customers" method="GET" class="d-flex me-2">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Search by name or email"
+                                        name="search" value="<%= search ? search : '' %>">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="bi bi-search "></i>
+                                    </button>
+                                    <% if (search) { %>
+                                        <a href="/admin/customers" class="btn btn-secondary ms-2">
+                                            <i class="bi bi-x-lg"></i> Clear
+                                        </a>
+                                        <% } %>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Sl. No</th>
+                                                <th>Name</th>
+                                                <th>Email</th>
+                                                <th>Phone</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% users.forEach((user, index)=> { %>
+                                                <tr>
+                                                    <td>
+                                                        <%= ((currentPage || 1) - 1) * (itemsPerPage || 5) + index + 1
+                                                            %>
+                                                    </td>
+                                                    <td>
+                                                        <%= user.fname %>
+                                                            <%= user.lname %>
+                                                    </td>
+                                                    <td>
+                                                        <%= user.email %>
+                                                    </td>
+                                                    <td>
+                                                        <%= user.phone %>
+                                                    </td>
+                                                    <td>
+                                                        <button
+                                                            onclick="toggleUserStatus('<%= user._id %>', '<%= user.status %>')"
+                                                            class="btn btn-<%= user.status === 'Blocked' ? 'success' : 'danger' %> btn-sm">
+                                                            <%= user.status==='Blocked' ? 'Unblock' : 'Block' %>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                <% }) %>
+                                        </tbody>
+                                    </table>
+                                </div>
 
-                            <% if (totalPages> 1) { %>
-                                <nav aria-label="Page navigation" class="mt-4">
-                                    <ul class="pagination justify-content-center">
-                                        <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
-                                            <a class="page-link" href="?page=<%= currentPage - 1 %>"
-                                                tabindex="-1">Previous</a>
-                                        </li>
-
-                                        <% for(let i=1; i <=totalPages; i++) { %>
-                                            <li class="page-item <%= currentPage === i ? 'active' : '' %>">
-                                                <a class="page-link" href="?page=<%= i %>">
-                                                    <%= i %>
-                                                </a>
+                                <% if (totalPages> 1) { %>
+                                    <nav aria-label="Page navigation" class="mt-4">
+                                        <ul class="pagination justify-content-center">
+                                            <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
+                                                <a class="page-link" href="?page=<%= currentPage - 1 %>"
+                                                    tabindex="-1">Previous</a>
                                             </li>
-                                            <% } %>
 
-                                                <li
-                                                    class="page-item <%= currentPage === totalPages ? 'disabled' : '' %>">
-                                                    <a class="page-link" href="?page=<%= currentPage + 1 %>">Next</a>
+                                            <% for(let i=1; i <=totalPages; i++) { %>
+                                                <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                                                    <a class="page-link" href="?page=<%= i %>">
+                                                        <%= i %>
+                                                    </a>
                                                 </li>
-                                    </ul>
-                                </nav>
-                                <% } %>
+                                                <% } %>
+
+                                                    <li
+                                                        class="page-item <%= currentPage === totalPages ? 'disabled' : '' %>">
+                                                        <a class="page-link"
+                                                            href="?page=<%= currentPage + 1 %>">Next</a>
+                                                    </li>
+                                        </ul>
+                                    </nav>
+                                    <% } %>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <script>
-        // User status toggle functionality
-        function toggleUserStatus(userId, currentStatus) {
-            console.log('Attempting to toggle user: ', userId);
-            Swal.fire({
-                title: "Are you sure?",
-                text: `Do you want to ${currentStatus === "Blocked" ? 'unblock' : 'block'} this user?`,
-                icon: "warning",
-                showCancelButton: true,
-                confirmButtonText: "Yes",
-                cancelButtonText: "No"
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch(`/admin/customers/${userId}`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            console.log('Response: ', data);
-                            if (data.success) {
-                                Swal.fire({
-                                    title: "Success!",
-                                    text: data.message,
-                                    icon: "success",
-                                    timer: 1500
-                                }).then(() => {
-                                    window.location.reload();
-                                });
-                            } else {
-                                Swal.fire("Error", data.message, "error");
+        <script>
+            // User status toggle functionality
+            function toggleUserStatus(userId, currentStatus) {
+                console.log('Attempting to toggle user: ', userId);
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: `Do you want to ${currentStatus === "Blocked" ? 'unblock' : 'block'} this user?`,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonText: "Yes",
+                    cancelButtonText: "No"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch(`/admin/customers/${userId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
                             }
                         })
-                        .catch(error => {
-                            console.error("Error:", error);
-                            Swal.fire("Error", "Something went wrong!", "error");
-                        });
-                }
-            });
-        }
-    </script>
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log('Response: ', data);
+                                if (data.success) {
+                                    Swal.fire({
+                                        title: "Success!",
+                                        text: data.message,
+                                        icon: "success",
+                                        timer: 1500
+                                    }).then(() => {
+                                        window.location.reload();
+                                    });
+                                } else {
+                                    Swal.fire("Error", data.message, "error");
+                                }
+                            })
+                            .catch(error => {
+                                console.error("Error:", error);
+                                Swal.fire("Error", "Something went wrong!", "error");
+                            });
+                    }
+                });
+            }
+        </script>
 <%- include('partials/admin/footer') %>

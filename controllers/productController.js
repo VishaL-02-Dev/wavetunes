@@ -51,7 +51,9 @@ const adminProduct = async (req, res) => {
 //Create Product
 const createProduct = async (req, res) => {
     try {
-        const { name, brand, description, specifications, price, category, stock, images } = req.body;
+        const { name, brand, description, specifications, price, category, stock } = req.body;
+
+        const imageUrls=req.body.imageUrls || [];
 
         // Basic field validation
         if (!name || !description || !price || !category || stock == null) {
@@ -71,8 +73,8 @@ const createProduct = async (req, res) => {
 
         // Handle images from frontend (array of Cloudinary URLs)
         let productImages = [];
-        if (images) {
-            const imageArray = Array.isArray(images) ? images : [images]; // Handle single or multiple images
+        if (imageUrls && imageUrls.length>0) {
+            const imageArray = Array.isArray(imageUrls) ? imageUrls : [imageUrls]; // Handle single or multiple images
             if (imageArray.length > 4) {
                 return res.status(400).json({
                     success: false,
@@ -137,7 +139,10 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, brand, description, specifications, price, category, stock, images, removeImages } = req.body;
+        const { name, brand, description, specifications, price, category, stock } = req.body;
+
+        const imageUrls=req.body.imageUrls || [];
+        const removeImages=req.body.removeImages;
 
         const existingProduct = await Product.findById(id);
         if (!existingProduct) {
@@ -165,8 +170,8 @@ const updateProduct = async (req, res) => {
         }
 
         // Handle new images (Cloudinary URLs from frontend)
-        if (images) {
-            const newImages = Array.isArray(images) ? images : [images];
+        if (imageUrls && imageUrls.length>0) {
+            const newImages = Array.isArray(imageUrls) ? imageUrls : [imageUrls];
             if (updatedImages.length + newImages.length > 4) {
                 return res.status(400).json({
                     success: false,
@@ -233,13 +238,25 @@ const deleteProduct = async (req, res) => {
             });
         }
 
-        // Delete images from Cloudinary
-        for (const img of product.images) {
-            await cloudinary.uploader.destroy(img.public_id);
-        }
+        
+        // for (const img of product.images) {
+        //     await cloudinary.uploader.destroy(img.public_id);
+        // }
 
         // Delete the product from the database
         await Product.findByIdAndDelete(id);
+
+        // Delete images from Cloudinary
+        try {
+            for (const img of product.images) {
+                if (img && img.public_id) {
+                    await cloudinary.uploader.destroy(img?.public_id);
+                }
+            }
+        } catch (cloudinaryError) {
+            console.error('Cloudinary error:', cloudinaryError);
+        }
+
 
         res.status(200).json({ 
             success: true, 
@@ -443,7 +460,7 @@ const getCategoryProducts = async (req, res) => {
 
     try {
         //  Find the corresponding category ObjectId from the database
-        const category = await Category.findOne({ name: categoryMap[categorySlug] });
+        const category = await Category.findOne({ name: categoryMap[categorySlug],status:'Listed'});
 
         if (!category) {
             return res.status(404).send("Category not found in the database");
@@ -492,7 +509,7 @@ const getCategoryProducts = async (req, res) => {
             //     };
             // });
 
-            console.log('products passed',products);
+            // console.log('products passed',products);
 
         res.render('user/category', {
             products,

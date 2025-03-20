@@ -2,13 +2,29 @@ const User = require('../model/userModel');
 
 const getCustomers = async (req, res) => {
     try {
+
+        const { search, page}=req.query;
+
+        let filter={isAdmin: false };
+        if(search){
+            filter={
+                isAdmin: false,
+                $or:[
+                    {fname:{$regex: search, $options:'i'}},
+                    {lname:{$regex: search, $options:'i'}},
+                    {email:{$regex: search, $options:'i'}}
+
+                ]
+            };
+        }
+
         const itemsPerPage = 5;
-        const currentPage = parseInt(req.query.page) || 1;
+        const currentPage = parseInt(page) || 1;
         let skip = (currentPage - 1) * itemsPerPage;
 
-        const totalCount = await User.countDocuments({ isAdmin: false });
+        const totalCount = await User.countDocuments(filter);
 
-        const users = await User.find({ isAdmin: false })
+        const users = await User.find(filter)
             .sort({ createdAt: 1 })
             .skip(skip)
             .limit(itemsPerPage);
@@ -19,7 +35,8 @@ const getCustomers = async (req, res) => {
             totalPages: Math.ceil(totalCount / itemsPerPage),
             totalCount,
             itemsPerPage,
-            errorMessasge: null
+            errorMessasge: null,
+            search
         });
         // console.log('Customers page rendered');
     } catch (error) {
@@ -32,7 +49,8 @@ const getCustomers = async (req, res) => {
             totalPages: 1,
             totalCount: 1,
             itemsPerPage: 5,
-            errorMessage: "Failed to load customers"
+            errorMessage: "Failed to load customers",
+            search:''
         });
 
     }

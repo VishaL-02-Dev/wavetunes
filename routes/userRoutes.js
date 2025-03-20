@@ -26,8 +26,14 @@ router.get('/auth/google/callback',passport.authenticate('google',{failureRedire
     res.redirect('/');
 });
 
-// router.get('/forgotPassword')
-
+//Forgot Password routes
+router.get('/forgotPassword',userController.loadForgotPassword);
+router.post('/forgotPassword',userController.forgotPassword);
+router.get('/verifyResetOtp',userController.loadVerifyResetOtp);
+router.post('/verifyResetOtp',userController.verifyResetOtp);
+router.post('/verifyResetOtp',userController.resendResetOtp);
+router.get('/resetPassword',userController.loadResetPassword);
+router.post('/resetPassword',userController.resetPassword);
 
 
 //For OTP verification page

@@ -73,15 +73,6 @@ const login=async(req,res)=>{
 }
 
 
-// const loadDashboard= async(req,res)=>{
-//     try {
-//         console.log("Dashboard rendered");
-//         res.render('dashboard');
-//     } catch (error) {
-//         console.log(error);
-//     }
-// }
-
 // Dashboard
 const getDashboard = async (req, res) => {
     try {
@@ -148,34 +139,6 @@ const getDashboard = async (req, res) => {
 
 
 
-
-// const logout= async(req,res)=>{
-//     try {
-//         delete req.session.admin;
-        
-//         req.session.save((err) => {
-//             if (err) {
-//                 return res.status(500).json({
-//                     success: false,
-//                     message: "Error during logout",
-//                 });
-//             }
-            
-//             return res.status(200).json({
-//                 success: true,
-//                 message: "Logout successful",
-//                 redirectUrl: '/admin/login'
-//             });
-//         });
-       
-//     } catch (error) {
-//         console.log("Login error",error);
-//         res.status(500).json({
-//             success:false,
-//             message:"Internal Server error"
-//         });
-//     }
-// }
 
 // Logout 
 const logout = async (req, res) => {

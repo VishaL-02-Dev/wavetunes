@@ -72,7 +72,7 @@
                                 <a href="/admin/products" class="btn btn-outline-secondary ms-2">Clear</a>
                                 <% } %>
                         </form>
-                </div>
+                    </div>
                 </div>
                 <div class="content-wrapper">
                     <div class="container-fluid">
@@ -406,25 +406,182 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
     <script>
-        // Global variables for image handling
+        // Global variables
+        let cropper;
+        let currentFileIndex = 0;
+        let filesToProcess = [];
+        let croppedImages = [];
         let imagesToRemove = [];
 
+        // Initialize cropper when a file is selected
+        document.getElementById('productImages').addEventListener('change', function (e) {
+            filesToProcess = Array.from(e.target.files);
+
+            if (filesToProcess.length > 4) {
+                Swal.fire("Error", "Maximum 4 images allowed", "error");
+                this.value = '';
+                return;
+            }
+
+            // Start processing the first image
+            if (filesToProcess.length > 0) {
+                currentFileIndex = 0;
+                processNextImage();
+            }
+        });
+
+        // Process images one by one
+        function processNextImage() {
+            if (currentFileIndex < filesToProcess.length) {
+                const file = filesToProcess[currentFileIndex];
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    // Show the cropper container
+                    const cropperContainer = document.getElementById('imageCropperContainer');
+                    cropperContainer.style.display = 'block';
+
+                    // Set the image source
+                    const image = document.getElementById('imageToCrop');
+                    image.src = e.target.result;
+
+                    // Initialize cropper on the image
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+
+                    cropper = new Cropper(image, {
+                        aspectRatio: 1, // Square crop
+                        viewMode: 1,
+                        responsive: true,
+                        restore: false
+                    });
+                };
+
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Handle crop button click
+        document.getElementById('cropImageBtn').addEventListener('click', function () {
+            if (!cropper) return;
+
+            // Get the cropped canvas
+            const canvas = cropper.getCroppedCanvas({
+                width: 500,
+                height: 500
+            });
+
+            // Convert canvas to blob
+            canvas.toBlob(function (blob) {
+                // Create a new File object from the blob
+                const croppedFile = new File([blob], filesToProcess[currentFileIndex].name, {
+                    type: filesToProcess[currentFileIndex].type,
+                    lastModified: Date.now()
+                });
+
+                // Add to cropped images array
+                croppedImages.push(croppedFile);
+
+                // Add preview
+                addCroppedImagePreview(canvas.toDataURL());
+
+                // Move to next image or finish
+                currentFileIndex++;
+                if (currentFileIndex < filesToProcess.length) {
+                    processNextImage();
+                } else {
+                    // Hide cropper when all images are processed
+                    document.getElementById('imageCropperContainer').style.display = 'none';
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                    }
+                }
+            }, filesToProcess[currentFileIndex].type);
+        });
+
+        // Cancel crop button
+        document.getElementById('cancelCropBtn').addEventListener('click', function () {
+            // Skip current image and move to next
+            currentFileIndex++;
+            if (currentFileIndex < filesToProcess.length) {
+                processNextImage();
+            } else {
+                // Hide cropper when all images are processed
+                document.getElementById('imageCropperContainer').style.display = 'none';
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+            }
+        });
+
+        // Add cropped image preview
+        function addCroppedImagePreview(dataUrl) {
+            const previewContainer = document.getElementById('croppedImagesPreviews');
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'preview-item position-relative m-1';
+            previewDiv.innerHTML = `
+        <img src="${dataUrl}" alt="Preview image" 
+             style="width: 80px; height: 80px; object-fit: cover;">
+        <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                style="top: 0; right: 0; padding: 0 5px;" 
+                onclick="removeCroppedImage(${croppedImages.length - 1})">×</button>
+    `;
+            previewContainer.appendChild(previewDiv);
+        }
+
+        // Remove cropped image
+        function removeCroppedImage(index) {
+            croppedImages.splice(index, 1);
+            refreshCroppedImagePreviews();
+        }
+
+        // Refresh all cropped image previews
+        function refreshCroppedImagePreviews() {
+            const previewContainer = document.getElementById('croppedImagesPreviews');
+            previewContainer.innerHTML = '';
+
+            croppedImages.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const previewDiv = document.createElement('div');
+                    previewDiv.className = 'preview-item position-relative m-1';
+                    previewDiv.innerHTML = `
+                <img src="${e.target.result}" alt="Preview image" 
+                     style="width: 80px; height: 80px; object-fit: cover;">
+                <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                        style="top: 0; right: 0; padding: 0 5px;" 
+                        onclick="removeCroppedImage(${index})">×</button>
+            `;
+                    previewContainer.appendChild(previewDiv);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Modify the form submission to use cropped images
         document.getElementById("addProductForm").addEventListener("submit", async function (event) {
             event.preventDefault();
 
-            const formData = new FormData(this);
-            const files = document.getElementById("productImages").files;
-
-            if (files.length === 0) {
+            if (croppedImages.length === 0) {
                 Swal.fire("Error", "Please add at least one product image", "error");
                 return;
             }
 
             try {
-                // Upload images to Cloudinary
-                const uploadedImages = await uploadImagesToCloudinary(files);
-                uploadedImages.forEach((imageUrl, index) => {
-                    formData.append('images', imageUrl);
+                const formData = new FormData(this);
+
+                // Remove the original file input images
+                formData.delete('images');
+
+                // Upload cropped images to Cloudinary
+                const uploadedImages = await uploadImagesToCloudinary(croppedImages);
+
+                // Add uploaded image URLs to the form data
+                uploadedImages.forEach(imageUrl => {
+                    formData.append('imageUrls', imageUrl);
                 });
 
                 const response = await fetch("/admin/products", {
@@ -440,180 +597,210 @@
                     Swal.fire("Error", result.message, "error");
                 }
             } catch (error) {
+                console.error("Error submitting form:", error);
                 Swal.fire("Error", "Something went wrong!", "error");
             }
         });
 
         // Helper function to upload images to Cloudinary
-        // Add these logs to your uploadImagesToCloudinary function
         async function uploadImagesToCloudinary(files) {
             console.log("Starting upload to Cloudinary with files:", files);
-            
+
             const uploadPromises = Array.from(files).map(file => {
                 console.log("Preparing to upload file:", file.name);
                 const formData = new FormData();
                 formData.append("file", file);
                 formData.append("upload_preset", "my_upload_preset"); // Make sure this is correct
-                
+
                 return fetch(`https://api.cloudinary.com/v1_1/drdggqz62/image/upload`, {
                     method: "POST",
                     body: formData,
                 })
-                .then(response => {
-                    console.log("Cloudinary response status:", response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    console.log("Cloudinary response data:", data);
-                    return data.secure_url;
-                })
-                .catch(error => {
-                    console.error("Error uploading to Cloudinary:", error);
-                    throw error;
-                });
+                    .then(response => {
+                        console.log("Cloudinary response status:", response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log("Cloudinary response data:", data);
+                        return data.secure_url;
+                    })
+                    .catch(error => {
+                        console.error("Error uploading to Cloudinary:", error);
+                        throw error;
+                    });
             });
 
             return Promise.all(uploadPromises);
         }
 
-        // Handle image selection and preview (no cropping)
-        document.getElementById('productImages').addEventListener('change', function (e) {
-            const files = e.target.files;
+        // ---- EDIT PRODUCT SECTION ---- //
 
-            if (files.length > 4) {
+        // Similar implementation for the edit product form
+        let editCropper;
+        let editCurrentFileIndex = 0;
+        let editFilesToProcess = [];
+        let editCroppedImages = [];
+
+        document.getElementById('editProductImages').addEventListener('change', function (e) {
+            editFilesToProcess = Array.from(e.target.files);
+
+            if (editFilesToProcess.length > 4) {
                 Swal.fire("Error", "Maximum 4 images allowed", "error");
                 this.value = '';
                 return;
             }
 
-            const previewContainer = document.getElementById('croppedImagesPreviews');
+            // Start processing the first image
+            if (editFilesToProcess.length > 0) {
+                editCurrentFileIndex = 0;
+                processNextEditImage();
+            }
+        });
+
+        function processNextEditImage() {
+            if (editCurrentFileIndex < editFilesToProcess.length) {
+                const file = editFilesToProcess[editCurrentFileIndex];
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    // Show the cropper container
+                    const cropperContainer = document.getElementById('editImageCropperContainer');
+                    cropperContainer.style.display = 'block';
+
+                    // Set the image source
+                    const image = document.getElementById('editImageToCrop');
+                    image.src = e.target.result;
+
+                    // Initialize cropper on the image
+                    if (editCropper) {
+                        editCropper.destroy();
+                    }
+
+                    editCropper = new Cropper(image, {
+                        aspectRatio: 1, // Square crop
+                        viewMode: 1,
+                        responsive: true,
+                        restore: false
+                    });
+                };
+
+                reader.readAsDataURL(file);
+            }
+        }
+
+        document.getElementById('editCropImageBtn').addEventListener('click', function () {
+            if (!editCropper) return;
+
+            // Get the cropped canvas
+            const canvas = editCropper.getCroppedCanvas({
+                width: 500,
+                height: 500
+            });
+
+            // Convert canvas to blob
+            canvas.toBlob(function (blob) {
+                // Create a new File object from the blob
+                const croppedFile = new File([blob], editFilesToProcess[editCurrentFileIndex].name, {
+                    type: editFilesToProcess[editCurrentFileIndex].type,
+                    lastModified: Date.now()
+                });
+
+                // Add to cropped images array
+                editCroppedImages.push(croppedFile);
+
+                // Add preview
+                addEditCroppedImagePreview(canvas.toDataURL());
+
+                // Move to next image or finish
+                editCurrentFileIndex++;
+                if (editCurrentFileIndex < editFilesToProcess.length) {
+                    processNextEditImage();
+                } else {
+                    // Hide cropper when all images are processed
+                    document.getElementById('editImageCropperContainer').style.display = 'none';
+                    if (editCropper) {
+                        editCropper.destroy();
+                        editCropper = null;
+                    }
+                }
+            }, editFilesToProcess[editCurrentFileIndex].type);
+        });
+
+        document.getElementById('editCancelCropBtn').addEventListener('click', function () {
+            // Skip current image and move to next
+            editCurrentFileIndex++;
+            if (editCurrentFileIndex < editFilesToProcess.length) {
+                processNextEditImage();
+            } else {
+                // Hide cropper when all images are processed
+                document.getElementById('editImageCropperContainer').style.display = 'none';
+                if (editCropper) {
+                    editCropper.destroy();
+                    editCropper = null;
+                }
+            }
+        });
+
+        function addEditCroppedImagePreview(dataUrl) {
+            const previewContainer = document.getElementById('editCroppedImagesPreviews');
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'preview-item position-relative m-1';
+            previewDiv.innerHTML = `
+        <img src="${dataUrl}" alt="Preview image" 
+             style="width: 80px; height: 80px; object-fit: cover;">
+        <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                style="top: 0; right: 0; padding: 0 5px;" 
+                onclick="removeEditCroppedImage(${editCroppedImages.length - 1})">×</button>
+    `;
+            previewContainer.appendChild(previewDiv);
+        }
+
+        function removeEditCroppedImage(index) {
+            editCroppedImages.splice(index, 1);
+            refreshEditCroppedImagePreviews();
+        }
+
+        function refreshEditCroppedImagePreviews() {
+            const previewContainer = document.getElementById('editCroppedImagesPreviews');
             previewContainer.innerHTML = '';
 
-            Array.from(files).forEach((file, index) => {
+            editCroppedImages.forEach((file, index) => {
                 const reader = new FileReader();
                 reader.onload = function (e) {
                     const previewDiv = document.createElement('div');
                     previewDiv.className = 'preview-item position-relative m-1';
                     previewDiv.innerHTML = `
-                <img src="${e.target.result}" alt="Preview image ${index + 1}" 
+                <img src="${e.target.result}" alt="Preview image" 
                      style="width: 80px; height: 80px; object-fit: cover;">
                 <button type="button" class="btn btn-danger btn-sm position-absolute" 
                         style="top: 0; right: 0; padding: 0 5px;" 
-                        onclick="removeImage(${index})">×</button>
+                        onclick="removeEditCroppedImage(${index})">×</button>
             `;
                     previewContainer.appendChild(previewDiv);
                 };
                 reader.readAsDataURL(file);
             });
-        });
-
-        // Function to remove a preview image
-        function removeImage(index) {
-            const previewContainer = document.getElementById('croppedImagesPreviews');
-            previewContainer.children[index].remove();
         }
 
-        // Delete Product
-        async function deleteProduct(productId) {
-            Swal.fire({
-                title: "Are you sure?",
-                text: "This action cannot be undone!",
-                icon: "warning",
-                showCancelButton: true,
-                confirmButtonText: "Yes, delete!",
-                cancelButtonText: "Cancel"
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    try {
-                        const response = await fetch(`/admin/products/${productId}`, {
-                            method: "DELETE",
-                            headers: { 'Content-Type': 'application/json' },
-                        });
-
-                        const data = await response.json();
-                        if (data.success) {
-                            Swal.fire("Deleted!", "Product has been removed.", "success")
-                                .then(() => window.location.reload());
-                        } else {
-                            Swal.fire("Error", data.message, "error");
-                        }
-                    } catch (error) {
-                        Swal.fire("Error", "Something went wrong!", "error");
-                    }
-                }
-            });
-        }
-
-        // Edit Product (Fetch and display product data)
-        async function editProduct(productId) {
-            try {
-                const response = await fetch(`/admin/products/${productId}`);
-                if (!response.ok) throw new Error(`Failed to fetch product: ${response.statusText}`);
-
-                const data = await response.json();
-                const product = data.product;
-
-                document.getElementById("editProductId").value = product._id;
-                document.getElementById("editProductName").value = product.name;
-                document.getElementById("editProductBrand").value = product.brand;
-                document.getElementById("editProductDescription").value = product.description;
-                document.getElementById("editProductSpecification").value = typeof product.specifications === 'string' ? product.specifications : JSON.stringify(product.specifications);
-                document.getElementById("editProductPrice").value = product.price;
-                document.getElementById("editProductStock").value = product.stock;
-                document.getElementById("editProductCategory").value = product.category._id;
-
-                document.getElementById('editExistingImagesContainer').innerHTML = '';
-                product.images.forEach((img, index) => {
-                    const imgContainer = document.createElement('div');
-                    imgContainer.classList.add("position-relative", "m-2");
-
-                    const image = document.createElement("img");
-                    image.src = img; // Assuming img is a Cloudinary URL
-                    image.classList.add("existing-image", "img-thumbnail");
-                    image.style.maxWidth = "100px";
-                    imgContainer.appendChild(image);
-
-                    const removeButton = document.createElement("button");
-                    removeButton.classList.add("btn", "btn-danger", "btn-sm", "position-absolute", "top-0", "end-0");
-                    removeButton.innerText = "X";
-                    removeButton.onclick = function () {
-                        removeExistingImage(index);
-                    };
-
-                    imgContainer.appendChild(removeButton);
-                    document.getElementById("editExistingImagesContainer").appendChild(imgContainer);
-                });
-
-                function removeExistingImage(index) {
-                    imagesToRemove.push(index);
-                    document.getElementById("editExistingImagesContainer").children[index].style.display = "none";
-                }
-
-                const editModal = new bootstrap.Modal(document.getElementById('editProductModal'));
-                editModal.show();
-            } catch (error) {
-                Swal.fire("Error", "Failed to fetch product details", "error");
-            }
-        }
-
-        // Submit Edit Product Form
+        // Update the edit product form submission
         document.getElementById("editProductForm").addEventListener("submit", async function (event) {
             event.preventDefault();
 
             const productId = document.getElementById("editProductId").value;
             const formData = new FormData(this);
-            const files = document.getElementById("editProductImages").files;
-
-            if (files.length > 0) {
-                const uploadedImages = await uploadImagesToCloudinary(files);
-                uploadedImages.forEach(url => formData.append("images", url));
-            }
-
-            if (imagesToRemove.length > 0) {
-                formData.append("removeImages", JSON.stringify(imagesToRemove));
-            }
 
             try {
+                // Add cropped images if any
+                if (editCroppedImages.length > 0) {
+                    const uploadedImages = await uploadImagesToCloudinary(editCroppedImages);
+                    uploadedImages.forEach(url => formData.append("imageUrls", url));
+                }
+
+                // Add images to remove
+                if (imagesToRemove.length > 0) {
+                    formData.append("removeImages", JSON.stringify(imagesToRemove));
+                }
+
                 const response = await fetch(`/admin/products/edit/${productId}`, {
                     method: "PATCH",
                     body: formData,
@@ -627,46 +814,64 @@
                     Swal.fire("Error", data.message || "Update failed", "error");
                 }
             } catch (error) {
+                console.error("Error updating product:", error);
                 Swal.fire("Error", "Something went wrong while updating the product", "error");
             }
         });
 
-        // Handle image selection and preview for edit
-        document.getElementById('editProductImages').addEventListener('change', function (e) {
-            const files = e.target.files;
-
-            if (files.length > 4) {
-                Swal.fire("Error", "Maximum 4 images allowed", "error");
-                this.value = '';
-                return;
-            }
-
-            const previewContainer = document.getElementById('editCroppedImagesPreviews');
-            previewContainer.innerHTML = '';
-
-            Array.from(files).forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const previewDiv = document.createElement('div');
-                    previewDiv.className = 'preview-item position-relative m-1';
-                    previewDiv.innerHTML = `
-                <img src="${e.target.result}" alt="Preview image ${index + 1}" 
-                     style="width: 80px; height: 80px; object-fit: cover;">
-                <button type="button" class="btn btn-danger btn-sm position-absolute" 
-                        style="top: 0; right: 0; padding: 0 5px;" 
-                        onclick="removeEditImage(${index})">×</button>
-            `;
-                    previewContainer.appendChild(previewDiv);
-                };
-                reader.readAsDataURL(file);
-            });
-        });
-
-        // Function to remove a cropped edit image preview
-        function removeEditImage(index) {
-            const previewContainer = document.getElementById('editCroppedImagesPreviews');
-            previewContainer.children[index].remove();
+        // Function to remove an existing image
+        function removeExistingImage(index) {
+            imagesToRemove.push(index);
+            document.getElementById("editExistingImagesContainer").children[index].style.display = "none";
         }
+
+        // Function to delete a product
+function deleteProduct(productId) {
+    // Confirm deletion with the user
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Send delete request to the server
+            fetch(`/admin/products/${productId}`, {
+                method: 'DELETE',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire(
+                        'Deleted!',
+                        'Product has been deleted.',
+                        'success'
+                    ).then(() => {
+                        // Reload the page to update the product list
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire(
+                        'Error!',
+                        data.message || 'Failed to delete product.',
+                        'error'
+                    );
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire(
+                    'Error!',
+                    'Something went wrong.',
+                    'error'
+                );
+            });
+        }
+    });
+}
     </script>
 
     <%- include('partials/admin/footer') %>
