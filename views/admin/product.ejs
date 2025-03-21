@@ -826,52 +826,117 @@
         }
 
         // Function to delete a product
-function deleteProduct(productId) {
-    // Confirm deletion with the user
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Send delete request to the server
-            fetch(`/admin/products/${productId}`, {
-                method: 'DELETE',
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire(
-                        'Deleted!',
-                        'Product has been deleted.',
-                        'success'
-                    ).then(() => {
-                        // Reload the page to update the product list
-                        window.location.reload();
-                    });
-                } else {
-                    Swal.fire(
-                        'Error!',
-                        data.message || 'Failed to delete product.',
-                        'error'
-                    );
+        function deleteProduct(productId) {
+            // Confirm deletion with the user
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Send delete request to the server
+                    fetch(`/admin/products/${productId}`, {
+                        method: 'DELETE',
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire(
+                                    'Deleted!',
+                                    'Product has been deleted.',
+                                    'success'
+                                ).then(() => {
+                                    // Reload the page to update the product list
+                                    window.location.reload();
+                                });
+                            } else {
+                                Swal.fire(
+                                    'Error!',
+                                    data.message || 'Failed to delete product.',
+                                    'error'
+                                );
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire(
+                                'Error!',
+                                'Something went wrong.',
+                                'error'
+                            );
+                        });
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire(
-                    'Error!',
-                    'Something went wrong.',
-                    'error'
-                );
             });
         }
-    });
-}
+
+        // Function to edit a product
+        function editProduct(productId) {
+            // Reset the forms and previews
+            document.getElementById('editProductForm').reset();
+            document.getElementById('editExistingImagesContainer').innerHTML = '';
+            document.getElementById('editCroppedImagesPreviews').innerHTML = '';
+            editCroppedImages = [];
+            imagesToRemove = [];
+
+            // Set the form action
+            document.getElementById('editProductForm').action = `/admin/products/edit/${productId}`;
+            document.getElementById('editProductId').value = productId;
+
+            // Fetch product data
+            fetch(`/admin/products/${productId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const product = data.product;
+
+                        // Populate form fields
+                        document.getElementById('editProductName').value = product.name;
+                        document.getElementById('editProductBrand').value = product.brand;
+                        document.getElementById('editProductDescription').value = product.description;
+                        document.getElementById('editProductSpecification').value = product.specifications;
+                        document.getElementById('editProductPrice').value = product.price;
+                        document.getElementById('editProductStock').value = product.stock;
+
+                        // Set category
+                        if (product.category) {
+                            document.getElementById('editProductCategory').value = product.category._id;
+                        }
+
+                        // Display existing images
+                        const imagesContainer = document.getElementById('editExistingImagesContainer');
+                        imagesContainer.innerHTML = '';
+
+                        if (product.images && product.images.length > 0) {
+                            product.images.forEach((image, index) => {
+                                const imageDiv = document.createElement('div');
+                                imageDiv.className = 'position-relative m-2';
+                                imageDiv.innerHTML = `
+                            <img src="${image.url}" alt="Product image" 
+                                style="width: 100px; height: 100px; object-fit: cover;">
+                            <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                                    style="top: 0; right: 0; padding: 0 5px;" 
+                                    onclick="removeExistingImage(${index})">×</button>
+                        `;
+                                imagesContainer.appendChild(imageDiv);
+                            });
+                        }
+
+                        // Show the modal
+                        const editModal = new bootstrap.Modal(document.getElementById('editProductModal'));
+                        editModal.show();
+                    } else {
+                        Swal.fire('Error', data.message || 'Failed to load product data', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching product data:', error);
+                    Swal.fire('Error', 'Something went wrong while loading product data', 'error');
+                });
+        }
     </script>
 
     <%- include('partials/admin/footer') %>

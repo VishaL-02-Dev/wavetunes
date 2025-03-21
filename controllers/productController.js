@@ -48,7 +48,7 @@ const adminProduct = async (req, res) => {
     }
 };
 
-//Create Product
+//Create Product admin side
 const createProduct = async (req, res) => {
     try {
         const { name, brand, description, specifications, price, category, stock } = req.body;
@@ -135,7 +135,7 @@ const createProduct = async (req, res) => {
     }
 };
 
-// Update Product
+// Update Product admin side
 const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
@@ -225,7 +225,7 @@ const updateProduct = async (req, res) => {
 };
 
 
-// Delete Product
+// Delete Product admin side
 const deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
@@ -277,9 +277,9 @@ const getProduct = async (req, res) => {
     try {
         const { id } = req.params;
         
-        const products = await Product.find().populate("category");
+        const product = await Product.findById(id).populate("category");
         
-        if (!products) {
+        if (!product) {
             return res.status(404).json({
                 success: false,
                 message: "Product not found"
@@ -287,7 +287,7 @@ const getProduct = async (req, res) => {
         }
         res.status(200).json({
             success: true,
-            products
+            product
         });
         
     } catch (error) {
