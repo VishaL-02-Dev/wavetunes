@@ -46,7 +46,7 @@ const login=async(req,res)=>{
             { expiresIn: '1d' }
         );
         
-        console.log('Token generated',token);
+        // console.log('Token generated',token);
         
         // Set the JWT as a cookie
         res.cookie('jwt', token, {

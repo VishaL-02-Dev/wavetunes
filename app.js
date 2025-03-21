@@ -63,9 +63,6 @@ const path=require('path');
 app.set('view engine','ejs');
 app.set('views',[path.join(__dirname,'views'),path.join(__dirname,'views/admin')]);
 
-// app.get('/',(req,res)=>{
-//     res.render('home');
-// });
 
 app.get('/', async (req, res) => {
     try {
@@ -77,7 +74,7 @@ app.get('/', async (req, res) => {
 
       let products = await Product.find({ stock: {$gt: 1}, category:{$in: listedCategoryIds } }).sort({ createdAt: -1 }).limit(8);
       // console.log('products',products);
-      console.log('user passed',req.user);
+      // console.log('user passed',req.user);
 
       res.render('home', { 
         products,
