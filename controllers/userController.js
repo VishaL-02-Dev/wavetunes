@@ -694,6 +694,6 @@ module.exports={
     verifyResetOtp,
     resendResetOtp,
     loadResetPassword,
-    resetPassword
+    resetPassword,
 }
 

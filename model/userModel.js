@@ -35,8 +35,13 @@ const userSchema= new mongoose.Schema({
     status:{
         type:String,
         default:"Unblocked"
+    },
+    addressId:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Address',
+        required: true
     }
-}
-, {timestamps:true});
+}, 
+{timestamps:true});
 
 module.exports= mongoose.model('User',userSchema);

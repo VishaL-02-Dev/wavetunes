@@ -182,44 +182,44 @@
                                 enctype="multipart/form-data">
                                 <div class="mb-3">
                                     <label for="productName" class="form-label text-black">Product Name</label>
-                                    <input type="text" class="form-control" id="productName" name="name" required>
+                                    <input type="text" class="form-control" id="productName" name="name" >
                                 </div>
 
                                 <div class="mb-3">
                                     <label for="productBrand" class="form-label text-black">Brand</label>
-                                    <input type="text" class="form-control" id="productBrand" name="brand" required>
+                                    <input type="text" class="form-control" id="productBrand" name="brand" >
                                 </div>
 
                                 <div class="mb-3">
                                     <label for="productDescription" class="form-label text-black">Description</label>
                                     <textarea class="form-control" id="productDescription" name="description"
-                                        required></textarea>
+                                        ></textarea>
                                 </div>
 
                                 <div class="mb-3">
                                     <label for="productSpecification"
                                         class="form-label text-black">Specifications</label>
                                     <textarea class="form-control" id="productSpecification" name="specifications"
-                                        required></textarea>
+                                        ></textarea>
                                 </div>
 
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label for="productPrice" class="form-label text-black">Price</label>
                                         <input type="number" class="form-control" id="productPrice" name="price" min="0"
-                                            required>
+                                            >
                                     </div>
 
                                     <div class="col-md-6 mb-3">
                                         <label for="productStock" class="form-label text-black">Stock</label>
                                         <input type="number" class="form-control" id="productStock" name="stock" min="0"
-                                            required>
+                                            >
                                     </div>
                                 </div>
 
                                 <div class="mb-3">
                                     <label for="productCategory" class="form-label text-black">Category</label>
-                                    <select class="form-control" id="productCategory" name="category" required>
+                                    <select class="form-control" id="productCategory" name="category" >
                                         <option value="">Select Category</option>
                                         <% categories.forEach(category=> { %>
                                             <option value="<%= category._id %>">

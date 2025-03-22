@@ -3,7 +3,9 @@ const router=express.Router();
 const userController=require('../controllers/userController');
 const verifyToken =require('../middleware/auth');
 const productController=require('../controllers/productController');
+const profileController=require('../controllers/profileController');
 const passport = require('passport');
+const jwt=require('jsonwebtoken');
 
 router.use(express.static('public'));
 router.use(express.json());
@@ -47,6 +49,7 @@ router.get('/products/:categorySlug',productController.getCategoryProducts);
 router.get('/product/:id',productController.getProductById);  
 
 
-
+//Profile Management
+router.get('/profile',profileController.loadProfile);
 
 module.exports=router;
