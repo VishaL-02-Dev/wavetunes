@@ -36,11 +36,6 @@ const userSchema= new mongoose.Schema({
         type:String,
         default:"Unblocked"
     },
-    addressId:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Address',
-        required: true
-    }
 }, 
 {timestamps:true});
 

@@ -6,6 +6,7 @@ const productController=require('../controllers/productController');
 const profileController=require('../controllers/profileController');
 const passport = require('passport');
 const jwt=require('jsonwebtoken');
+const addressController=require('../controllers/addressController');
 
 router.use(express.static('public'));
 router.use(express.json());
@@ -51,5 +52,10 @@ router.get('/product/:id',productController.getProductById);
 
 //Profile Management
 router.get('/profile',profileController.loadProfile);
+router.post('/profile/addAddress',addressController.addAddress);
+router.get('/profile/getAddress/:index',addressController.getAddress);
+router.post('/profile/editAddress/:index',addressController.editAddress);
+router.patch('/profile/setDefault',addressController.setDefault);
+router.delete('/profile/deleteAddress',addressController.deleteAddress);
 
 module.exports=router;

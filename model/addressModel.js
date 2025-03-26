@@ -1,5 +1,10 @@
 const mongoose = require("mongoose");
 const addressSchema = new mongoose.Schema({
+    userId:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required:true
+    },
     address:{
         type:String,
         required:true
@@ -12,23 +17,26 @@ const addressSchema = new mongoose.Schema({
         type:String,
         required:true
     },
+    city:{
+        type:String,
+        required:true
+    },
     district:{
         type:String,
         required:true
     },
     addressType:{
         type:String,
-        enum:['Home','Work'],
+        enum:['Home','Work', 'Other'],
         required:true
-    },
-    userId:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
     },
     phone:{
         type:Number,
         required:true
+    },
+    isDefault: {
+        type: Boolean,
+        default: false
     }
 },
 {timestamps:true});

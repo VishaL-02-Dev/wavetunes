@@ -108,16 +108,16 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <!-- Product Images -->
             <div>
-                <% if (product.images && product.images.length > 0) { %>
-                    <% if (product.images.length > 1) { %>
+                <% if (product.images && product.images.length> 0) { %>
+                    <% if (product.images.length> 1) { %>
                         <!-- Multiple images gallery -->
                         <div class="product-gallery">
                             <div class="thumbnail-container">
                                 <% product.images.forEach(function(image, index) { %>
                                     <img src="<%= image.url %>" alt="<%= product.name %> thumbnail <%= index + 1 %>"
                                         class="thumbnail <%= index === 0 ? 'active' : '' %>"
-                                        onclick="changeMainImage('<%= image.url %>', this, <%= index %>)">
-                                <% }); %>
+                                        onclick="changeMainImage('<%= image.url %>', this, `<%= index %>`)">
+                                    <% }); %>
                             </div>
                             <div class="main-image-container">
                                 <img id="mainImage" src="<%= product.images[0].url %>" alt="<%= product.name %>"
@@ -127,22 +127,22 @@
                                 </div>
                             </div>
                         </div>
-                    <% } else { %>
-                        <!-- Single image with zoom -->
-                        <div class="single-image-container">
-                            <img id="mainImage" src="<%= product.images[0].url %>" alt="<%= product.name %>"
-                                class="main-image">
-                            <div id="zoomOverlay" class="zoom-overlay">
-                                <div id="zoomResult" class="zoom-result"></div>
+                        <% } else { %>
+                            <!-- Single image with zoom -->
+                            <div class="single-image-container">
+                                <img id="mainImage" src="<%= product.images[0].url %>" alt="<%= product.name %>"
+                                    class="main-image">
+                                <div id="zoomOverlay" class="zoom-overlay">
+                                    <div id="zoomResult" class="zoom-result"></div>
+                                </div>
                             </div>
-                        </div>
-                    <% } %>
-                <% } else { %>
-                    <div class="bg-gray-100 flex items-center justify-center h-64 rounded-lg">
-                        <p class="text-gray-500">No images available</p>
-                    </div>
-                <% } %>
-                
+                            <% } %>
+                                <% } else { %>
+                                    <div class="bg-gray-100 flex items-center justify-center h-64 rounded-lg">
+                                        <p class="text-gray-500">No images available</p>
+                                    </div>
+                                    <% } %>
+
             </div>
 
             <!-- Product Info -->
@@ -221,6 +221,15 @@
                                     : '' %>>
                                     Add to Cart
                             </button>
+
+                            <button onclick="addToWishlist('<%= product._id %>')"
+                                class="bg-red-600 hover:bg-red-700 text-white font-medium p-2 m-2 rounded-md transition"
+                                title="Add to Wishlist">
+                                <svg class="w-6 h-6 fill-current " viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                </svg>
+                            </button>
                         </div>
 
                         <div class="border-t border-gray-200 pt-4">
@@ -286,33 +295,40 @@
 
                         <!-- Write Review Form -->
                         <div id="writeReview" class="mt-8 bg-white shadow-md rounded-lg p-6">
-                <h3 class="text-xl font-semibold mb-4">Write a Review</h3>
-                <form action="/product/<%= product._id %>/review" method="POST">
-                    <div class="mb-4">
-                        <label for="rating" class="block text-sm font-medium text-gray-700 mb-1">Rating</label>
-                        <div class="flex space-x-1">
-                            <% for(let i = 1; i <= 5; i++) { %>
-                                <button type="button" onclick="setRating(<%= i %>)" class="rating-star text-gray-300 hover:text-yellow-400 focus:outline-none">
-                                    <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                                </button>
-                            <% } %>
+                            <h3 class="text-xl font-semibold mb-4">Write a Review</h3>
+                            <form action="/product/<%= product._id %>/review" method="POST">
+                                <div class="mb-4">
+                                    <label for="rating"
+                                        class="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                                    <div class="flex space-x-1">
+                                        <% for(let i=1; i <=5; i++) { %>
+                                            <button type="button" onclick="setRating(`<%= i %>`)"
+                                                class="rating-star text-gray-300 hover:text-yellow-400 focus:outline-none">
+                                                <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24">
+                                                    <path
+                                                        d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                                </svg>
+                                            </button>
+                                            <% } %>
+                                    </div>
+                                    <input type="hidden" id="ratingInput" name="rating" value="5">
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="comment" class="block text-sm font-medium text-gray-700 mb-1">Your
+                                        Review</label>
+                                    <textarea id="comment" name="comment" rows="4" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                                </div>
+
+                                <div class="flex justify-end">
+                                    <button type="submit"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition">
+                                        Submit Review
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                        <input type="hidden" id="ratingInput" name="rating" value="5">
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="comment" class="block text-sm font-medium text-gray-700 mb-1">Your Review</label>
-                        <textarea id="comment" name="comment" rows="4" required
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
-                    </div>
-                    
-                    <div class="flex justify-end">
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition">
-                            Submit Review
-                        </button>
-                    </div>
-                </form>
-            </div>
         </div>
 
         <!-- Related Products -->
@@ -320,9 +336,9 @@
             <h2 class="text-2xl font-bold mb-6">You May Also Like</h2>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"> -->
-                <!-- This would be populated by related products from backend -->
-                <!-- Example placeholder for now -->
-                <!-- <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+        <!-- This would be populated by related products from backend -->
+        <!-- Example placeholder for now -->
+        <!-- <div class="bg-white shadow-lg rounded-lg overflow-hidden">
                     <img src="/images/default.jpg" class="w-full h-48 object-contain" alt="Related product">
                     <div class="p-4">
                         <h3 class="text-lg font-semibold mb-2">Related product</h3>
@@ -347,17 +363,9 @@
         window.addEventListener("DOMContentLoaded", function () {
             const mainImage = document.getElementById("mainImage");
             if (!mainImage) return;
-            
-            <% if (product.imageBase64 && product.imageBase64.length > 0) { %>
-                imagesList =[
-                    <% product.imageBase64.forEach(function (image, index) { %>
-                    "<%= image %>" <%= index < product.imageBase64.length - 1 ? ',' : '' %>
-                    <% }); %>
-                ];
-            <% } %>
 
-                // Initialize zoom functionality
-                initializeZoom();
+            // Initialize zoom functionality
+            initializeZoom();
         });
 
         // Initialize zoom functionality
@@ -459,7 +467,7 @@
             const quantity = parseInt(document.getElementById('quantity').value);
 
             // Add to cart API call
-            fetch('/api/cart/add', {
+            fetch('/user/cart/add', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -472,16 +480,82 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Show success message
-                        alert('Product added to cart!');
-                        // Update cart count in navbar if you have one
+                        // Show success message with Swal
+                        Swal.fire({
+                            title: 'Success!',
+                            text: 'Product added to cart!',
+                            icon: 'success',
+                            confirmButtonColor: '#3B82F6' // Blue color, adjust as needed
+                        }).then(() => {
+                            // Update cart count in navbar if you have one (optional)
+                            // e.g., updateCartCount();
+                        });
                     } else {
-                        alert(data.message || 'Failed to add to cart');
+                        // Show error message with Swal
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.message || 'Failed to add to cart',
+                            icon: 'error',
+                            confirmButtonColor: '#EF4444' // Red color, adjust as needed
+                        });
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('An error occurred. Please try again.');
+                    // Show generic error message with Swal
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'An error occurred. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#EF4444' // Red color, adjust as needed
+                    });
+                });
+        }
+
+        // Add to wishlist
+        function addToWishlist(productId) {
+            // Add to wishlist API call
+            fetch('/user/wishlist/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    productId: productId
+                }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message with Swal
+                        Swal.fire({
+                            title: 'Success!',
+                            text: 'Product added to wishlist!',
+                            icon: 'success',
+                            confirmButtonColor: '#3B82F6'
+                        }).then(() => {
+                            // Optional: Update wishlist count in navbar if you have one
+                            // e.g., updateWishlistCount();
+                        });
+                    } else {
+                        // Show error message with Swal
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.message || 'Failed to add to wishlist',
+                            icon: 'error',
+                            confirmButtonColor: '#EF4444'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Show generic error message with Swal
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'An error occurred. Please try again.',
+                        icon: 'error',
+                        confirmButtonColor: '#EF4444'
+                    });
                 });
         }
     </script>

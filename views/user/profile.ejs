@@ -93,24 +93,24 @@
                             </div>
 
                             <div id="addresses-container" class="space-y-4">
-                                <% if (user.address && user.addresses.length> 0) { %>
-                                    <% user.addresses.forEach((address, index)=> { %>
+                                <% if (addresses && addresses.length> 0) { %>
+                                    <% addresses.forEach((address, index)=> { %>
                                         <div class="border border-gray-700 rounded-lg p-4 relative">
                                             <% if (address.isDefault) { %>
                                                 <span
-                                                    class="absolute top-2 right-2 bg-blue-600 text-xs px-2 py-1 rounded-full">Default</span>
+                                                    class="absolute bottom-2 right-2 bg-blue-600 text-xs px-2 py-1 rounded-full">Default</span>
                                                 <% } %>
                                                     <div class="flex justify-between">
                                                         <div>
                                                             <p class="font-medium">
-                                                                <%= address.name %>
+                                                                <%= address.addressType%>
                                                             </p>
                                                             <p class="text-gray-400 mt-1">
-                                                                <%= address.street %>
+                                                                <%= address.address %>
                                                             </p>
                                                             <p class="text-gray-400">
                                                                 <%= address.city %>, <%= address.state %>
-                                                                        <%= address.PinCode %>
+                                                                        PIN: <%= address.pinCode %>
                                                             </p>
                                                             <p class="text-gray-400">Phone: <%= address.phone %>
                                                             </p>
@@ -267,20 +267,20 @@
                 <form id="address-form" class="p-6 space-y-4">
                     <input type="hidden" id="address-index" value="-1">
                     <div>
-                        <label for="address-name" class="block text-sm font-medium">Address Type (e.g. Home,
+                        <label for="address-type" class="block text-sm font-medium">Address Type (e.g. Home,
                             Work)</label>
-                        <select id="address-name" name="name"
+                        <select id="address-type" name="type"
                             class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
                             <option value="" disabled selected>Select Address Type</option>
-                            <option value="home">Home</option>
-                            <option value="work">Work</option>
+                            <option value="Home">Home</option>
+                            <option value="Work">Work</option>
+                            <option value="Other">Other</option>
                         </select>
                     </div>
                     <div>
-                        <label for="address-street" class="block text-sm font-medium">Address</label>
-                        <textarea id="address-street" name="street"
-                            class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
-                    </textarea>
+                        <label for="address" class="block text-sm font-medium">Address</label>
+                        <textarea id="address" name="address"
+                            class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400"></textarea>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -293,11 +293,16 @@
                             <input type="text" id="address-state" name="state"
                                 class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
                         </div>
+                        <div>
+                            <label for="address-district" class="block text-sm font-medium">District</label>
+                            <input type="text" id="address-district" name="district"
+                                class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
+                        </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label for="address-zip" class="block text-sm font-medium">PIN Code</label>
-                            <input type="text" id="address-zip" name="zipCode"
+                            <label for="address-pin" class="block text-sm font-medium">PIN Code</label>
+                            <input type="text" id="address-pin" name="pinCode"
                                 class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
                         </div>
                         <div>
@@ -326,189 +331,31 @@
         </div>
 
         <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                // Tab navigation
+            document.addEventListener('DOMContentLoaded', function () {
+
+
+
+                // Tab functionality
                 const tabButtons = document.querySelectorAll('.tab-button');
                 const tabContents = document.querySelectorAll('.tab-content');
 
                 tabButtons.forEach(button => {
-                    button.addEventListener('click', () => {
+                    button.addEventListener('click', function () {
                         // Remove active class from all buttons and contents
                         tabButtons.forEach(btn => {
                             btn.classList.remove('text-blue-400', 'border-b-2', 'border-blue-400');
                             btn.classList.add('text-gray-400');
                         });
-                        tabContents.forEach(content => {
-                            content.classList.add('hidden');
-                            content.classList.remove('active');
-                        });
+                        tabContents.forEach(content => content.classList.add('hidden'));
 
-                        // Add active class to clicked button and corresponding content
-                        button.classList.add('text-blue-400', 'border-b-2', 'border-blue-400');
-                        button.classList.remove('text-gray-400');
-                        const tabId = button.getAttribute('data-tab');
-                        const activeContent = document.getElementById(tabId);
-                        activeContent.classList.remove('hidden');
-                        activeContent.classList.add('active');
+                        // Add active class to clicked button and show corresponding content
+                        this.classList.remove('text-gray-400');
+                        this.classList.add('text-blue-400', 'border-b-2', 'border-blue-400');
+
+                        const tabId = this.getAttribute('data-tab');
+                        document.getElementById(tabId).classList.remove('hidden');
                     });
                 });
-
-                // Change password form
-                const changePasswordForm = document.getElementById('change-password-form');
-                if (changePasswordForm) {
-                    changePasswordForm.addEventListener('submit', async function (e) {
-                        e.preventDefault();
-
-                        const currentPassword = document.getElementById('current-password').value;
-                        const newPassword = document.getElementById('new-password').value;
-                        const confirmPassword = document.getElementById('confirm-password').value;
-
-                        if (newPassword !== confirmPassword) {
-                            Swal.fire({
-                                title: 'Error!',
-                                text: 'New passwords do not match',
-                                icon: 'error'
-                            });
-                            return;
-                        }
-
-                        try {
-                            const response = await fetch('/user/change-password', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    currentPassword,
-                                    newPassword
-                                })
-                            });
-
-                            const data = await response.json();
-
-                            if (data.success) {
-                                Swal.fire({
-                                    title: 'Success!',
-                                    text: 'Password has been updated',
-                                    icon: 'success'
-                                });
-                                changePasswordForm.reset();
-                            } else {
-                                Swal.fire({
-                                    title: 'Error!',
-                                    text: data.message || 'Something went wrong',
-                                    icon: 'error'
-                                });
-                            }
-                        } catch (error) {
-                            Swal.fire({
-                                title: 'Error!',
-                                text: 'Something went wrong',
-                                icon: 'error'
-                            });
-                        }
-                    });
-                }
-
-                // Account deactivation
-                const deactivateButton = document.getElementById('deactivate-account');
-                if (deactivateButton) {
-                    deactivateButton.addEventListener('click', function () {
-                        Swal.fire({
-                            title: 'Deactivate Account?',
-                            text: 'Your account will be temporarily disabled. You can reactivate it by logging in again.',
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonText: 'Yes, deactivate it',
-                            cancelButtonText: 'Cancel'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                // Add API call for deactivation here
-                                fetch('/user/deactivate', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    }
-                                })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.success) {
-                                            Swal.fire(
-                                                'Deactivated!',
-                                                'Your account has been deactivated.',
-                                                'success'
-                                            ).then(() => {
-                                                window.location.href = '/logout';
-                                            });
-                                        } else {
-                                            Swal.fire(
-                                                'Error!',
-                                                data.message || 'Failed to deactivate account',
-                                                'error'
-                                            );
-                                        }
-                                    })
-                                    .catch(error => {
-                                        Swal.fire(
-                                            'Error!',
-                                            'Something went wrong',
-                                            'error'
-                                        );
-                                    });
-                            }
-                        });
-                    });
-                }
-
-                // Account deletion
-                const deleteButton = document.getElementById('delete-account');
-                if (deleteButton) {
-                    deleteButton.addEventListener('click', function () {
-                        Swal.fire({
-                            title: 'Delete Account?',
-                            text: 'This action cannot be undone. All your data will be permanently deleted.',
-                            icon: 'error',
-                            showCancelButton: true,
-                            confirmButtonText: 'Yes, delete it',
-                            confirmButtonColor: '#d33',
-                            cancelButtonText: 'Cancel'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                fetch('/user/delete', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    }
-                                })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.success) {
-                                            Swal.fire(
-                                                'Deleted!',
-                                                'Your account has been deleted.',
-                                                'success'
-                                            ).then(() => {
-                                                window.location.href = '/';
-                                            });
-                                        } else {
-                                            Swal.fire(
-                                                'Error!',
-                                                data.message || 'Failed to delete account',
-                                                'error'
-                                            );
-                                        }
-                                    })
-                                    .catch(error => {
-                                        Swal.fire(
-                                            'Error!',
-                                            'Something went wrong',
-                                            'error'
-                                        );
-                                    });
-                            }
-                        });
-                    });
-                }
 
                 // Edit Profile Modal
                 const editProfileBtn = document.getElementById('edit-profile-btn');
@@ -517,328 +364,482 @@
                 const cancelEditBtn = document.getElementById('cancel-edit');
                 const editProfileForm = document.getElementById('edit-profile-form');
 
-                function openModal() {
-                    editProfileModal.classList.remove('hidden');
-                    document.body.style.overflow = 'hidden'; // Prevent scrolling
+                function toggleEditProfileModal() {
+                    editProfileModal.classList.toggle('hidden');
                 }
 
-                function closeModal() {
-                    editProfileModal.classList.add('hidden');
-                    document.body.style.overflow = 'auto'; // Enable scrolling
-                }
+                editProfileBtn.addEventListener('click', toggleEditProfileModal);
+                closeModalBtn.addEventListener('click', toggleEditProfileModal);
+                cancelEditBtn.addEventListener('click', toggleEditProfileModal);
 
-                editProfileBtn.addEventListener('click', openModal);
-                closeModalBtn.addEventListener('click', closeModal);
-                cancelEditBtn.addEventListener('click', closeModal);
+                editProfileForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
 
-                // Close modal when clicking outside of it
-                editProfileModal.addEventListener('click', function (e) {
-                    if (e.target === editProfileModal) {
-                        closeModal();
-                    }
-                });
+                    // Get form data
+                    const formData = new FormData(this);
+                    const profileData = Object.fromEntries(formData.entries());
 
-                // Edit Profile Form Submission
-                if (editProfileForm) {
-                    editProfileForm.addEventListener('submit', async function (e) {
-                        e.preventDefault();
-
-                        const formData = {
-                            fname: document.getElementById('edit-fname').value,
-                            lname: document.getElementById('edit-lname').value,
-                            email: document.getElementById('edit-email').value,
-                            phone: document.getElementById('edit-phone').value
-                        };
-
-                        try {
-                            const response = await fetch('/user/update-profile', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify(formData)
-                            });
-
-                            const data = await response.json();
-
+                    // Send update request
+                    fetch('/user/profile/editProfile', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(profileData)
+                    })
+                        .then(response => response.json())
+                        .then(data => {
                             if (data.success) {
+                                toggleEditProfileModal();
+
+                                // Update displayed profile information
+                                document.querySelector('h1').textContent = `${profileData.fname} ${profileData.lname}`;
+                                document.querySelectorAll('#personal-info p')[0].textContent = profileData.fname;
+                                document.querySelectorAll('#personal-info p')[1].textContent = profileData.lname;
+                                document.querySelectorAll('#personal-info p')[2].textContent = profileData.email;
+                                document.querySelectorAll('#personal-info p')[3].textContent = profileData.phone || 'Not provided';
+
+                                // Show success message with SweetAlert
                                 Swal.fire({
                                     title: 'Success!',
-                                    text: 'Profile has been updated',
-                                    icon: 'success'
-                                }).then(() => {
-                                    window.location.reload(); // Refresh page to show updated info
+                                    text: 'Profile updated successfully!',
+                                    icon: 'success',
+                                    confirmButtonColor: '#3B82F6'
                                 });
                             } else {
                                 Swal.fire({
-                                    title: 'Error!',
-                                    text: data.message || 'Something went wrong',
-                                    icon: 'error'
+                                    title: 'Error',
+                                    text: 'Error updating profile: ' + data.message,
+                                    icon: 'error',
+                                    confirmButtonColor: '#3B82F6'
                                 });
                             }
-                        } catch (error) {
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
                             Swal.fire({
-                                title: 'Error!',
-                                text: 'Something went wrong',
-                                icon: 'error'
+                                title: 'Error',
+                                text: 'An error occurred while updating your profile.',
+                                icon: 'error',
+                                confirmButtonColor: '#3B82F6'
                             });
-                        }
-                    });
-                }
-
-                // Address Management
-                let userAddresses = `<%= JSON.stringify(user.address || []) %>`;
+                        });
+                });
 
                 // Address Modal
+                const addAddressBtn = document.getElementById('add-address-btn');
                 const addressModal = document.getElementById('address-modal');
-                const addressModalTitle = document.getElementById('address-modal-title');
                 const closeAddressModalBtn = document.getElementById('close-address-modal');
                 const cancelAddressBtn = document.getElementById('cancel-address');
-                const addAddressBtn = document.getElementById('add-address-btn');
                 const addressForm = document.getElementById('address-form');
-                const addressIndexInput = document.getElementById('address-index');
+                const addressModalTitle = document.getElementById('address-modal-title');
+                const addressIndex = document.getElementById('address-index');
 
-                function openAddressModal(isEdit = false, index = -1) {
-                    addressModal.classList.remove('hidden');
-                    document.body.style.overflow = 'hidden';
-
-                    if (isEdit && index >= 0) {
-                        addressModalTitle.textContent = 'Edit Address';
-                        const address = userAddresses[index];
-
-                        // Fill form with address data
-                        addressIndexInput.value = index;
-                        document.getElementById('address-name').value = address.name || '';
-                        document.getElementById('address-street').value = address.street || '';
-                        document.getElementById('address-city').value = address.city || '';
-                        document.getElementById('address-state').value = address.state || '';
-                        document.getElementById('address-zip').value = address.zipCode || '';
-                        document.getElementById('address-phone').value = address.phone || '';
-                        document.getElementById('address-default').checked = address.isDefault || false;
-                    } else {
-                        addressModalTitle.textContent = 'Add New Address';
-                        addressIndexInput.value = -1;
-                        addressForm.reset();
-                        // If no addresses exist, set as default by default
-                        document.getElementById('address-default').checked = userAddresses.length === 0;
-                    }
+                function toggleAddressModal() {
+                    addressModal.classList.toggle('hidden');
                 }
 
-                function closeAddressModal() {
-                    addressModal.classList.add('hidden');
-                    document.body.style.overflow = 'auto';
+                addAddressBtn.addEventListener('click', function () {
+                    // Reset form for adding new address
                     addressForm.reset();
-                }
-
-                addAddressBtn.addEventListener('click', () => openAddressModal(false));
-                closeAddressModalBtn.addEventListener('click', closeAddressModal);
-                cancelAddressBtn.addEventListener('click', closeAddressModal);
-
-                // Close modal when clicking outside of it
-                addressModal.addEventListener('click', function (e) {
-                    if (e.target === addressModal) {
-                        closeAddressModal();
-                    }
+                    addressIndex.value = -1;
+                    addressModalTitle.textContent = 'Add New Address';
+                    toggleAddressModal();
                 });
 
-                // Handle edit address button clicks
-                document.addEventListener('click', function (e) {
-                    if (e.target.closest('.edit-address-btn')) {
-                        const index = parseInt(e.target.closest('.edit-address-btn').getAttribute('data-index'));
-                        openAddressModal(true, index);
-                    }
-                });
+                closeAddressModalBtn.addEventListener('click', toggleAddressModal);
+                cancelAddressBtn.addEventListener('click', toggleAddressModal);
 
-                // Handle set as default address button clicks
-                document.addEventListener('click', function (e) {
-                    if (e.target.closest('.set-default-btn')) {
-                        const index = parseInt(e.target.closest('.set-default-btn').getAttribute('data-index'));
-                        setDefaultAddress(index);
-                    }
-                });
+                // Handle Edit Address buttons
+                const addressesContainer = document.getElementById('addresses-container');
 
-                // Handle delete address button clicks
-                document.addEventListener('click', function (e) {
-                    if (e.target.closest('.delete-address-btn')) {
-                        const index = parseInt(e.target.closest('.delete-address-btn').getAttribute('data-index'));
-                        deleteAddress(index);
-                    }
-                });
-
-                // Address Form Submission
-                if (addressForm) {
-                    addressForm.addEventListener('submit', async function (e) {
-                        e.preventDefault();
-
-                        const index = parseInt(addressIndexInput.value);
-                        const isDefault = document.getElementById('address-default').checked;
-
-                        // Create address object from form
-                        const addressData = {
-                            name: document.getElementById('address-name').value,
-                            street: document.getElementById('address-street').value,
-                            city: document.getElementById('address-city').value,
-                            state: document.getElementById('address-state').value,
-                            zipCode: document.getElementById('address-zip').value,
-                            phone: document.getElementById('address-phone').value,
-                            isDefault: isDefault
-                        };
-
-                        // If address is set as default, update other addresses
-                        if (isDefault) {
-                            userAddresses.forEach(addr => addr.isDefault = false);
-                        }
-
-                        // If editing existing address
-                        if (index >= 0) {
-                            userAddresses[index] = addressData;
-                        } else {
-                            // If adding new address
-                            userAddresses.push(addressData);
-                        }
-
-                        try {
-                            const response = await fetch('/user/update-addresses', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ addresses: userAddresses })
-                            });
-
-                            const data = await response.json();
-
-                            if (data.success) {
-                                Swal.fire({
-                                    title: 'Success!',
-                                    text: 'Address has been saved',
-                                    icon: 'success'
-                                }).then(() => {
-                                    window.location.reload(); // Refresh to show updated addresses
-                                });
-                            } else {
-                                Swal.fire({
-                                    title: 'Error!',
-                                    text: data.message || 'Failed to save address',
-                                    icon: 'error'
-                                });
+                addressesContainer.addEventListener('click', function (e) {
+                    if (e.target.classList.contains('edit-address-btn') || e.target.parentElement.classList.contains('edit-address-btn')) {
+                        const button = e.target.classList.contains('edit-address-btn') ? e.target : e.target.parentElement;
+                        const index = button.getAttribute('data-index');
+                        console.log('Editing address at index: ', index);
+                        fetch(`/user/profile/getAddress/${index}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
                             }
-                        } catch (error) {
-                            Swal.fire({
-                                title: 'Error!',
-                                text: 'Something went wrong',
-                                icon: 'error'
+                        })
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! Status: ${response.status}`);
+                                }
+                                return response.text(); // Get raw text first
+                            })
+                            .then(text => {
+                                // console.log('Raw response:', text); // Debug raw response
+                                if (!text) {
+                                    throw new Error('Empty response from server');
+                                }
+                                return JSON.parse(text); // Parse manually
+                            })
+                            .then(address => {
+                                // Populate form with address data
+                                document.getElementById('address-type').value = address.addressType;
+                                document.getElementById('address').value = address.address;
+                                document.getElementById('address-city').value = address.city;
+                                document.getElementById('address-state').value = address.state;
+                                document.getElementById('address-district').value = address.district || '';
+                                document.getElementById('address-pin').value = address.pinCode;
+                                document.getElementById('address-phone').value = address.phone;
+                                document.getElementById('address-default').checked = address.isDefault;
+                                addressIndex.value = index;
+                                console.log('Set addressIndex value to: ', addressIndex.value)
+
+                                addressModalTitle.textContent = 'Edit Address';
+                                toggleAddressModal();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'Failed to load address information.',
+                                    icon: 'error',
+                                    confirmButtonColor: '#3B82F6'
+                                });
                             });
-                        }
+                    }
 
-                        closeAddressModal();
-                    });
-                }
 
-                // Function to set default address
-                async function setDefaultAddress(index) {
-                    if (index >= 0 && index < userAddresses.length) {
-                        // Update local data
-                        userAddresses.forEach((addr, i) => {
-                            addr.isDefault = (i === index);
+                    // Set as default address
+                    if (e.target.classList.contains('set-default-btn') || e.target.parentElement.classList.contains('set-default-btn')) {
+                        const button = e.target.classList.contains('set-default-btn') ? e.target : e.target.parentElement;
+                        const index = button.getAttribute('data-index');
+
+                        fetch('/user/profile/setDefault', {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ index })
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Refresh page to show updated default address
+                                    window.location.reload();
+                                } else {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: 'Error setting default address: ' + data.message,
+                                        icon: 'error',
+                                        confirmButtonColor: '#3B82F6'
+                                    });
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'Failed to set default address.',
+                                    icon: 'error',
+                                    confirmButtonColor: '#3B82F6'
+                                });
+                            });
+                    }
+
+                    // Delete address
+                    if (e.target.classList.contains('delete-address-btn') || e.target.parentElement.classList.contains('delete-address-btn')) {
+                        const button = e.target.classList.contains('delete-address-btn') ? e.target : e.target.parentElement;
+                        const index = button.getAttribute('data-index');
+
+                        Swal.fire({
+                            title: 'Are you sure?',
+                            text: 'You are about to delete this address.',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#EF4444',
+                            cancelButtonColor: '#6B7280',
+                            confirmButtonText: 'Yes, delete it!'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                fetch('/user/profile/deleteAddress', {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    credentials:'include',
+                                    body: JSON.stringify({ addressIndex: index })
+                                })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            Swal.fire({
+                                                title: 'Deleted!',
+                                                text: 'Address has been deleted.',
+                                                icon: 'success',
+                                                confirmButtonColor: '#3B82F6'
+                                            }).then(() => {
+                                                window.location.reload();
+                                            });
+                                        } else {
+                                            Swal.fire({
+                                                title: 'Error',
+                                                text: 'Error deleting address: ' + data.message,
+                                                icon: 'error',
+                                                confirmButtonColor: '#3B82F6'
+                                            });
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error:', error);
+                                        Swal.fire({
+                                            title: 'Error',
+                                            text: 'Failed to delete address.',
+                                            icon: 'error',
+                                            confirmButtonColor: '#3B82F6'
+                                        });
+                                    });
+                            }
                         });
+                    }
+                });
 
-                        try {
-                            const response = await fetch('/user/update-addresses', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ addresses: userAddresses })
-                            });
 
-                            const data = await response.json();
+                // Address form submission
+                addressForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
 
+                    const formData = new FormData(this);
+                    const addressData = Object.fromEntries(formData.entries());
+                    addressData.index = addressIndex.value;
+                    addressData.isDefault = !!addressData.isDefault;
+
+                    let url;
+
+                    if(addressIndex.value==="-1"){
+                        url='/user/profile/addAddress';
+                    }else{
+                        url=`/user/profile/editAddress/${addressData.index}`;
+                    }
+
+                    // const url = addressIndex === '-1' ? '/user/profile/addAddress' : `/user/profile/editAddress/${addressData.index}`;
+                    console.log('Fetch URL:', url); // Debug
+
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(addressData)
+                    })
+                        .then(response => response.json())
+                        .then(data => {
                             if (data.success) {
+                                toggleAddressModal();
                                 Swal.fire({
                                     title: 'Success!',
-                                    text: 'Default address has been updated',
-                                    icon: 'success'
+                                    text: 'Address saved successfully!',
+                                    icon: 'success',
+                                    confirmButtonColor: '#3B82F6'
                                 }).then(() => {
                                     window.location.reload();
                                 });
                             } else {
                                 Swal.fire({
-                                    title: 'Error!',
-                                    text: data.message || 'Failed to update default address',
-                                    icon: 'error'
+                                    title: 'Error',
+                                    text: 'Error saving address: ' + data.message,
+                                    icon: 'error',
+                                    confirmButtonColor: '#3B82F6'
                                 });
                             }
-                        } catch (error) {
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
                             Swal.fire({
-                                title: 'Error!',
-                                text: 'Something went wrong',
-                                icon: 'error'
+                                title: 'Error',
+                                text: 'Failed to save address.',
+                                icon: 'error',
+                                confirmButtonColor: '#3B82F6'
                             });
-                        }
-                    }
-                }
+                        });
+                });
 
-                // Function to delete address
-                async function deleteAddress(index) {
-                    if (index >= 0 && index < userAddresses.length) {
+                // Change Password Form
+                const changePasswordForm = document.getElementById('change-password-form');
+
+                changePasswordForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+
+                    const formData = new FormData(this);
+                    const passwordData = Object.fromEntries(formData.entries());
+
+                    // Validate passwords match
+                    if (passwordData.newPassword !== passwordData.confirmPassword) {
                         Swal.fire({
-                            title: 'Delete Address?',
-                            text: 'Are you sure you want to delete this address?',
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonText: 'Yes, delete it',
-                            cancelButtonText: 'Cancel'
-                        }).then(async (result) => {
-                            if (result.isConfirmed) {
-                                // Remove address from local array
-                                userAddresses.splice(index, 1);
+                            title: 'Error',
+                            text: 'New passwords do not match!',
+                            icon: 'error',
+                            confirmButtonColor: '#3B82F6'
+                        });
+                        return;
+                    }
 
-                                try {
-                                    const response = await fetch('/user/update-addresses', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({ addresses: userAddresses })
-                                    });
+                    fetch('/api/password/change', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(passwordData)
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    title: 'Success!',
+                                    text: 'Password updated successfully!',
+                                    icon: 'success',
+                                    confirmButtonColor: '#3B82F6'
+                                });
+                                this.reset();
+                            } else {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'Error updating password: ' + data.message,
+                                    icon: 'error',
+                                    confirmButtonColor: '#3B82F6'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                title: 'Error',
+                                text: 'Failed to update password.',
+                                icon: 'error',
+                                confirmButtonColor: '#3B82F6'
+                            });
+                        });
+                });
 
-                                    const data = await response.json();
+                // Deactivate Account
+                const deactivateBtn = document.getElementById('deactivate-account');
 
+                deactivateBtn.addEventListener('click', function () {
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: 'You are about to deactivate your account. You can reactivate it later by logging in.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#FBBF24',
+                        cancelButtonColor: '#6B7280',
+                        confirmButtonText: 'Yes, deactivate it!'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            fetch('/api/account/deactivate', {
+                                method: 'POST'
+                            })
+                                .then(response => response.json())
+                                .then(data => {
                                     if (data.success) {
                                         Swal.fire({
-                                            title: 'Deleted!',
-                                            text: 'Address has been deleted',
-                                            icon: 'success'
+                                            title: 'Deactivated',
+                                            text: 'Your account has been deactivated. You will be logged out now.',
+                                            icon: 'success',
+                                            confirmButtonColor: '#3B82F6'
                                         }).then(() => {
-                                            window.location.reload();
+                                            window.location.href = '/logout';
                                         });
                                     } else {
                                         Swal.fire({
-                                            title: 'Error!',
-                                            text: data.message || 'Failed to delete address',
-                                            icon: 'error'
+                                            title: 'Error',
+                                            text: 'Error deactivating account: ' + data.message,
+                                            icon: 'error',
+                                            confirmButtonColor: '#3B82F6'
                                         });
                                     }
-                                } catch (error) {
+                                })
+                                .catch(error => {
+                                    console.error('Error:', error);
                                     Swal.fire({
-                                        title: 'Error!',
-                                        text: 'Something went wrong',
-                                        icon: 'error'
+                                        title: 'Error',
+                                        text: 'Failed to deactivate account.',
+                                        icon: 'error',
+                                        confirmButtonColor: '#3B82F6'
                                     });
-                                }
-                            }
-                        });
-                    }
-                }
+                                });
+                        }
+                    });
+                });
 
-                // Ensure the first tab is active by default if none is active
-                if (!document.querySelector('.tab-content.active:not(.hidden)')) {
-                    const firstTab = document.querySelector('.tab-button');
-                    if (firstTab) {
-                        firstTab.click();
-                    }
-                }
+                // Delete Account
+                const deleteBtn = document.getElementById('delete-account');
+
+                deleteBtn.addEventListener('click', function () {
+                    Swal.fire({
+                        title: 'Warning!',
+                        text: 'Are you sure you want to permanently delete your account? This action cannot be undone.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#EF4444',
+                        cancelButtonColor: '#6B7280',
+                        confirmButtonText: 'Delete Account'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({
+                                title: 'Confirm Deletion',
+                                text: 'To confirm, please type "DELETE" in all caps:',
+                                input: 'text',
+                                inputAttributes: {
+                                    autocapitalize: 'off'
+                                },
+                                showCancelButton: true,
+                                confirmButtonText: 'Confirm',
+                                confirmButtonColor: '#EF4444',
+                                cancelButtonColor: '#6B7280',
+                                showLoaderOnConfirm: true,
+                                preConfirm: (confirmPhrase) => {
+                                    if (confirmPhrase !== 'DELETE') {
+                                        Swal.showValidationMessage(
+                                            'The confirmation phrase is incorrect'
+                                        );
+                                    }
+                                    return confirmPhrase;
+                                },
+                                allowOutsideClick: () => !Swal.isLoading()
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    fetch('/api/account/delete', {
+                                        method: 'POST'
+                                    })
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            if (data.success) {
+                                                Swal.fire({
+                                                    title: 'Deleted!',
+                                                    text: 'Your account has been permanently deleted. You will be redirected to the homepage.',
+                                                    icon: 'success',
+                                                    confirmButtonColor: '#3B82F6'
+                                                }).then(() => {
+                                                    window.location.href = '/';
+                                                });
+                                            } else {
+                                                Swal.fire({
+                                                    title: 'Error',
+                                                    text: 'Error deleting account: ' + data.message,
+                                                    icon: 'error',
+                                                    confirmButtonColor: '#3B82F6'
+                                                });
+                                            }
+                                        })
+                                        .catch(error => {
+                                            console.error('Error:', error);
+                                            Swal.fire({
+                                                title: 'Error',
+                                                text: 'Failed to delete account.',
+                                                icon: 'error',
+                                                confirmButtonColor: '#3B82F6'
+                                            });
+                                        });
+                                }
+                            });
+                        }
+                    });
+                });
             });
         </script>
 
