@@ -78,11 +78,11 @@
 
                                         <div>
                                             <span class="text-2xl font-bold text-gray-900">
-                                                $<%= item.product.price %>
+                                                ₹<%= item.product.price %>
                                             </span>
                                             <% if (item.product.originalPrice && item.product.originalPrice > item.product.price) { %>
                                                 <span class="text-sm text-gray-500 line-through ml-2">
-                                                    $<%= (item.product.originalPrice * item.quantity).toFixed(2) %>
+                                                    ₹<%= (item.product.originalPrice * item.quantity).toFixed(2) %>
                                                 </span>
                                             <% } %>
                                         </div>
@@ -100,20 +100,20 @@
                     <div class="space-y-4 mb-6">
                         <div class="flex justify-between">
                             <span class="text-gray-700">Subtotal</span>
-                            <span class="font-medium">$<%= cart.subtotal.toFixed(2) %></span>
+                            <span class="font-medium">₹<%= cart.subtotal.toFixed(2) %></span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-700">Shipping</span>
-                            <span class="font-medium">$<%= cart.shipping.toFixed(2) %></span>
+                            <span class="font-medium">₹<%= cart.shipping.toFixed(2) %></span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-700">Tax</span>
-                            <span class="font-medium">$<%= cart.tax.toFixed(2) %></span>
+                            <span class="font-medium">₹<%= cart.tax.toFixed(2) %></span>
                         </div>
                         <hr class="border-gray-200">
                         <div class="flex justify-between text-xl font-bold">
                             <span>Total</span>
-                            <span>$<%= cart.total.toFixed(2) %></span>
+                            <span>₹<%= cart.total.toFixed(2) %></span>
                         </div>
                     </div>
 

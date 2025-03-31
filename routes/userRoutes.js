@@ -9,6 +9,7 @@ const jwt=require('jsonwebtoken');
 const addressController=require('../controllers/addressController');
 const wishlistController=require('../controllers/wishlistController');
 const cartController=require('../controllers/cartController');
+const orderController=require('../controllers/orderController');
 
 router.use(express.static('public'));
 router.use(express.json());
@@ -66,7 +67,13 @@ router.put('/cart/updateQuantity',cartController.updateQuantity);
 router.delete('/cart/removeItem',cartController.removeFromCart)
 
 
-
+//Checkout
+router.get('/checkout',orderController.loadCheckout);
+router.post('/checkout/addAddress',addressController.addAddress);
+router.post('/placeOrder',orderController.placeOrder);
+router.get('/myOrders',orderController.loadMyOrders);
+router.get('/orders/:id',orderController.loadOrderDetails);
+router.post('/orders/:id/cancel',orderController.cancelOrder);
 
 //Profile Management
 router.get('/profile',profileController.loadProfile);
