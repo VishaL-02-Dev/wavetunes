@@ -344,7 +344,8 @@ const getProductById = async (req, res) => {
             relatedProducts = await Product.find({
                 category: product.category._id,
                 _id: { $ne: product._id } // Exclude current product
-            }).limit(4);
+            }).limit(4)
+              .populate('images');
         }
         
         // Increment view count (optional)

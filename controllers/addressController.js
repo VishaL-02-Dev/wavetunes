@@ -183,7 +183,15 @@ const setDefault=async(req,res)=>{
             });
         }
 
-        const address=addresses[addressIndex];
+        const index = parseInt(addressIndex, 10);
+        if (isNaN(index) || index < 0 || index >= addresses.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'Invalid address index'
+            });
+        }
+
+        const address=addresses[index];
 
         await Address.updateMany(
             {userId:user._id,_id:{$ne:address._id}, isDefault:true},

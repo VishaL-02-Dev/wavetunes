@@ -311,7 +311,7 @@
                                 class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
                         </div>
                     </div>
-                    <div class="flex items-center space-x-2 mt-4">
+                    <div id="default-address-wrapper" class="flex items-center space-x-2 mt-4">
                         <input type="checkbox" id="address-default" name="isDefault"
                             class="h-4 w-4 bg-gray-800 border-gray-600 rounded focus:ring-blue-500">
                         <label for="address-default" class="text-sm font-medium">Set as default delivery address</label>
@@ -434,6 +434,7 @@
                 const addressForm = document.getElementById('address-form');
                 const addressModalTitle = document.getElementById('address-modal-title');
                 const addressIndex = document.getElementById('address-index');
+                const defaultAddressWrapper = document.getElementById('default-address-wrapper');
 
                 function toggleAddressModal() {
                     addressModal.classList.toggle('hidden');
@@ -444,6 +445,7 @@
                     addressForm.reset();
                     addressIndex.value = -1;
                     addressModalTitle.textContent = 'Add New Address';
+                    defaultAddressWrapper.classList.remove('hidden');
                     toggleAddressModal();
                 });
 
@@ -491,6 +493,7 @@
                                 console.log('Set addressIndex value to: ', addressIndex.value)
 
                                 addressModalTitle.textContent = 'Edit Address';
+                                defaultAddressWrapper.classList.add('hidden');
                                 toggleAddressModal();
                             })
                             .catch(error => {
@@ -511,17 +514,26 @@
                         const index = button.getAttribute('data-index');
 
                         fetch('/user/profile/setDefault', {
-                            method: 'PATCH',
+                            method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify({ index })
+                            body: JSON.stringify({ addressIndex: index })
                         })
                             .then(response => response.json())
                             .then(data => {
                                 if (data.success) {
-                                    // Refresh page to show updated default address
-                                    window.location.reload();
+                                    Swal.fire({
+                                        title: 'Success!',
+                                        text: 'Default address has been set successfully.',
+                                        icon: 'success',
+                                        showConfirmButton: false,
+                                        timer: 2000,
+                                        timerProgressBar: true //Show progress bar
+                                    }).then(() => {
+                                        // Refresh page after the user clicks "OK" or timer expires
+                                        window.location.reload();
+                                    });
                                 } else {
                                     Swal.fire({
                                         title: 'Error',
@@ -562,7 +574,7 @@
                                     headers: {
                                         'Content-Type': 'application/json',
                                     },
-                                    credentials:'include',
+                                    credentials: 'include',
                                     body: JSON.stringify({ addressIndex: index })
                                 })
                                     .then(response => response.json())
@@ -611,10 +623,10 @@
 
                     let url;
 
-                    if(addressIndex.value==="-1"){
-                        url='/user/profile/addAddress';
-                    }else{
-                        url=`/user/profile/editAddress/${addressData.index}`;
+                    if (addressIndex.value === "-1") {
+                        url = '/user/profile/addAddress';
+                    } else {
+                        url = `/user/profile/editAddress/${addressData.index}`;
                     }
 
                     // const url = addressIndex === '-1' ? '/user/profile/addAddress' : `/user/profile/editAddress/${addressData.index}`;

@@ -1,0 +1,203 @@
+<head>
+    <title>My Wishlist | WaveTunes</title>
+    <%- include('./partials/user/header') %>
+    <style>
+        /* Reuse some styles from product-detail page */
+        .wishlist-item {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .wishlist-item:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <nav class="mb-8" aria-label="Breadcrumb">
+            <ol class="flex text-sm">
+                <li><a href="/" class="text-white hover:text-blue-700">Home</a></li>
+                <li class="mx-2 text-white">/</li>
+                <li class="text-white font-medium">My Wishlist</li>
+            </ol>
+        </nav>
+
+        <h1 class="text-3xl font-bold mb-8 text-white">My Wishlist</h1>
+
+        <% if (wishlist && wishlist.length > 0) { %>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <% wishlist.forEach(function(item) { %>
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden wishlist-item">
+                        <div class="relative">
+                            <% if (item.product.images && item.product.images.length > 0) { %>
+                                <img src="<%= item.product.images[0].url %>" 
+                                     alt="<%= item.product.name %>" 
+                                     class="w-full h-64 object-contain">
+                            <% } else { %>
+                                <div class="bg-gray-100 h-64 flex items-center justify-center">
+                                    <p class="text-gray-500">No image available</p>
+                                </div>
+                            <% } %>
+                            
+                            <button onclick="removeFromWishlist('<%= item.product._id %>')" 
+                                    class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="p-4">
+                            <h2 class="text-xl font-semibold mb-2 text-gray-800">
+                                <%= item.product.name %>
+                            </h2>
+
+                            <div class="flex items-center mb-4">
+                                <div class="flex text-yellow">
+                                    <% for(let i=1; i <=5; i++) { %>
+                                        <% if (i <= Math.floor(item.product.ratings || 0)) { %>
+                                            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                            </svg>
+                                        <% } else { %>
+                                            <svg class="w-5 h-5 fill-current text-gray-300" viewBox="0 0 24 24">
+                                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                            </svg>
+                                        <% } %>
+                                    <% } %>
+                                </div>
+                                <span class="text-gray-500 text-sm ml-2">
+                                    <%= item.product.numOfReviews || 0 %> reviews
+                                </span>
+                            </div>
+
+                            <div class="mb-4">
+                                <span class="text-2xl font-bold text-gray-900">$<%= item.product.price %></span>
+                                <% if (item.product.originalPrice && item.product.originalPrice > item.product.price) { %>
+                                    <span class="text-lg text-gray-500 line-through ml-2">$<%= item.product.originalPrice %></span>
+                                    <span class="ml-2 bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                                        <%= Math.round((1 - item.product.price / item.product.originalPrice) * 100) %>% OFF
+                                    </span>
+                                <% } %>
+                            </div>
+
+                            <div class="flex space-x-2">
+                                <a href="/user/product/<%= item.product._id %>" 
+                                   class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition text-center">
+                                    View Details
+                                </a>
+                                <button onclick="addToCart('<%= item.product._id %>')"
+                                        class="bg-green-600 hover:bg-green-700 text-white font-medium p-2 rounded-md transition"
+                                        <%= item.product.stock <= 0 ? 'disabled' : '' %>>
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        <% } else { %>
+            <div class="bg-white rounded-lg p-8 text-center">
+                <svg class="mx-auto mb-4 w-20 h-20 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                </svg>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Your Wishlist is Empty</h2>
+                <p class="text-gray-600 mb-6">Looks like you haven't added any items to your wishlist yet.</p>
+                <a href="/user/products" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition">
+                    Continue Shopping
+                </a>
+            </div>
+        <% } %>
+    </div>
+
+    <script>
+        function removeFromWishlist(productId) {
+            fetch('/user/wishlist/removeItem', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    productId: productId
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload the page or remove the item from DOM
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Product removed from wishlist!',
+                        icon: 'success',
+                        confirmButtonColor: '#3B82F6'
+                    }).then(() => {
+                        location.reload(); // Reload to update wishlist
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.message || 'Failed to remove from wishlist',
+                        icon: 'error',
+                        confirmButtonColor: '#EF4444'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'An error occurred. Please try again.',
+                    icon: 'error',
+                    confirmButtonColor: '#EF4444'
+                });
+            });
+        }
+
+        function addToCart(productId) {
+            fetch('/user/cart/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    productId: productId,
+                    quantity: 1 // Default to 1 for wishlist
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Product added to cart!',
+                        icon: 'success',
+                        confirmButtonColor: '#3B82F6'
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.message || 'Failed to add to cart',
+                        icon: 'error',
+                        confirmButtonColor: '#EF4444'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'An error occurred. Please try again.',
+                    icon: 'error',
+                    confirmButtonColor: '#EF4444'
+                });
+            });
+        }
+    </script>
+
+    <%- include('./partials/user/footer') %>
+</body>
+</html>

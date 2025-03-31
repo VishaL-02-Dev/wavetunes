@@ -175,7 +175,11 @@ const verifyOtp = async (req, res) => {
         
         // req.session.save();
 
-        return res.status(200).json({ success: true, message:"User registration successful" ,token, redirectUrl: "/" });
+        return res.status(200).json({ 
+            success: true, 
+            message:"User registration successful" ,
+            token, 
+            redirectUrl: "/user/login" });
 
     } catch (error) {
         console.error("Error verifying OTP:", error);

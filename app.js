@@ -40,7 +40,7 @@ app.use((req, res, next) => {
           res.locals.user = decoded; // Store user data in res.locals for templates
           req.user = decoded; // Attach user data to req.user for route handlers
           // console.log("User authenticated:", decoded.fname);
-
+          // console.log('Decoded user in the middleware ',decoded)
           if(decoded.role==='admin'){
             res.locals.admin=decoded;
           }
@@ -74,7 +74,7 @@ app.get('/', async (req, res) => {
 
       let products = await Product.find({ stock: {$gt: 1}, category:{$in: listedCategoryIds } }).sort({ createdAt: -1 }).limit(8);
       // console.log('products',products);
-      // console.log('user passed',req.user);
+      // console.log('user passed',req.user || res.locals.user);
 
       res.render('home', { 
         products,

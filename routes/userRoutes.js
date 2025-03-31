@@ -7,6 +7,8 @@ const profileController=require('../controllers/profileController');
 const passport = require('passport');
 const jwt=require('jsonwebtoken');
 const addressController=require('../controllers/addressController');
+const wishlistController=require('../controllers/wishlistController');
+const cartController=require('../controllers/cartController');
 
 router.use(express.static('public'));
 router.use(express.json());
@@ -21,11 +23,15 @@ router.get('/logout',userController.logout);
 router.get('/auth/google',passport.authenticate('google',{scope:['profile','email']}))
 router.get('/auth/google/callback',passport.authenticate('google',{failureRedirect:'/signup'}),(req,res)=>{
    const token = jwt.sign(
-    { userId:req.user._id, email:req.user.email},
+    { id:req.user._id, 
+        email:req.user.email,
+        fname:req.user.fname,
+        lname:req.user.lname
+    },
     process.env.JWT_SECRET,
-    {expiresIn:'7d'}
+    {expiresIn:'3d'}
    );
-    res.cookie('authToken',token,{httpOnly: true, secure:false});
+    res.cookie('jwt',token,{httpOnly: true, secure:false});
     res.redirect('/');
 });
 
@@ -48,6 +54,18 @@ router.post('/otpverify/resendotp', userController.resendOtp);
 router.get('/products',productController.displayProduct);
 router.get('/products/:categorySlug',productController.getCategoryProducts);
 router.get('/product/:id',productController.getProductById);  
+router.get('/wishlist',wishlistController.getWishlist);
+router.delete('/wishlist/removeItem',wishlistController.removeItem);
+router.post('/product/addToWishlist',wishlistController.addToWishlist);
+
+
+//Cart
+router.get('/cart',cartController.loadCart);
+router.post('/cart/add',cartController.addToCart);
+router.put('/cart/updateQuantity',cartController.updateQuantity);
+router.delete('/cart/removeItem',cartController.removeFromCart)
+
+
 
 
 //Profile Management
@@ -55,7 +73,7 @@ router.get('/profile',profileController.loadProfile);
 router.post('/profile/addAddress',addressController.addAddress);
 router.get('/profile/getAddress/:index',addressController.getAddress);
 router.post('/profile/editAddress/:index',addressController.editAddress);
-router.patch('/profile/setDefault',addressController.setDefault);
+router.post('/profile/setDefault',addressController.setDefault);
 router.delete('/profile/deleteAddress',addressController.deleteAddress);
 
 module.exports=router;
