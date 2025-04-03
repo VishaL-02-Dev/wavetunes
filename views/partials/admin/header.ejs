@@ -8,3 +8,44 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <link rel="stylesheet" href="/adminStyles.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<body>
+    
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="px-3 py-2">
+                <h4>Admin Panel</h4>
+            </div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="/admin/dashboard" class="<%= currentPage === 'dashboard' ? 'active' : '' %>">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/customers" class="<%= currentPage === 'users' ? 'active' : '' %>">
+                        <i class="bi bi-people"></i> Users
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/products" class="<%= currentPage === 'products' ? 'active' : '' %>">
+                        <i class="bi bi-box"></i> Products
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/orders" class="<%= currentPage === 'orders' ? 'active' : '' %>">
+                        <i class="bi bi-cart"></i> Orders
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/categories" class="<%= currentPage === 'categories' ? 'active' : '' %>">
+                        <i class="bi bi-tags"></i> Categories
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/coupons" class="<%= currentPage === 'coupons' ? 'active' : '' %>">
+                        <i class="bi bi-ticket-perforated"></i> Coupons
+                    </a>
+                </li>
+            </ul>
+        </div>

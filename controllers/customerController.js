@@ -3,7 +3,7 @@ const User = require('../model/userModel');
 const getCustomers = async (req, res) => {
     try {
 
-        const { search, page}=req.query;
+        const { search }=req.query;
 
         let filter={isAdmin: false };
         if(search){
@@ -19,8 +19,8 @@ const getCustomers = async (req, res) => {
         }
 
         const itemsPerPage = 5;
-        const currentPage = parseInt(page) || 1;
-        let skip = (currentPage - 1) * itemsPerPage;
+        const page = parseInt(req.query.page) || 1;
+        let skip = (page - 1) * itemsPerPage;
 
         const totalCount = await User.countDocuments(filter);
 
@@ -31,7 +31,8 @@ const getCustomers = async (req, res) => {
 
         res.render('admin/customers', {
             users,
-            currentPage,
+            currentPage:'users',
+            page,
             totalPages: Math.ceil(totalCount / itemsPerPage),
             totalCount,
             itemsPerPage,

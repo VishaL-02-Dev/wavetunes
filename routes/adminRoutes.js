@@ -6,6 +6,7 @@ const customerController=require('../controllers/customerController');
 const categoryController=require('../controllers/categoriesController');
 const productController=require('../controllers/productController');
 const orderController=require('../controllers/orderController');
+const couponController=require('../controllers/couponController');
 const upload=require('../middleware/uploadMiddleware');
 
 router.use(express.static('public'));
@@ -38,4 +39,7 @@ router.get('/orders/:id',verifyAdmin,orderController.adminGetOrderDetails);
 router.get('/orders/:id/items',verifyAdmin,orderController.adminGetOrderItems);
 router.patch('/orders/:id/status',verifyAdmin,orderController.adminUpdateOrderStatus);
 
+//Coupons
+router.get('/coupons',verifyAdmin,couponController.getCoupon);
+router.post('/coupons',verifyAdmin,couponController.createCoupon);
 module.exports=router;

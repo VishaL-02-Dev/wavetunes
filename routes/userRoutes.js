@@ -77,10 +77,12 @@ router.post('/orders/:id/cancel',orderController.cancelOrder);
 
 //Profile Management
 router.get('/profile',profileController.loadProfile);
+router.patch('/profile/editProfile',profileController.editProfile);
 router.post('/profile/addAddress',addressController.addAddress);
 router.get('/profile/getAddress/:index',addressController.getAddress);
 router.post('/profile/editAddress/:index',addressController.editAddress);
 router.post('/profile/setDefault',addressController.setDefault);
 router.delete('/profile/deleteAddress',addressController.deleteAddress);
+
 
 module.exports=router;

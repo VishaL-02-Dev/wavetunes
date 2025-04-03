@@ -70,7 +70,7 @@ const addAddress = async (req, res) => {
         });
     }
 };
-
+//Get Address
 const getAddress= async(req,res)=>{
     const token=req.cookies.jwt;
     const addressIndex=parseInt(req.params.index);
@@ -80,7 +80,7 @@ const getAddress= async(req,res)=>{
         const user= await User.findById(decoded.id);
 
         if(!user){
-            return rest.status(401).json({
+            return res.status(401).json({
                 success:false,
                 message:'User not found'
             });
@@ -106,7 +106,7 @@ const getAddress= async(req,res)=>{
     }
 }
 
-
+//Edit Address
 const editAddress=async(req,res)=>{
     const token=req.cookies.jwt;
     const { type, address, city, state, district, pinCode, phone, isDefault } = req.body;
@@ -159,6 +159,7 @@ const editAddress=async(req,res)=>{
     }
 }
 
+//Set the default address
 const setDefault=async(req,res)=>{
     const token=req.cookies.jwt;
     const {addressIndex}=req.body;
@@ -214,6 +215,7 @@ const setDefault=async(req,res)=>{
     }
 }
 
+//Delete the given address
 const deleteAddress=async(req,res)=>{
     const token= req.cookies.jwt;
     const { addressIndex }=req.body;

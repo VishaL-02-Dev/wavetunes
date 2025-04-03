@@ -29,7 +29,7 @@ const loadCategory = async (req, res) => {
 
         res.render('admin/category', { 
             cat: categories,
-            currentPage,
+            currentPage:'categories',
             totalPages:Math.ceil(totalCategories/itemsPerPage),
             itemsPerPage,
             totalCategories,

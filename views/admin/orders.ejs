@@ -1,40 +1,4 @@
 <%- include('partials/admin/header') %>
-
-    <div class="admin-layout">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="px-3 py-2">
-                <h4>Admin Panel</h4>
-            </div>
-            <ul class="sidebar-menu">
-                <li>
-                    <a href="/admin/dashboard" class="<%= currentPage === 'dashboard' ? 'active' : '' %>">
-                        <i class="bi bi-speedometer2"></i> Dashboard
-                    </a>
-                </li>
-                <li>
-                    <a href="/admin/customers" class="<%= currentPage === 'users' ? 'active' : '' %>">
-                        <i class="bi bi-people"></i> Users
-                    </a>
-                </li>
-                <li>
-                    <a href="/admin/products" class="<%= currentPage === 'products' ? 'active' : '' %>">
-                        <i class="bi bi-box"></i> Products
-                    </a>
-                </li>
-                <li>
-                    <a href="/admin/orders" class="<%= currentMenu === 'orders' ? 'active' : '' %>">
-                        <i class="bi bi-cart"></i> Orders
-                    </a>
-                </li>
-                <li>
-                    <a href="/admin/categories" class="<%= currentPage === 'categories' ? 'active' : '' %>">
-                        <i class="bi bi-tags"></i> Categories
-                    </a>
-                </li>
-            </ul>
-        </div>
-
         <!-- Main Content -->
         <div class="main-content">
             <!-- Header -->
@@ -121,9 +85,7 @@
                                 <% orders.forEach((order, index)=> { %>
                                     <tr>
                                         <td>
-                                            <%= ((typeof currentPage !=='undefined' ? parseInt(currentPage) : 1) - 1) *
-                                                (typeof itemsPerPage !=='undefined' ? parseInt(itemsPerPage) : 10) +
-                                                index + 1 %>
+                                            <%= ((page || 1) - 1) * itemsPerPage + index + 1 %>
                                         </td>
                                         <td>
                                             <%= order.orderId %>
@@ -170,14 +132,14 @@
                         <% if (totalPages> 1) { %>
                             <nav aria-label="Page navigation" class="mt-4">
                                 <ul class="pagination justify-content-center">
-                                    <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
+                                    <li class="page-item <%= page === 1 ? 'disabled' : '' %>">
                                         <a class="page-link"
-                                            href="?page=<%= currentPage - 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %><%= typeof status !== 'undefined' && status ? '&status=' + status : '' %><%= typeof dateFilter !== 'undefined' && dateFilter ? '&dateFilter=' + dateFilter : '' %>"
+                                            href="?page=<%= page - 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %><%= typeof status !== 'undefined' && status ? '&status=' + status : '' %><%= typeof dateFilter !== 'undefined' && dateFilter ? '&dateFilter=' + dateFilter : '' %>"
                                             tabindex="-1">Previous</a>
                                     </li>
 
                                     <% for(let i=1; i <=totalPages; i++) { %>
-                                        <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                                        <li class="page-item <%= page === i ? 'active' : '' %>">
                                             <a class="page-link"
                                                 href="?page=<%= i %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %><%= typeof status !== 'undefined' && status ? '&status=' + status : '' %><%= typeof dateFilter !== 'undefined' && dateFilter ? '&dateFilter=' + dateFilter : '' %>">
                                                 <%= i %>
@@ -185,9 +147,10 @@
                                         </li>
                                         <% } %>
 
-                                            <li class="page-item <%= currentPage === totalPages ? 'disabled' : '' %>">
+
+                                            <li class="page-item <%= page === totalPages ? 'disabled' : '' %>">
                                                 <a class="page-link"
-                                                    href="?page=<%= currentPage + 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %><%= typeof status !== 'undefined' && status ? '&status=' + status : '' %><%= typeof dateFilter !== 'undefined' && dateFilter ? '&dateFilter=' + dateFilter : '' %>">Next</a>
+                                                    href="?page=<%= page + 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %><%= typeof status !== 'undefined' && status ? '&status=' + status : '' %><%= typeof dateFilter !== 'undefined' && dateFilter ? '&dateFilter=' + dateFilter : '' %>">Next</a>
                                             </li>
                                 </ul>
                             </nav>

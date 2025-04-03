@@ -328,7 +328,7 @@ const cancelOrder=async(req,res)=>{
 const adminGetOrders=async(req,res)=>{
     try {
         const page = parseInt(req.query.page) || 1;
-        const itemsPerPage = 10;
+        const itemsPerPage = 5;
         const skip = (page - 1) * itemsPerPage;
         
         // Get search, status, and date filter parameters
@@ -386,14 +386,14 @@ const adminGetOrders=async(req,res)=>{
         
         res.render('admin/orders', {
             orders,
-            currentPage: page,
+            page,
+            currentPage: 'orders',
             totalPages,
             itemsPerPage,
             totalCount,
             search,
             status,
             dateFilter,
-            currentMenu: 'orders',
             getStatusBadgeClass
         });
     } catch (error) {

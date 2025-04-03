@@ -10,8 +10,8 @@ const cloudinary= require('../config/cloudinary');
 const adminProduct = async (req, res) => {
     try {
         const itemsPerPage= 5;
-        const currentPage=parseInt(req.query.page) || 1;
-        let skip=(currentPage - 1) * itemsPerPage;
+        const page=parseInt(req.query.page) || 1;
+        let skip=(page - 1) * itemsPerPage;
         const search=req.query.search || '';
        
 
@@ -38,7 +38,8 @@ const adminProduct = async (req, res) => {
             totalCount,
             totalPages:Math.ceil(totalCount/itemsPerPage),
             itemsPerPage,
-            currentPage,
+            page,
+            currentPage:'products',
             categories,
             search
         });
