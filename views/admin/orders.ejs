@@ -1,237 +1,273 @@
 <%- include('partials/admin/header') %>
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Header -->
-            <header class="top-header">
-                <div class="header-left"></div>
-                <div class="header-center">
-                    <a href="#" class="brand-name">WaveTune</a>
-                </div>
-                <div class="header-right">
-                    <a id="logout-button" class="logout-btn" href="/admin/logout">Logout</a>
-                </div>
-            </header>
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="top-header">
+            <div class="header-left"></div>
+            <div class="header-center">
+                <a href="#" class="brand-name">WaveTune</a>
+            </div>
+            <div class="header-right">
+                <a id="logout-button" class="logout-btn" href="/admin/logout">Logout</a>
+            </div>
+        </header>
 
+        <div class="content-wrapper">
+            <div class="container-fluid">
+                <h2>Manage Orders</h2>
+                <span class="text-white">Total Orders: <%= totalCount %></span>
+            </div>
+            <!-- Search Bar -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <form action="" method="GET" class="d-flex mt-4">
+                        <input type="text" name="search" class="form-control"
+                            placeholder="Search orders by order ID, user email or status..."
+                            value="<%= typeof search !== 'undefined' ? search : '' %>">
+                        <button type="submit" class="btn btn-primary ms-2">
+                            <i class="bi bi-search"></i>
+                        </button>
+                        <% if (typeof search !=='undefined' && search) { %>
+                            <a href="/admin/orders" class="btn btn-outline-secondary ms-2">Clear</a>
+                            <% } %>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-end mt-4">
+                        <div class="me-2">
+                            <select class="form-select" id="statusFilter" name="status">
+                                <option value="">All Statuses</option>
+                                <option value="pending" <%=status==='pending' ? 'selected' : '' %>>Pending</option>
+                                <option value="processing" <%=status==='processing' ? 'selected' : '' %>>Processing
+                                </option>
+                                <option value="shipped" <%=status==='shipped' ? 'selected' : '' %>>Shipped</option>
+                                <option value="delivered" <%=status==='delivered' ? 'selected' : '' %>>Delivered
+                                </option>
+                                <option value="cancelled" <%=status==='cancelled' ? 'selected' : '' %>>Cancelled
+                                </option>
+                                <option value="return_requested" <%=status==='return_requested' ? 'selected' : '' %>
+                                    >Return Requested</option>
+                                <option value="returned" <%=status==='returned' ? 'selected' : '' %>>Returned
+                                </option>
+                                <option value="payment_failed" <%=status==='payment_failed' ? 'selected' : '' %>
+                                    >Payment Failed</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select class="form-select" id="dateFilter" name="dateFilter">
+                                <option value="">All Time</option>
+                                <option value="today" <%=dateFilter==='today' ? 'selected' : '' %>>Today</option>
+                                <option value="week" <%=dateFilter==='week' ? 'selected' : '' %>>This Week</option>
+                                <option value="month" <%=dateFilter==='month' ? 'selected' : '' %>>This Month
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="content-wrapper">
                 <div class="container-fluid">
-                    <h2>Manage Orders</h2>
-                    <span class="text-white">Total Orders: <%= totalCount %></span>
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Sl.No</th>
+                                <th>Order ID</th>
+                                <th>User</th>
+                                <th>Items</th>
+                                <th>Total Amount</th>
+                                <th>Payment Method</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% orders.forEach((order, index)=> { %>
+                                <tr>
+                                    <td>
+                                        <%= ((page || 1) - 1) * itemsPerPage + index + 1 %>
+                                    </td>
+                                    <td>
+                                        <%= order.orderId %>
+                                    </td>
+                                    <td>
+                                        <%= order.userId.name || order.userId.email %>
+                                    </td>
+                                    <td>
+                                        <%= order.items.length %> items
+                                            <button class="btn btn-sm btn-info"
+                                                onclick="viewOrderItems('<%= order._id %>')">
+                                                <i class="bi bi-eye"></i> View
+                                            </button>
+                                    </td>
+                                    <td>
+                                        ₹<%= order.totalAmount.toFixed(2) %>
+                                    </td>
+                                    <td>
+                                        <%= order.paymentMethod %>
+                                    </td>
+                                    <td>
+                                        <span class="badge <%= getStatusBadgeClass(order.status) %>">
+                                            <%= order.status %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <%= new Date(order.date).toLocaleDateString('en-IN', { day: '2-digit' ,
+                                            month: '2-digit' , year: 'numeric' }) %>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-primary btn-sm"
+                                            onclick="viewOrderDetails('<%= order._id %>')">
+                                            <i class="bi bi-info-circle"></i>
+                                        </button>
+                                        <button class="btn btn-warning btn-sm"
+                                            onclick="updateOrderStatus('<%= order._id %>')">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                    <% if (totalPages> 1) { %>
+                        <nav aria-label="Page navigation" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item <%= page === 1 ? 'disabled' : '' %>">
+                                    <a class="page-link"
+                                        href="?page=<%= page - 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %><%= typeof status !== 'undefined' && status ? '&status=' + status : '' %><%= typeof dateFilter !== 'undefined' && dateFilter ? '&dateFilter=' + dateFilter : '' %>"
+                                        tabindex="-1">Previous</a>
+                                </li>
+
+                                <% for(let i=1; i <=totalPages; i++) { %>
+                                    <li class="page-item <%= page === i ? 'active' : '' %>">
+                                        <a class="page-link"
+                                            href="?page=<%= i %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %><%= typeof status !== 'undefined' && status ? '&status=' + status : '' %><%= typeof dateFilter !== 'undefined' && dateFilter ? '&dateFilter=' + dateFilter : '' %>">
+                                            <%= i %>
+                                        </a>
+                                    </li>
+                                    <% } %>
+
+
+                                        <li class="page-item <%= page === totalPages ? 'disabled' : '' %>">
+                                            <a class="page-link"
+                                                href="?page=<%= page + 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %><%= typeof status !== 'undefined' && status ? '&status=' + status : '' %><%= typeof dateFilter !== 'undefined' && dateFilter ? '&dateFilter=' + dateFilter : '' %>">Next</a>
+                                        </li>
+                            </ul>
+                        </nav>
+                        <% } %>
                 </div>
-                <!-- Search Bar -->
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <form action="" method="GET" class="d-flex mt-4">
-                            <input type="text" name="search" class="form-control"
-                                placeholder="Search orders by order ID, user email or status..."
-                                value="<%= typeof search !== 'undefined' ? search : '' %>">
-                            <button type="submit" class="btn btn-primary ms-2">
-                                <i class="bi bi-search"></i>
-                            </button>
-                            <% if (typeof search !=='undefined' && search) { %>
-                                <a href="/admin/orders" class="btn btn-outline-secondary ms-2">Clear</a>
-                                <% } %>
+            </div>
+        </div>
+
+        <!-- Order Details Modal -->
+        <div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-labelledby="orderDetailsModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-black" id="orderDetailsModalLabel">Order Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="orderDetailsContent">
+                        <!-- Order details will be loaded here dynamically -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Items Modal -->
+        <div class="modal fade" id="orderItemsModal" tabindex="-1" aria-labelledby="orderItemsModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-black" id="orderItemsModalLabel">Order Items</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="orderItemsContent">
+                        <!-- Order items will be loaded here dynamically -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Update Order Status Modal -->
+        <div class="modal fade" id="updateStatusModal" tabindex="-1" aria-labelledby="updateStatusModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-black" id="updateStatusModalLabel">Update Order Status</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="updateStatusForm">
+                            <input type="hidden" id="updateOrderId" name="orderId">
+                            <div class="mb-3">
+                                <label for="orderStatus" class="form-label text-black">Status</label>
+                                <select class="form-select" id="orderStatus" name="status" required>
+                                    <option value="pending">Pending</option>
+                                    <option value="processing">Processing</option>
+                                    <option value="shipped">Shipped</option>
+                                    <option value="delivered">Delivered</option>
+                                    <option value="cancelled">Cancelled</option>
+                                    <option value="return_requested">Return Requested</option>
+                                    <option value="returned">Returned</option>
+                                </select>
+                            </div>
                         </form>
                     </div>
-                    <div class="col-md-6">
-                        <div class="d-flex justify-content-end mt-4">
-                            <div class="me-2">
-                                <select class="form-select" id="statusFilter" name="status">
-                                    <option value="">All Statuses</option>
-                                    <option value="pending" <%=status==='pending' ? 'selected' : '' %>>Pending</option>
-                                    <option value="processing" <%=status==='processing' ? 'selected' : '' %>>Processing
-                                    </option>
-                                    <option value="shipped" <%=status==='shipped' ? 'selected' : '' %>>Shipped</option>
-                                    <option value="delivered" <%=status==='delivered' ? 'selected' : '' %>>Delivered
-                                    </option>
-                                    <option value="cancelled" <%=status==='cancelled' ? 'selected' : '' %>>Cancelled
-                                    </option>
-                                    <option value="return_requested" <%=status==='return_requested' ? 'selected' : '' %>
-                                        >Return Requested</option>
-                                    <option value="returned" <%=status==='returned' ? 'selected' : '' %>>Returned
-                                    </option>
-                                    <option value="payment_failed" <%=status==='payment_failed' ? 'selected' : '' %>
-                                        >Payment Failed</option>
-                                </select>
-                            </div>
-                            <div>
-                                <select class="form-select" id="dateFilter" name="dateFilter">
-                                    <option value="">All Time</option>
-                                    <option value="today" <%=dateFilter==='today' ? 'selected' : '' %>>Today</option>
-                                    <option value="week" <%=dateFilter==='week' ? 'selected' : '' %>>This Week</option>
-                                    <option value="month" <%=dateFilter==='month' ? 'selected' : '' %>>This Month
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="content-wrapper">
-                    <div class="container-fluid">
-                        <table class="table table-bordered table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Sl.No</th>
-                                    <th>Order ID</th>
-                                    <th>User</th>
-                                    <th>Items</th>
-                                    <th>Total Amount</th>
-                                    <th>Payment Method</th>
-                                    <th>Status</th>
-                                    <th>Date</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <% orders.forEach((order, index)=> { %>
-                                    <tr>
-                                        <td>
-                                            <%= ((page || 1) - 1) * itemsPerPage + index + 1 %>
-                                        </td>
-                                        <td>
-                                            <%= order.orderId %>
-                                        </td>
-                                        <td>
-                                            <%= order.userId.name || order.userId.email %>
-                                        </td>
-                                        <td>
-                                            <%= order.items.length %> items
-                                                <button class="btn btn-sm btn-info"
-                                                    onclick="viewOrderItems('<%= order._id %>')">
-                                                    <i class="bi bi-eye"></i> View
-                                                </button>
-                                        </td>
-                                        <td>
-                                            ₹<%= order.totalAmount.toFixed(2) %>
-                                        </td>
-                                        <td>
-                                            <%= order.paymentMethod %>
-                                        </td>
-                                        <td>
-                                            <span class="badge <%= getStatusBadgeClass(order.status) %>">
-                                                <%= order.status %>
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <%= new Date(order.date).toLocaleDateString('en-IN', { day: '2-digit' ,
-                                                month: '2-digit' , year: 'numeric' }) %>
-                                        </td>
-                                        <td>
-                                            <button class="btn btn-primary btn-sm"
-                                                onclick="viewOrderDetails('<%= order._id %>')">
-                                                <i class="bi bi-info-circle"></i>
-                                            </button>
-                                            <button class="btn btn-warning btn-sm"
-                                                onclick="updateOrderStatus('<%= order._id %>')">
-                                                <i class="bi bi-pencil-square"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    <% }) %>
-                            </tbody>
-                        </table>
-                        <% if (totalPages> 1) { %>
-                            <nav aria-label="Page navigation" class="mt-4">
-                                <ul class="pagination justify-content-center">
-                                    <li class="page-item <%= page === 1 ? 'disabled' : '' %>">
-                                        <a class="page-link"
-                                            href="?page=<%= page - 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %><%= typeof status !== 'undefined' && status ? '&status=' + status : '' %><%= typeof dateFilter !== 'undefined' && dateFilter ? '&dateFilter=' + dateFilter : '' %>"
-                                            tabindex="-1">Previous</a>
-                                    </li>
-
-                                    <% for(let i=1; i <=totalPages; i++) { %>
-                                        <li class="page-item <%= page === i ? 'active' : '' %>">
-                                            <a class="page-link"
-                                                href="?page=<%= i %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %><%= typeof status !== 'undefined' && status ? '&status=' + status : '' %><%= typeof dateFilter !== 'undefined' && dateFilter ? '&dateFilter=' + dateFilter : '' %>">
-                                                <%= i %>
-                                            </a>
-                                        </li>
-                                        <% } %>
-
-
-                                            <li class="page-item <%= page === totalPages ? 'disabled' : '' %>">
-                                                <a class="page-link"
-                                                    href="?page=<%= page + 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %><%= typeof status !== 'undefined' && status ? '&status=' + status : '' %><%= typeof dateFilter !== 'undefined' && dateFilter ? '&dateFilter=' + dateFilter : '' %>">Next</a>
-                                            </li>
-                                </ul>
-                            </nav>
-                            <% } %>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="updateStatusBtn">Update Status</button>
                     </div>
                 </div>
             </div>
-
-            <!-- Order Details Modal -->
-            <div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-labelledby="orderDetailsModalLabel"
-                aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title text-black" id="orderDetailsModalLabel">Order Details</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body" id="orderDetailsContent">
-                            <!-- Order details will be loaded here dynamically -->
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Order Items Modal -->
-            <div class="modal fade" id="orderItemsModal" tabindex="-1" aria-labelledby="orderItemsModalLabel"
-                aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title text-black" id="orderItemsModalLabel">Order Items</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body" id="orderItemsContent">
-                            <!-- Order items will be loaded here dynamically -->
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Update Order Status Modal -->
-            <div class="modal fade" id="updateStatusModal" tabindex="-1" aria-labelledby="updateStatusModalLabel"
-                aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title text-black" id="updateStatusModalLabel">Update Order Status</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="updateStatusForm">
-                                <input type="hidden" id="updateOrderId" name="orderId">
-                                <div class="mb-3">
-                                    <label for="orderStatus" class="form-label text-black">Status</label>
-                                    <select class="form-select" id="orderStatus" name="status" required>
-                                        <option value="pending">Pending</option>
-                                        <option value="processing">Processing</option>
-                                        <option value="shipped">Shipped</option>
-                                        <option value="delivered">Delivered</option>
-                                        <option value="cancelled">Cancelled</option>
-                                        <option value="return_requested">Return Requested</option>
-                                        <option value="returned">Returned</option>
-                                    </select>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary" id="updateStatusBtn">Update Status</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         </div>
+
+        <!-- Update Item Status Modal -->
+        <div class="modal fade" id="updateItemStatusModal" tabindex="-1" aria-labelledby="updateItemStatusModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-black" id="updateItemStatusModalLabel">Update Item Status</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="updateItemStatusForm">
+                            <input type="hidden" id="updateOrderItemId" name="itemId">
+                            <input type="hidden" id="updateItemOrderId" name="orderId">
+                            <div class="mb-3">
+                                <label for="itemStatus" class="form-label text-black">Status</label>
+                                <select class="form-select" id="itemStatus" name="status" required>
+                                    <option value="pending">Pending</option>
+                                    <option value="processing">Processing</option>
+                                    <option value="shipped">Shipped</option>
+                                    <option value="delivered">Delivered</option>
+                                    <option value="cancelled">Cancelled</option>
+                                    <option value="return_requested">Return Requested</option>
+                                    <option value="returned">Returned</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="updateItemStatusBtn">Update Item
+                            Status</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
     </div>
 
     <script>
@@ -376,51 +412,99 @@
         }
 
         // Function to view order items
-        function viewOrderItems(orderId) {
-            fetch(`/admin/orders/${orderId}/items`)
+        function viewOrderDetails(orderId) {
+            fetch(`/admin/orders/${orderId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        const items = data.items;
+                        const order = data.order;
+
+                        // Make sure we have valid objects for address and user
+                        const address = order.addressId || {};
+                        const user = order.userId || {};
 
                         let content = `
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Image</th>
-                                        <th>Product</th>
-                                        <th>Price</th>
-                                        <th>Quantity</th>
-                                        <th>Subtotal</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-black fw-bold">Order Information</h6>
+                        <p><strong>Order ID:</strong> ${order.orderId || 'N/A'}</p>
+                        <p><strong>Date:</strong> ${order.date ? new Date(order.date).toLocaleString('en-IN') : 'N/A'}</p>
+                        <p><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(order.status)}">${order.status || 'N/A'}</span></p>
+                        <p><strong>Payment Method:</strong> ${order.paymentMethod || 'N/A'}</p>
+                        <p><strong>Total Amount:</strong> ₹${order.totalAmount ? order.totalAmount.toFixed(2) : '0.00'}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-black fw-bold">Customer Information</h6>
+                        <p><strong>Name:</strong> ${user.name || 'N/A'}</p>
+                        <p><strong>Email:</strong> ${user.email || 'N/A'}</p>
+                        <p><strong>Phone:</strong> ${user.phone || 'N/A'}</p>
+                    </div>
+                </div>`;
 
-                        items.forEach(item => {
-                            content += `
-                                <tr>
-                                    <td>
-                                        <img src="${item.productId.images && item.productId.images.length > 0 ? item.productId.images[0].url : '/images/no-image.jpg'}" 
-                                             alt="${item.productId.name}" width="50">
-                                    </td>
-                                    <td>${item.productId.name}</td>
-                                    <td>₹${item.productId.price.toFixed(2)}</td>
-                                    <td>${item.quantity}</td>
-                                    <td>₹${(item.productId.price * item.quantity).toFixed(2)}</td>
-                                    <td><span class="badge ${getStatusBadgeClass(item.status)}">${item.status}</span></td>
-                                </tr>`;
-                        });
-
+                        // Address section
                         content += `
-                                </tbody>
-                            </table>`;
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-black fw-bold">Shipping Address</h6>`;
 
-                        document.getElementById('orderItemsContent').innerHTML = content;
-                        const modal = new bootstrap.Modal(document.getElementById('orderItemsModal'));
+                        if (address && typeof address === 'object') {
+                            content += `
+                    <p>
+                        ${address.name || 'N/A'}<br>
+                        ${address.street || address.address || 'N/A'}<br>
+                        ${address.city || 'N/A'}, ${address.state || 'N/A'} - ${address.zipCode || address.pinCode || 'N/A'}<br>
+                        Phone: ${address.phone || 'N/A'}
+                    </p>`;
+                        } else {
+                            content += `<p>Address information not available</p>`;
+                        }
+                        content += `</div></div>`;
+
+                        // Items table - enhanced for individual item management
+                        content += `
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-black fw-bold">Order Items</h6>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+                        if (order.items && order.items.length > 0) {
+                            order.items.forEach((item, index) => {
+                                const productName = item.productId && typeof item.productId === 'object'
+                                    ? item.productId.name || 'Unknown Product'
+                                    : 'Unknown Product';
+
+                                content += `
+                        <tr>
+                            <td>${productName}</td>
+                            <td>${item.quantity || 0}</td>
+                            <td><span class="badge ${getStatusBadgeClass(item.status || order.status)}">${item.status || order.status || 'N/A'}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" onclick="updateItemStatus('${order._id}', '${item._id || index}', '${item.status || order.status}')">
+                                    Update Status
+                                </button>
+                            </td>
+                        </tr>`;
+                            });
+                        } else {
+                            content += `<tr><td colspan="4">No items found</td></tr>`;
+                        }
+
+                        content += `</tbody></table></div></div>`;
+
+                        document.getElementById('orderDetailsContent').innerHTML = content;
+                        const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
                         modal.show();
                     } else {
-                        Swal.fire('Error', data.message || 'Failed to load order items', 'error');
+                        Swal.fire('Error', data.message || 'Failed to load order details', 'error');
                     }
                 })
                 .catch(error => {
@@ -474,6 +558,49 @@
                             });
                     } else {
                         Swal.fire('Error', data.message || 'Failed to update order status', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Error', 'Something went wrong', 'error');
+                });
+        });
+
+        // Function to update individual item status
+        function updateItemStatus(orderId, itemId, currentStatus) {
+            document.getElementById('updateItemOrderId').value = orderId;
+            document.getElementById('updateOrderItemId').value = itemId;
+            document.getElementById('itemStatus').value = currentStatus || 'pending';
+
+            const modal = new bootstrap.Modal(document.getElementById('updateItemStatusModal'));
+            modal.show();
+        }
+
+        // Update Item Status Button Event
+        document.getElementById('updateItemStatusBtn').addEventListener('click', function () {
+            const orderId = document.getElementById('updateItemOrderId').value;
+            const itemId = document.getElementById('updateOrderItemId').value;
+            const status = document.getElementById('itemStatus').value;
+
+            fetch(`/admin/orders/${orderId}/item/${itemId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('updateItemStatusModal'));
+                        modal.hide();
+                        Swal.fire('Success', 'Item status updated successfully', 'success')
+                            .then(() => {
+                                // Refresh the order details modal instead of reloading the page
+                                viewOrderDetails(orderId);
+                            });
+                    } else {
+                        Swal.fire('Error', data.message || 'Failed to update item status', 'error');
                     }
                 })
                 .catch(error => {

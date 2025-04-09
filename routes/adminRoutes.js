@@ -38,8 +38,10 @@ router.get('/orders',verifyAdmin,orderController.adminGetOrders);
 router.get('/orders/:id',verifyAdmin,orderController.adminGetOrderDetails);
 router.get('/orders/:id/items',verifyAdmin,orderController.adminGetOrderItems);
 router.patch('/orders/:id/status',verifyAdmin,orderController.adminUpdateOrderStatus);
+router.patch('/orders/:orderId/item/:itemId/status',verifyAdmin,orderController.adminUpdateOrderItemStatus);
 
 //Coupons
 router.get('/coupons',verifyAdmin,couponController.getCoupon);
 router.post('/coupons',verifyAdmin,couponController.createCoupon);
+router.put('/coupons/:id',verifyAdmin,couponController.getCouponDetails);
 module.exports=router;

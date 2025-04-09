@@ -70,10 +70,12 @@ router.delete('/cart/removeItem',cartController.removeFromCart)
 //Checkout
 router.get('/checkout',orderController.loadCheckout);
 router.post('/checkout/addAddress',addressController.addAddress);
+router.post('/checkout/apply-coupon',orderController.applyCoupon);
 router.post('/placeOrder',orderController.placeOrder);
 router.get('/myOrders',orderController.loadMyOrders);
 router.get('/orders/:id',orderController.loadOrderDetails);
 router.post('/orders/:id/cancel',orderController.cancelOrder);
+router.post('/orders/:orderId/items/:itemId/cancel',orderController.cancelOrderItem);
 
 //Profile Management
 router.get('/profile',profileController.loadProfile);
