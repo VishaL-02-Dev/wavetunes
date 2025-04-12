@@ -1,4 +1,6 @@
 const User=require('../model/userModel');
+const Order= require('../model/order');
+const Product= require('../model/productModel');
 const bcrypt=require('bcrypt');
 const jwt=require('jsonwebtoken');
 
@@ -75,51 +77,84 @@ const login=async(req,res)=>{
 
 // Dashboard
 const getDashboard = async (req, res) => {
+    let totalUsers = 0;
+    let totalOrders = 0;
+    let totalProducts = 0;
+    let totalRevenue = 0;
+    let months = [];
+    let sales = [];
+    let topProducts = { labels: [], data: [] };
+    let recentOrders = [];
+    
     try {
+
+         totalUsers= await User.countDocuments({isAdmin: false});
+         totalOrders= await Order.countDocuments();
+         totalProducts= await Product.countDocuments();
+         totalRevenue= await Order.aggregate([
+            {$match: {status:{$ne: 'canceled'}}},
+            {$group:{_id:null, total: {$sum:'$totalAmount'}}}
+        ]);
+
+        const salesData= await Order.aggregate([
+            {$match: {status:{$ne:'canceled'}}},
+            {$group: {
+                _id: {
+                    month:{$month: '$createdAt'},
+                    year:{$year: '$createdAt'}
+                },
+                totalSales:{$sum: '$totalAmount'}
+            }
+        },
+        {$sort: {'_id.year':1, '_id.month': 1}},
+        {$limit: 12}
+        ]);
+
+        months= salesData.map(data=>{
+            const date = new Date(data._id.year, data._id.month -1 );
+            return date.toLocaleString('default', {month:'short', year: 'numeric'})
+        });
+        sales= salesData.map(data=> data.totalSales);
+
+        recentOrders= await Order.find()
+            .sort({createdAt: -1})
+            .limit(5)
+            .populate('userId', 'fname lname');
+
         res.render('admin/dashboard',{ 
             currentPage: 'dashboard',
-            admin:req.user
+            admin:req.user,
+            stats:{
+                totalUsers,
+                totalProducts: totalProducts || 0,
+                totalOrders,
+                totalRevenue: totalRevenue[0]?.total || 0
+            },
+            chartData:{
+                months,
+                sales
+            },
+            recentOrders
         })
-        
-        // , {
-        //     currentPage: 'dashboard',
-        //     stats,
-        //     chartData: {
-        //         months,
-        //         sales
-        //     },
-        //     topProducts: {
-        //         labels: topProducts.map(p => p.productInfo[0].name),
-        //         data: topProducts.map(p => p.count)
-        //     },
-        //     recentOrders: formattedOrders
-        // });
 
     } catch (error) {
         console.error('Dashboard Error:', error);
         res.render('admin/dashboard',{
             currentPage: 'dashboard',
-            admin:req.user
+            admin:req.user,
+            stats:{
+                totalUsers,
+                totalProducts: totalProducts || 0,
+                totalOrders,
+                totalRevenue: totalRevenue[0]?.total || 0
+            },
+            chartData:{
+                months,
+                sales
+            },
+            recentOrders
         })
-        // , {
-        //     currentPage: 'dashboard',
-        //     stats: {
-        //         totalUsers: 0,
-        //         totalProducts: 0,
-        //         totalOrders: 0,
-        //         totalRevenue: 0
-        //     },
-        //     chartData: {
-        //         months: [],
-        //         sales: []
-        //     },
-        //     topProducts: {
-        //         labels: [],
-        //         data: []
-        //     },
-        //     recentOrders: [],
-        //     error: 'Failed to load dashboard data'
-        // });
+     
     }
 };
 

@@ -501,7 +501,7 @@ const cancelOrderItem=async(req,res)=>{
             order.totalAmount = activeItems.reduce((sum,i)=>{
                 const itemPrice= i.price ||0;
                 return sum + (itemPrice * i.quantity);
-            },0 ) + 10;
+            },0 ) ;
         } else{
             order.status= 'cancelled';
             order.totalAmount = 0;
@@ -613,7 +613,7 @@ const adminGetOrderDetails = async (req, res) => {
         const orderId = req.params.id;
 
         const order = await Order.findById(orderId)
-            .populate('userId', 'name email phone')
+            .populate('userId', 'fname lname email phone')
             .populate('addressId')
             .populate('items.productId', 'name');
 
@@ -666,18 +666,19 @@ const adminUpdateOrderStatus = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid status' });
         }
 
-        const order = await Order.findByIdAndUpdate(
-            orderId,
-            { status },
-            { new: true }
-        );
+        const order = await Order.findByIdAndUpdate(orderId,);
 
         if (!order) {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
 
+        order.status=status;
+        if(order.items && order.items.length>0){
+            order.items.forEach(item=>{
+                item.status = status;
+            });
         // Additional logic for specific status changes
-        if (status === 'cancelled') {
+        if (status === 'cancelled' && order.status !== 'cancelled') {
             // Return items to inventory
             if (order.items && order.items.length > 0) {
                 for (const item of order.items) {
@@ -689,6 +690,7 @@ const adminUpdateOrderStatus = async (req, res) => {
                 }
             }
         }
+    }
 
         res.json({ success: true, order });
     } catch (error) {
@@ -758,6 +760,7 @@ const adminUpdateOrderItemStatus = async (req, res) => {
         }
 
         // Update the specific item's status
+        const previousItemStatus = order.items[itemIndex].status;
         order.items[itemIndex].status = status;
 
         // If all items have the same status, update the overall order status
@@ -767,7 +770,7 @@ const adminUpdateOrderItemStatus = async (req, res) => {
         }
 
         // Handle inventory adjustments for cancelled items
-        if (status === 'cancelled' && order.items[itemIndex].status !== 'cancelled') {
+        if (status === 'cancelled' && previousItemStatus !== 'cancelled') {
             // Return item to inventory
             await Product.findByIdAndUpdate(
                 order.items[itemIndex].productId,

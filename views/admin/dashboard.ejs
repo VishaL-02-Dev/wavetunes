@@ -4,91 +4,228 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     </head>
 
-            <!-- Main Content -->
-            <div class="main-content">
-                <!-- Header -->
-                <header class="top-header">
-                    <div class="header-left"></div>
-                    <div class="header-center">
-                        <a href="#" class="brand-name">WaveTune</a>
-                    </div>
-                    <div class="header-right">
-                        <a id="logout-button" class="logout-btn" href="/admin/logout">Logout</a>
-                    </div>
-                </header>
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="top-header">
+            <div class="header-left"></div>
+            <div class="header-center">
+                <a href="#" class="brand-name">WaveTune</a>
+            </div>
+            <div class="header-right">
+                <a id="logout-button" class="logout-btn" href="/admin/logout">Logout</a>
+            </div>
+        </header>
 
-                <!-- Content Area -->
-                <div class="content-wrapper">
-                    <div class="container-fluid">
-                        <!-- Welcome Section -->
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h2>Dashboard</h2>
-                            <div>
-                                <span class="text-white">Welcome, Admin!</span>
+        <!-- Content Area -->
+        <div class="content-wrapper">
+            <div class="container-fluid">
+                <!-- Welcome Section -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Dashboard</h2>
+                    <div>
+                        <span class="text-white">Welcome, Admin!</span>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Total Users</h5>
+                                <p class="card-text">
+                                    <%= stats.totalUsers %>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Total Products</h5>
+                                <p class="card-text">
+                                    <%= stats.totalProducts %>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Total Orders</h5>
+                                <p class="card-text">
+                                    <%= stats.totalOrders %>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Total Revenue</h5>
+                                <p class="card-text">₹<%= stats.totalRevenue.toFixed(2) %>
+                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Sales Chart -->
+                <div class="card bg-dark text-white mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Monthly Sales</h5>
+                        <canvas id="salesChart" height="100"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Orders -->
+                <div class="card bg-dark text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Recent Orders</h5>
+                        <% if (recentOrders && recentOrders.length> 0) { %>
+                            <table class="table table-dark table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>User</th>
+                                        <th>Total</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% recentOrders.forEach(order=> { %>
+                                        <tr>
+                                            <td>
+                                                <%= order.orderId %>
+                                            </td>
+                                            <td>
+                                                <%= order.userId.fname %> <%= order.userId.lname %>
+                                            </td>
+                                            <td>₹<%= order.totalAmount.toFixed(2) %>
+                                            </td>
+                                            <td>
+                                                <span
+                                                    class="badge <%= order.status === 'delivered' ? 'bg-success' : order.status === 'pending' ? 'bg-warning' : 'bg-danger' %>">
+                                                    <%= order.status %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <%= new Date(order.createdAt).toLocaleDateString() %>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                </tbody>
+                            </table>
+                            <% } else { %>
+                                <p class="text-center text-gray-400">No recent orders found.</p>
+                                <% } %>
+                    </div>
+                </div>
+
             </div>
         </div>
+    </div>
+    </div>
+    </div>
+    </div>
+    </div>
+    </div>
 
-        <script>
-            // Logout functionality
-            document.addEventListener("DOMContentLoaded", function () {
+    <script>
 
-                const logoutButton = document.getElementById("logout-button");
-
-                if (logoutButton) {
-
-                    logoutButton.addEventListener("click", function (event) {
-                        event.preventDefault();
-                        Swal.fire({
-                            title: "Are you sure?",
-                            text: "You will be logged out!",
-                            icon: "warning",
-                            showCancelButton: true,
-                            confirmButtonText: "Yes, logout!",
-                            cancelButtonText: "Cancel"
-                        }).then((result) => {
-
-                            if (result.isConfirmed) {
-
-                                fetch("/admin/logout", {
-                                    method: "GET",
-                                    headers: {
-                                        "Content-Type": "application/json",
-                                        "Accept": "application/json"
-                                    },
-                                    credentials: 'include'
-                                })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.success) {
-                                            Swal.fire({
-                                                title: "Logged Out!",
-                                                text: "You have been successfully logged out.",
-                                                icon: "success",
-                                                timer: 1500,
-                                                showConfirmButton: false
-                                            }).then(() => {
-                                                window.location.href = data.redirectUrl;
-                                            });
-                                        } else {
-                                            Swal.fire("Error", data.message, "error");
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error("Logout Error:", error);
-                                        Swal.fire("Error", "Something went wrong!", "error");
-                                    });
-                            }
-                        });
-                    });
+        // Chart.js for Sales
+        document.addEventListener('DOMContentLoaded', function () {
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            const salesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: '<%- JSON.stringify(chartData.months) %>',
+                    datasets: [{
+                        label: 'Sales (₹)',
+                        data: '<%- JSON.stringify(chartData.sales) %>',
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Revenue (₹)',
+                                color: '#ffffff'
+                            },
+                            ticks: { color: '#ffffff' }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Months',
+                                color: '#ffffff'
+                            },
+                            ticks: { color: '#ffffff' }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#ffffff' } }
+                    }
                 }
             });
 
-        </script>
-        <%- include("partials/admin/footer") %>
-    </body>
-
-    </html>
+            // Logout functionality (unchanged)
+            const logoutButton = document.getElementById("logout-button");
+            if (logoutButton) {
+                logoutButton.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    Swal.fire({
+                        title: "Are you sure?",
+                        text: "You will be logged out!",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonText: "Yes, logout!",
+                        cancelButtonText: "Cancel"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            fetch("/admin/logout", {
+                                method: "GET",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "Accept": "application/json"
+                                },
+                                credentials: 'include'
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire({
+                                        title: "Logged Out!",
+                                        text: "You have been successfully logged out.",
+                                        icon: "success",
+                                        timer: 1500,
+                                        showConfirmButton: false
+                                    }).then(() => {
+                                        window.location.href = data.redirectUrl;
+                                    });
+                                } else {
+                                    Swal.fire("Error", data.message, "error");
+                                }
+                            })
+                            .catch(error => {
+                                console.error("Logout Error:", error);
+                                Swal.fire("Error", "Something went wrong!", "error");
+                            });
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+    <%- include("partials/admin/footer") %>
+</body>
+</html>

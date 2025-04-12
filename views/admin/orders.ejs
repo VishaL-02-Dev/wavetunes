@@ -91,7 +91,7 @@
                                         <%= order.orderId %>
                                     </td>
                                     <td>
-                                        <%= order.userId.name || order.userId.email %>
+                                        <%= order.userId.fname || order.userId.email %>
                                     </td>
                                     <td>
                                         <%= order.items.length %> items
@@ -308,210 +308,227 @@
 
         // Function to view order details
         function viewOrderDetails(orderId) {
+            console.log("Loading order details for ID:", orderId);
+
             fetch(`/admin/orders/${orderId}`)
-                .then(response => response.json())
+                .then(response => {
+                    console.log("Response status:", response.status);
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.success) {
+                    console.log("Order data received:", data);
+
+                    if (data.success && data.order) {
                         const order = data.order;
-                        // Add debugging to see what's actually in the data
-                        console.log("Order data received:", order);
+                        console.log("Order object:", order);
+                        console.log("User data:", order.userId);
+                        console.log("Address data:", order.addressId);
+                        console.log("Items data:", order.items);
 
-                        // Check if address and user exist before trying to access their properties
-                        const address = order.addressId || {};
-                        const user = order.userId || {};
+                        // Create the content for the modal
+                        let content = buildOrderDetailsContent(order);
 
-                        let content = `
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-black">Order Information</h6>
-                            <p><strong>Order ID:</strong> ${order.orderId || 'N/A'}</p>
-                            <p><strong>Date:</strong> ${order.date ? new Date(order.date).toLocaleString('en-IN') : 'N/A'}</p>
-                            <p><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(order.status)}">${order.status || 'N/A'}</span></p>
-                            <p><strong>Payment Method:</strong> ${order.paymentMethod || 'N/A'}</p>
-                            <p><strong>Total Amount:</strong> ₹${order.totalAmount ? order.totalAmount.toFixed(2) : '0.00'}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="text-black">Customer Information</h6>`;
-
-                        // Check if user is an object with properties or just an ID
-                        if (typeof user === 'object' && user !== null) {
-                            content += `
-                        <p><strong>Name:</strong> ${user.name || 'N/A'}</p>
-                        <p><strong>Email:</strong> ${user.email || 'N/A'}</p>
-                        <p><strong>Phone:</strong> ${user.phone || 'N/A'}</p>`;
-                        } else {
-                            content += `<p><strong>User ID:</strong> ${user || 'N/A'}</p>`;
-                        }
-
-                        content += `</div></div>`;
-
-                        // Check if address is an object with properties
-                        content += `<div class="row mt-3"><div class="col-12"><h6 class="text-black">Shipping Address</h6>`;
-                        if (typeof address === 'object' && address !== null) {
-                            content += `
-                        <p>${address.name || 'N/A'}<br>
-                        ${address.street || 'N/A'}, ${address.city || 'N/A'}<br>
-                        ${address.state || 'N/A'}, ${address.country || 'N/A'} - ${address.zipCode || 'N/A'}<br>
-                        Phone: ${address.phone || 'N/A'}</p>`;
-                        } else {
-                            content += `<p>Address information not available</p>`;
-                        }
-                        content += `</div></div>`;
-
-                        // Items table
-                        content += `
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <h6 class="text-black">Order Items</h6>
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Product</th>
-                                        <th>Quantity</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
-
-                        // Check if items array exists and has elements
-                        if (order.items && order.items.length > 0) {
-                            order.items.forEach(item => {
-                                let productName = 'N/A';
-                                if (item.productId) {
-                                    if (typeof item.productId === 'object') {
-                                        productName = item.productId.name || 'Product ' + (item.productId._id || 'Unknown');
-                                    } else {
-                                        productName = 'Product ' + item.productId;
-                                    }
-                                }
-
-                                content += `
-                            <tr>
-                                <td>${productName}</td>
-                                <td>${item.quantity || 0}</td>
-                                <td><span class="badge ${getStatusBadgeClass(item.status)}">${item.status || 'N/A'}</span></td>
-                            </tr>`;
-                            });
-                        } else {
-                            content += `<tr><td colspan="3">No items found</td></tr>`;
-                        }
-
-                        content += `</tbody></table></div></div>`;
-
+                        // Update the modal content and show it
                         document.getElementById('orderDetailsContent').innerHTML = content;
                         const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
                         modal.show();
                     } else {
+                        console.error("Failed to load order details:", data.message);
                         Swal.fire('Error', data.message || 'Failed to load order details', 'error');
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    Swal.fire('Error', 'Something went wrong', 'error');
+                    console.error('Error fetching order details:', error);
+                    Swal.fire('Error', 'Something went wrong while fetching order details', 'error');
                 });
         }
 
-        // Function to view order items
-        function viewOrderDetails(orderId) {
-            fetch(`/admin/orders/${orderId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const order = data.order;
+        // Helper function to build the order details content
+        function buildOrderDetailsContent(order) {
+            // Make sure address and user objects exist
+            const address = order.addressId || {};
+            const user = order.userId || {};
+            let content = `
+    <div class="row">
+        <div class="col-md-6">
+            <h5 class="text-black fw-bold">Order Information</h6>
+            <p class= "text-black"><strong>Order ID:</strong> ${order.orderId || 'N/A'}</p>
+            <p class="text-black"><strong>Date:</strong> ${order.date ? new Date(order.date).toLocaleString('en-IN') : 'N/A'}</p>
+            <p class="text-black"><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(order.status)}">${order.status || 'N/A'}</span></p>
+            <p class="text-black"><strong>Payment Method:</strong> ${order.paymentMethod || 'N/A'}</p>
+            <p class="text-black"><strong>Total Amount:</strong> ₹${order.totalAmount ? order.totalAmount.toFixed(2) : '0.00'}</p>
+            ${order.coupon ? `<p><strong>Coupon Applied:</strong> ${order.coupon.code || 'N/A'}</p>
+            <p class="text-black"><strong>Discount:</strong> ₹${order.discount ? order.discount.toFixed(2) : '0.00'}</p>` : ''}
+        </div>
+        <div class="col-md-6">
+            <h5 class="text-black fw-bold">Customer Information</h6>`;
 
-                        // Make sure we have valid objects for address and user
-                        const address = order.addressId || {};
-                        const user = order.userId || {};
+            // Handle user information based on its structure
+            if (user) {
+                if (typeof user === 'object') {
+                    content += `
+            <p class="text-black"><strong>Name:</strong> ${user.fname} ${user.lname || 'N/A'}</p>
+            <p class="text-black"><strong>Email:</strong> ${user.email || 'N/A'}</p>
+            <p class="text-black"><strong>Phone:</strong> ${address.phone || 'N/A'}</p>`;
+                } else {
+                    content += `<p class="text-black"><strong>User ID:</strong> ${user}</p>`;
+                }
+            } else {
+                content += `<p class="text-black">Customer information not available</p>`;
+            }
 
-                        let content = `
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6 class="text-black fw-bold">Order Information</h6>
-                        <p><strong>Order ID:</strong> ${order.orderId || 'N/A'}</p>
-                        <p><strong>Date:</strong> ${order.date ? new Date(order.date).toLocaleString('en-IN') : 'N/A'}</p>
-                        <p><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(order.status)}">${order.status || 'N/A'}</span></p>
-                        <p><strong>Payment Method:</strong> ${order.paymentMethod || 'N/A'}</p>
-                        <p><strong>Total Amount:</strong> ₹${order.totalAmount ? order.totalAmount.toFixed(2) : '0.00'}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="text-black fw-bold">Customer Information</h6>
-                        <p><strong>Name:</strong> ${user.name || 'N/A'}</p>
-                        <p><strong>Email:</strong> ${user.email || 'N/A'}</p>
-                        <p><strong>Phone:</strong> ${user.phone || 'N/A'}</p>
-                    </div>
-                </div>`;
+            content += `</div></div>`;
 
-                        // Address section
-                        content += `
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <h6 class="text-black fw-bold">Shipping Address</h6>`;
+            // Address section with safe property access
+            content += `
+    <div class="row mt-3">
+        <div class="col-12">
+            <h5 class="text-black fw-bold">Shipping Address</h6>`;
 
-                        if (address && typeof address === 'object') {
-                            content += `
-                    <p>
-                        ${address.name || 'N/A'}<br>
-                        ${address.street || address.address || 'N/A'}<br>
-                        ${address.city || 'N/A'}, ${address.state || 'N/A'} - ${address.zipCode || address.pinCode || 'N/A'}<br>
-                        Phone: ${address.phone || 'N/A'}
-                    </p>`;
-                        } else {
-                            content += `<p>Address information not available</p>`;
-                        }
-                        content += `</div></div>`;
+            if (address) {
+                if (typeof address === 'object') {
+                    content += `
+            <p class="text-black">
+                ${address.street || address.address || 'N/A'}<br>
+                ${address.city || 'N/A'}, ${address.state || 'N/A'} - ${address.zipCode || address.pinCode || 'N/A'}<br>
+                ${address.country || 'India'}<br>
+                Phone: ${address.phone || 'N/A'}
+            </p>`;
+                } else {
+                    content += `<p class="text-black">Address ID: ${address}</p>`;
+                }
+            } else {
+                content += `<p class="text-black">Address information not available</p>`;
+            }
 
-                        // Items table - enhanced for individual item management
-                        content += `
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <h6 class="text-black fw-bold">Order Items</h6>
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Quantity</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>`;
+            content += `</div></div>`;
 
-                        if (order.items && order.items.length > 0) {
-                            order.items.forEach((item, index) => {
-                                const productName = item.productId && typeof item.productId === 'object'
-                                    ? item.productId.name || 'Unknown Product'
-                                    : 'Unknown Product';
-
-                                content += `
+            // Items table with individual item status management
+            content += `
+    <div class="row mt-3">
+        <div class="col-12">
+            <h5 class="text-black fw-bold">Order Items</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
                         <tr>
-                            <td>${productName}</td>
-                            <td>${item.quantity || 0}</td>
-                            <td><span class="badge ${getStatusBadgeClass(item.status || order.status)}">${item.status || order.status || 'N/A'}</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-warning" onclick="updateItemStatus('${order._id}', '${item._id || index}', '${item.status || order.status}')">
-                                    Update Status
-                                </button>
-                            </td>
-                        </tr>`;
-                            });
-                        } else {
-                            content += `<tr><td colspan="4">No items found</td></tr>`;
-                        }
+                            <th>Product</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
 
-                        content += `</tbody></table></div></div>`;
+            if (order.items && order.items.length > 0) {
+                order.items.forEach((item, index) => {
+                    const product = item.productId || {};
+                    const productName = typeof product === 'object' ? product.name || 'Unknown Product' : 'Unknown Product';
+                    const price = item.price || 0;
+                    const quantity = item.quantity || 0;
+                    const total = price * quantity;
+                    const itemStatus = item.status || order.status || 'N/A';
 
-                        document.getElementById('orderDetailsContent').innerHTML = content;
-                        const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+                    content += `
+            <tr>
+                <td>${productName}</td>
+                <td>₹${price.toFixed(2)}</td>
+                <td>${quantity}</td>
+                <td>₹${total.toFixed(2)}</td>
+                <td><span class="badge ${getStatusBadgeClass(itemStatus)}">${itemStatus}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-warning" onclick="updateItemStatus('${order._id}', '${item._id || index}', '${itemStatus}')">
+                        <i class="bi bi-pencil-square"></i> Update
+                    </button>
+                </td>
+            </tr>`;
+                });
+            } else {
+                content += `<tr><td colspan="6" class="text-center">No items found</td></tr>`;
+            }
+
+            content += `</tbody></table></div></div></div>`;
+
+            return content;
+        }
+
+        function viewOrderItems(orderId) {
+            console.log("Loading order items for ID:", orderId);
+
+            fetch(`/admin/orders/${orderId}`)
+                .then(response => {
+                    console.log("Response status:", response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Order data received:", data);
+
+                    if (data.success && data.order) {
+                        const order = data.order;
+                        console.log("Order items:", order.items);
+
+                        // Build content for items only
+                        let content = buildOrderItemsContent(order);
+
+                        // Update the modal content and show it
+                        document.getElementById('orderItemsContent').innerHTML = content;
+                        const modal = new bootstrap.Modal(document.getElementById('orderItemsModal'));
                         modal.show();
                     } else {
-                        Swal.fire('Error', data.message || 'Failed to load order details', 'error');
+                        console.error("Failed to load order items:", data.message);
+                        Swal.fire('Error', data.message || 'Failed to load order items', 'error');
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    Swal.fire('Error', 'Something went wrong', 'error');
+                    console.error('Error fetching order items:', error);
+                    Swal.fire('Error', 'Something went wrong while fetching order items', 'error');
                 });
         }
+
+        // Helper function to build the order items content
+        function buildOrderItemsContent(order) {
+            let content = `
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            if (order.items && order.items.length > 0) {
+                order.items.forEach(item => {
+                    const product = item.productId || {};
+                    const productName = typeof product === 'object' ? product.name || 'Unknown Product' : 'Unknown Product';
+                    const price = item.price || 0;
+                    const quantity = item.quantity || 0;
+                    const total = price * quantity;
+                    const itemStatus = item.status || order.status || 'N/A';
+
+                    content += `
+                    <tr>
+                        <td>${productName}</td>
+                        <td>₹${price.toFixed(2)}</td>
+                        <td>${quantity}</td>
+                        <td>₹${total.toFixed(2)}</td>
+                        <td><span class="badge ${getStatusBadgeClass(itemStatus)}">${itemStatus}</span></td>
+                    </tr>`;
+                });
+            } else {
+                content += `<tr><td colspan="5" class="text-center">No items found</td></tr>`;
+            }
+
+            content += `</tbody></table></div>`;
+            return content;
+        }
+
 
         // Function to update order status
         function updateOrderStatus(orderId) {
