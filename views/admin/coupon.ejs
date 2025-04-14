@@ -333,7 +333,7 @@
         // Function to view coupon details
         function viewCouponDetails(couponId) {
             fetch(`/admin/coupons/${couponId}`, {
-                method: 'PUT',
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -388,27 +388,27 @@
                 </div>
                 <div class="row mb-3">
                     <div class="col-12">
-                        <p><strong>Coupon Status:</strong> <span class="badge ${statusClass}">${status}</span></p>
-                        <p><strong>Times Used:</strong> ${coupon.usedCount} 
+                        <p class=text-black><strong>Coupon Status:</strong> <span class="badge ${statusClass}">${status}</span></p>
+                        <p class=text-black><strong>Times Used:</strong> ${coupon.usedCount} 
                             ${coupon.maxUses > 0 ? `/ ${coupon.maxUses} uses` : '(Unlimited)'}</p>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-6">
-                        <p><strong>Discount:</strong></p>
-                        <p><strong>Minimum Purchase:</strong></p>
-                        <p><strong>Valid From:</strong></p>
-                        <p><strong>Valid Until:</strong></p>
-                        <p><strong>Created On:</strong></p>
+                        <p class=text-black><strong>Discount:</strong></p>
+                        <p class=text-black><strong>Minimum Purchase:</strong></p>
+                        <p class=text-black><strong>Valid From:</strong></p>
+                        <p class=text-black><strong>Valid Until:</strong></p>
+                        <p class=text-black><strong>Created On:</strong></p>
                     </div>
                     <div class="col-6">
-                        <p>${coupon.discountType === 'percentage' ? coupon.discountAmount + '%' : '₹' + coupon.discountAmount}
+                        <p class=text-black>${coupon.discountType === 'percentage' ? coupon.discountAmount + '%' : '₹' + coupon.discountAmount}
                            ${coupon.discountType === 'percentage' && coupon.maxDiscount ? ' (up to ₹' + coupon.maxDiscount + ')' : ''}
                         </p>
-                        <p>₹${coupon.minimumPurchase}</p>
-                        <p>${startDate}</p>
-                        <p>${endDate}</p>
-                        <p>${createdAt}</p>
+                        <p class=text-black>₹${coupon.minimumPurchase}</p>
+                        <p class=text-black>${startDate}</p>
+                        <p class=text-black>${endDate}</p>
+                        <p class=text-black>${createdAt}</p>
                     </div>
                 </div>`;
 

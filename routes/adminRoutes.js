@@ -43,5 +43,7 @@ router.patch('/orders/:orderId/item/:itemId/status',verifyAdmin,orderController.
 //Coupons
 router.get('/coupons',verifyAdmin,couponController.getCoupon);
 router.post('/coupons',verifyAdmin,couponController.createCoupon);
-router.put('/coupons/:id',verifyAdmin,couponController.getCouponDetails);
+router.get('/coupons/:id',verifyAdmin,couponController.getCouponDetails);
+router.put('/coupons/:id',verifyAdmin,couponController.updateCoupon);
+router.patch('/coupons/:id/toggle-status',verifyAdmin,couponController.toggleCouponStatus);
 module.exports=router;

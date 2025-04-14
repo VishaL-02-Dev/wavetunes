@@ -69,6 +69,8 @@ router.delete('/cart/removeItem',cartController.removeFromCart)
 
 //Checkout
 router.get('/checkout',orderController.loadCheckout);
+router.post('/checkout/initiate-razorpay', orderController.initiateRazorpayOrder);
+router.post('/checkout/verify-razorpay', orderController.verifyRazorpay);
 router.post('/checkout/addAddress',addressController.addAddress);
 router.post('/checkout/apply-coupon',orderController.applyCoupon);
 router.post('/placeOrder',orderController.placeOrder);

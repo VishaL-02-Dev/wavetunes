@@ -145,9 +145,123 @@ const getCouponDetails= async(req,res)=>{
     }
 };
 
+//Update Coupon
+const updateCoupon = async(req,res)=>{
+    try {
+        const couponId =req.params.id;
+        const {
+            code,
+            discountType,
+            discountAmount,
+            minimumPurchase,
+            maxDiscount,
+            startDate,
+            endDate,
+            maxUses,
+            isActive
+        }=req.body;
+
+        if(discountType === 'percentage' && discountAmount > 100){
+            return res.status(400).json({
+                success:false,
+                messaage:'Discount percentage cannot exceed 100%'
+            });
+        }
+
+        if(new Date(startDate) > new Date(endDate)){
+            return res.status(400).json({
+                success:false,
+                message:'End date must be after start date'
+            });
+        }
+
+        const existingCoupon= await Coupon.findOne({
+            cose:code.toUpperCase(),
+            _id:{$ne:couponId}
+        });
+
+        if(existingCoupon){
+            return res.status(400).json({
+                success:false,
+                message:'Coupon code already exists'
+            });
+        }
+
+        const updatedCoupon = await Coupon.findByIdAndUpdate(
+            couponId,
+            {
+                code: code.toUpperCase(),
+                discountType,
+                discountAmount,
+                minimumPurchase,
+                maxDiscount: maxDiscount || undefined,
+                startDate,
+                endDate,
+                maxUses: maxUses || 0,
+                isActive
+            },
+            { new: true}
+        );
+
+        if(!updatedCoupon){
+            return res.status(404).json({
+                success:false,
+                message:'Coupon not found'
+            });
+        }
+
+        return res.status(200).json({
+            success:true,
+            message:'Couppon updated successfully',
+            coupon:updatedCoupon
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success:fasle,
+            messaage:'Server error'
+        });
+    }
+}
+
+// Toggle coupon status (activate/deactivate)
+const toggleCouponStatus = async(req, res) => {
+    try {
+        const couponId = req.params.id;
+        const { isActive } = req.body;
+
+        const updatedCoupon = await Coupon.findByIdAndUpdate(
+            couponId,
+            { isActive },
+            { new: true }
+        );
+
+        if(!updatedCoupon) {
+            return res.status(404).json({
+                success: false,
+                message: 'Coupon not found'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Coupon ${isActive ? 'activated' : 'deactivated'} successfully`,
+            coupon: updatedCoupon
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};
+
 
 module.exports={
     getCoupon,
     createCoupon,
-    getCouponDetails
+    getCouponDetails,
+    updateCoupon,
+    toggleCouponStatus
 }
