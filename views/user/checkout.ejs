@@ -306,7 +306,14 @@
                                             <div id="discount-row" class="flex justify-between hidden">
                                                 <span class="text-green-600">Discount (<span
                                                         id="coupon-code-display"></span>)</span>
-                                                <span class="font-medium text-green-600" id="discount-amount"></span>
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="font-medium text-green-600"
+                                                        id="discount-amount"></span>
+                                                    <button type="button" id="remove-coupon"
+                                                        class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                                        Remove
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div class="flex justify-between">
                                                 <span class="text-gray-700">Shipping</span>
@@ -348,7 +355,7 @@
                                             <% } %>
                             </select>
                             <button type="button" id="applyCoupon"
-                                class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-r-md transition">
+                                class="bg-blue-500 hover:bg-blue-200 text-gray-800 font-medium py-2 px-4 rounded-r-md transition m-1">
                                 Apply
                             </button>
                         </div>
@@ -369,11 +376,11 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
 
-            const subtotal = '<%= cart.subtotal %>';
-            const shipping = '<%= cart.shipping %>';
-            const tax = '<%= cart.tax %>';
+            const subtotal = parseFloat('<%= cart.subtotal %>');
+            const shipping = parseFloat('<%= cart.shipping %>');
+            const tax = parseFloat('<%= cart.tax %>');
             let discount = 0;
-
+            let total = subtotal + shipping + tax;
 
             // Toggle payment method forms
             const creditCardRadio = document.getElementById('credit-card');
@@ -570,6 +577,53 @@
                         Swal.fire({ title: 'Error', text: 'An error occurred. Please try again.', icon: 'error', confirmButtonColor: '#EF4444' });
                     });
             });
+
+
+            // Handle coupon removal
+            document.getElementById('remove-coupon').addEventListener('click', function () {
+                Swal.fire({
+                    title: 'Remove Coupon',
+                    text: 'Are you sure you want to remove the applied coupon?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#EF4444',
+                    cancelButtonColor: '#6B7280',
+                    confirmButtonText: 'Yes, remove it',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Reset discount
+                        discount = 0;
+
+                        // Recalculate total properly
+                        total = subtotal + shipping + tax;
+
+                        // Update order summary
+                        document.getElementById('discount-row').classList.add('hidden');
+                        document.getElementById('total-amount').textContent = `₹${total.toFixed(2)}`;
+                        document.getElementById('coupon-code-display').textContent = '';
+
+                        // Reset coupon selection
+                        const couponSelect = document.getElementById('couponCode');
+                        if (couponSelect) {
+                            couponSelect.selectedIndex = 0; // Reset to first option instead of empty string
+                        } else {
+                            console.error('Coupon select element not found');
+                        }
+
+                        // Clear the hidden coupon code field
+                        document.getElementById('hiddenCouponCode').value = '';
+
+                        Swal.fire({
+                            title: 'Coupon Removed',
+                            text: 'The coupon has been removed successfully.',
+                            icon: 'success',
+                            confirmButtonColor: '#3B82F6'
+                        });
+                    }
+                });
+            });
+
 
             // Form validation before submission
             document.getElementById('checkout-form').addEventListener('submit', function (event) {
@@ -781,57 +835,28 @@
                         }
                     });
 
-                    // Make API call to verify payment
-                    fetch('/user/checkout/verify-razorpay', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            razorpay_payment_id: paymentData.razorpay_payment_id,
-                            razorpay_order_id: paymentData.razorpay_order_id,
-                            razorpay_signature: paymentData.razorpay_signature
-                        }),
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                // Show success message
-                                Swal.fire({
-                                    title: 'Payment Successful!',
-                                    text: 'Your order has been placed successfully.',
-                                    icon: 'success',
-                                    confirmButtonColor: '#10B981'
-                                }).then(() => {
-                                    // Redirect to order confirmation page
-                                    window.location.href = '/user/orders/' + data.order._id;
-                                });
-                            } else {
-                                // Show error message
-                                Swal.fire({
-                                    title: 'Payment Verification Failed',
-                                    text: data.message || 'There was an issue verifying your payment.',
-                                    icon: 'error',
-                                    confirmButtonColor: '#EF4444'
-                                });
-                                // Re-enable order button
-                                document.getElementById('place-order-btn').disabled = false;
-                                document.getElementById('place-order-btn').innerHTML = 'Place Order';
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            Swal.fire({
-                                title: 'Error',
-                                text: 'An error occurred while verifying payment. Please contact support.',
-                                icon: 'error',
-                                confirmButtonColor: '#EF4444'
-                            });
-                            document.getElementById('place-order-btn').disabled = false;
-                            document.getElementById('place-order-btn').innerHTML = 'Place Order';
-                        });
-                }
+                    // Create a form to submit payment data
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/user/checkout/verify-razorpay';
 
+                    const fields = {
+                        razorpay_payment_id: paymentData.razorpay_payment_id,
+                        razorpay_order_id: paymentData.razorpay_order_id,
+                        razorpay_signature: paymentData.razorpay_signature
+                    };
+
+                    for (const [key, value] of Object.entries(fields)) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.value = value;
+                        form.appendChild(input);
+                    }
+
+                    document.body.appendChild(form);
+                    form.submit();
+                }
 
             });
         });
