@@ -46,4 +46,11 @@ router.post('/coupons',verifyAdmin,couponController.createCoupon);
 router.get('/coupons/:id',verifyAdmin,couponController.getCouponDetails);
 router.put('/coupons/:id',verifyAdmin,couponController.updateCoupon);
 router.patch('/coupons/:id/toggle-status',verifyAdmin,couponController.toggleCouponStatus);
+
+//Return Request
+router.get('/return-requests', verifyAdmin, orderController.getReturnRequests);
+router.post('/return-requests/:orderId/approve', orderController.adminApproveReturn);
+router.post('/return-requests/:orderId/items/:itemId/approve', orderController.adminApproveReturn);
+
+
 module.exports=router;

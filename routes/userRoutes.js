@@ -79,6 +79,10 @@ router.get('/orders/:id',orderController.loadOrderDetails);
 router.post('/orders/:id/cancel',orderController.cancelOrder);
 router.post('/orders/:orderId/items/:itemId/cancel',orderController.cancelOrderItem);
 
+//Return
+router.post('/orders/:id/return',orderController.returnOrder);
+router.post('/orders/:orderId/items/:itemId/return',orderController.returnOrderItem);
+
 //Profile Management
 router.get('/profile',profileController.loadProfile);
 router.patch('/profile/editProfile',profileController.editProfile);

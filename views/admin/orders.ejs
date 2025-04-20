@@ -614,6 +614,7 @@
                         Swal.fire('Success', 'Item status updated successfully', 'success')
                             .then(() => {
                                 // Refresh the order details modal instead of reloading the page
+                                window.location.reload();
                                 viewOrderDetails(orderId);
                             });
                     } else {

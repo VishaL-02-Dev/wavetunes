@@ -101,7 +101,8 @@
                                                 <%= order.orderId %>
                                             </td>
                                             <td>
-                                                <%= order.userId.fname %> <%= order.userId.lname %>
+                                                <%= order.userId.fname %>
+                                                    <%= order.userId.lname %>
                                             </td>
                                             <td>₹<%= order.totalAmount.toFixed(2) %>
                                             </td>
@@ -126,11 +127,6 @@
 
             </div>
         </div>
-    </div>
-    </div>
-    </div>
-    </div>
-    </div>
     </div>
 
     <script>
@@ -200,26 +196,26 @@
                                 },
                                 credentials: 'include'
                             })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    Swal.fire({
-                                        title: "Logged Out!",
-                                        text: "You have been successfully logged out.",
-                                        icon: "success",
-                                        timer: 1500,
-                                        showConfirmButton: false
-                                    }).then(() => {
-                                        window.location.href = data.redirectUrl;
-                                    });
-                                } else {
-                                    Swal.fire("Error", data.message, "error");
-                                }
-                            })
-                            .catch(error => {
-                                console.error("Logout Error:", error);
-                                Swal.fire("Error", "Something went wrong!", "error");
-                            });
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        Swal.fire({
+                                            title: "Logged Out!",
+                                            text: "You have been successfully logged out.",
+                                            icon: "success",
+                                            timer: 1500,
+                                            showConfirmButton: false
+                                        }).then(() => {
+                                            window.location.href = data.redirectUrl;
+                                        });
+                                    } else {
+                                        Swal.fire("Error", data.message, "error");
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error("Logout Error:", error);
+                                    Swal.fire("Error", "Something went wrong!", "error");
+                                });
                         }
                     });
                 });
@@ -227,5 +223,6 @@
         });
     </script>
     <%- include("partials/admin/footer") %>
-</body>
-</html>
+        </body>
+
+        </html>

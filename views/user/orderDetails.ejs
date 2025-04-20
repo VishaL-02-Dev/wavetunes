@@ -177,14 +177,19 @@
                                     <p class="text-lg font-medium text-gray-900">₹<%= item.productId.price ?
                                             (item.productId.price * (item.quantity || 1)).toFixed(2) : '0.00' %>
                                     </p>
-                                    <% if (item.status !='delivered' && order.status !='delivered' ) { %>
+                                    <% if (item.status !='delivered' && item.status !='returned' && item.status
+                                        !='cancelled' && order.status !='delivered' && order.status !='returned' &&
+                                        order.status !='cancelled' ) { %>
                                         <button class="text-red-600 hover:text-red-800 mt-2"
                                             onclick="cancelItem('<%= order._id %>', '<%= item._id %>')">Cancel
                                             Item</button>
                                         <% } %>
-                                            <% if (item.status==='delivered' && order.status==='delivered' ) { %>
+                                            <% if (order.items.length > 1 && item.status === 'delivered' && order.status
+                                                === 'delivered' &&
+                                                item.status != 'returned' && item.status != 'cancelled' &&
+                                                order.status != 'returned' && order.status != 'cancelled') { %>
                                                 <button class="text-yellow-600 hover:text-yellow-800 ml-2"
-                                                    onclick="returnItem('<%= order._id %>', '<%= item._id %>')">Return
+                                                    onclick="returnItem('<%= order.orderId %>', '<%= item._id %>')">Return
                                                     Item</button>
                                                 <% } %>
                                 </div>
@@ -206,7 +211,7 @@
                             </button>
                             <% } %>
                                 <% if (order.status==='delivered' && !order.items.every(item=> item.refunded)) { %>
-                                    <button onclick="returnOrder('<%= order._id %>')"
+                                    <button onclick="returnOrder('<%= order.orderId %>')"
                                         class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-3 rounded-md transition no-print mt-4">
                                         Return Order
                                     </button>
@@ -322,6 +327,7 @@
 
         //Return an entire order
         function returnOrder(orderId) {
+            console.log(`Initiating return for orderId:${orderId}`)
             Swal.fire({
                 title: 'Return Order',
                 html: `
