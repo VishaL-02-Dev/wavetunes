@@ -36,6 +36,10 @@ const userSchema= new mongoose.Schema({
         type:String,
         default:"Unblocked"
     },
+    wallet:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:'Wallet'
+    }
 }, 
 {timestamps:true});
 

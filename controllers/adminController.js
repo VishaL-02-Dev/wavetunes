@@ -1,5 +1,5 @@
 const User=require('../model/userModel');
-const Order= require('../model/order');
+const Order= require('../model/orderModel');
 const Product= require('../model/productModel');
 const bcrypt=require('bcrypt');
 const jwt=require('jsonwebtoken');

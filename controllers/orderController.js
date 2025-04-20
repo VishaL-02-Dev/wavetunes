@@ -2,11 +2,12 @@ const User = require('../model/userModel');
 const Product = require('../model/productModel');
 const Address = require('../model/addressModel');
 const Cart = require('../model/cartModel');
-const Order = require('../model/order');
-const Coupon = require('../model/coupons');
+const Order = require('../model/orderModel');
+const Coupon = require('../model/couponsModel');
 const jwt = require('jsonwebtoken');
 const { instance } = require('../config/razorpay')
 const crypto = require('crypto');
+const WalletService = require('./walletService');
 
 
 //Load Checkout
@@ -529,11 +530,11 @@ const verifyRazorpay = async (req, res) => {
 
         res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
-        return res.render('user/orderConfirm',{
+        return res.render('user/orderConfirm', {
             order: completeOrder,
             user,
             address,
-            redirectUrl:'/user/placeOrder'
+            redirectUrl: '/user/placeOrder'
         });
 
     } catch (error) {
@@ -687,7 +688,7 @@ const cancelOrder = async (req, res) => {
             {
                 _id: orderId,
                 userId: userId,
-                status: 'pending'
+                status: { $in: ['pending', 'processing'] }
             }
         );
 
@@ -708,10 +709,29 @@ const cancelOrder = async (req, res) => {
                     { new: true }
                 );
                 item.status = 'cancelled';
+
+                if (order.paymentMethod !== 'COD') {
+                    item.refunded = true;
+                    item.refundAmount = item.price * item.quantity;
+                    item.refundDate = new Date();
+                }
+
             }
         }
 
         order.status = 'cancelled';
+
+        if (order.paymentMethod !== 'COD') {
+            order.refundStatus = 'full';
+
+            await refundToWallet(
+                userId,
+                order.totalAmount,
+                order._id,
+                `Redund for cancelled order #${order.orderId}`
+            );
+        }
+
         await order.save();
 
         return res.status(200).json({
@@ -742,7 +762,7 @@ const cancelOrderItem = async (req, res) => {
         const order = await Order.findOne({
             _id: orderId,
             userId: userId,
-            status: 'pending'
+            status: { $in: ['pending', 'processing'] }
         });
 
         if (!order) {
@@ -765,17 +785,40 @@ const cancelOrderItem = async (req, res) => {
             { $inc: { stock: item.quantity || 0 } },
             { new: true },
         )
+
+        const itemTotal = item.price * item.quantity;
         item.status = 'cancelled';
 
+        if (order.paymentMethod !== 'COD') {
+            item.refunded = true,
+                item.refundAmount = itemTotal,
+                item.refundDate = new Date();
+
+            await refundToWallet(
+                userId,
+                itemTotal,
+                order._id,
+                `Refund for cancelled item in order #${order.orderId}`
+            );
+        }
+
+        // Check if all items are cancelled
         const activeItems = order.items.filter(i => i.status !== 'cancelled');
-        if (activeItems.length > 0) {
-            order.totalAmount = activeItems.reduce((sum, i) => {
-                const itemPrice = i.price || 0;
-                return sum + (itemPrice * i.quantity);
-            }, 0);
-        } else {
+        if (activeItems.length === 0) {
             order.status = 'cancelled';
-            order.totalAmount = 0;
+
+            if (order.paymentMethod !== 'COD') {
+                order.refundStatus = 'full';
+            }
+        } else {
+            // Only some items are cancelled, adjust order total
+            order.totalAmount = activeItems.reduce((sum, i) => {
+                return sum + (i.price * i.quantity);
+            }, 0);
+
+            if (order.paymentMethod !== 'COD') {
+                order.refundStatus = 'partial';
+            }
         }
 
         await order.save();
@@ -796,6 +839,140 @@ const cancelOrderItem = async (req, res) => {
     }
 }
 
+
+//Refund to wallet
+const refundToWallet = async (userId, amount, orderId, descrioption) => {
+    try {
+        return await WalletService.addFunds(userId, amount, descrioption, orderId);
+    } catch (error) {
+        console.log('Error refunding to wallet:', error);
+        throw error;
+    }
+}
+
+
+//Return order
+const returnOrder = async (req, res) => {
+    const token = req.cookies.jwt;
+    const orderId = req.params.id;
+    const { reason } = req.body;
+
+    try {
+        const decoded = jwt.verify(toke, process.env.JWT_SECRET);
+        const userId = decoded.id;
+
+        const order = await Order.findOne({
+            orderId: orderId,
+            userId: userId,
+            status: 'delicered'
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found or cannot be returned'
+            });
+        }
+
+        const deliveryDate = new Date(order.updatedAt);
+        const currentDate = new Date();
+        const daysDifference = Math.floor((currentDate - deliveryDate) / (1000 * 60 * 60 * 24));
+
+        if (daysDifference > 7) {
+            return res.status(400).json({
+                success: false,
+                message: 'Return period expired'
+            });
+        }
+
+        order.status = 'return_requested';
+        order.returnReason = reason || 'Not specified';
+
+        if (order.items && order.items.length > 0) {
+            for (const item of order.items) {
+                if (item.status === 'delivered') {
+                    item.status = 'return_requested'
+                }
+            }
+        }
+
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'REturn request submitted successfully'
+        });
+    } catch (error) {
+        console.log('Error processing return:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error processing return',
+            error: error.message
+        });
+    }
+}
+
+
+//Return item in an order
+const returnOrderItem = async (req, res) => {
+    const token = req.cookies.jwt;
+    const { orderId, itemId } = req.params;
+    const { reason } = req.body;
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+
+        const order = await Order.findOne({
+            orderId: orderId,
+            userId: userId,
+            status: 'delivered'
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                messge: 'Order not found or cannot be returned'
+            });
+        }
+
+        const item = order.items.id(itemId);
+        if (!item || item.status !== 'delivered') {
+            return res.status(404).json({
+                success: false,
+                message: 'Item not found not eligible to return'
+            });
+        }
+
+        const deliveryDate = new Date(order.updatedAt);
+        const currentDate = new Date();
+        const daysDifference = Math.floor((currentDate - deliveryDate) / (1000 * 60 * 60 * 24));
+
+        if (daysDifference > 7) {
+            return res.status(400).json({
+                success: false,
+                message: 'Return period expired (7 days from delivery)'
+            });
+        }
+
+        item.status = 'return_requested';
+        item.returnReason = reason || 'Not specified';
+
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Item return request submitted succssfully'
+        });
+    } catch (error) {
+        console.error('Error processing item return', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error proccessing item return',
+            error: error.message
+        });
+    }
+}
 
 //Admin get orders
 const adminGetOrders = async (req, res) => {
@@ -1059,6 +1236,120 @@ const adminUpdateOrderItemStatus = async (req, res) => {
     }
 };
 
+//Approve return request by admin
+const adminApproveReturn = async (req, res) => {
+    const { orderId, itemId } = req.params;
+
+    try {
+        const order = await Order.findById(orderId);
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        if (itemId) {
+            const item = order.items.id(itemId);
+            if (!item || item.status !== 'return_requested') {
+                return res.status(404).json({
+                    success: fale,
+                    message: 'Items not found or not pending return'
+                });
+            }
+            item.status = 'returned'
+        }
+
+        if (!item.refunded) {
+            const refundAmount = item.price * item.quantity;
+            item.refunded = true;
+            item.refundAmount = refundAmount;
+            item.refundDate = new Date();
+
+            await refundToWallet(
+                order.userId,
+                refundAmount,
+                order._id,
+                `Refund for returned item in order #${order.orderId}`
+            );
+
+            await Product.findByIdAndUpdate(
+                item.productId,
+                { $inc: { stock: item.quantity || 0 } },
+                { new: true }
+            );
+
+            const allItemsReturned = order.items.every(i =>
+                i.status === 'returned' || i.status === 'cancelled');
+            order.refundStatus = allItemsReturned ? 'full' : 'partial';
+        } else {
+            // Approve entire order return
+            if (order.status !== 'return_requested') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Order is not pending return'
+                });
+            }
+
+            order.status = 'returned';
+
+            // Process refund for all items
+            let totalRefund = 0;
+
+            for (const item of order.items) {
+                if (item.status === 'return_requested' && !item.refunded) {
+                    item.status = 'returned';
+
+                    const refundAmount = item.price * item.quantity;
+                    totalRefund += refundAmount;
+
+                    item.refunded = true;
+                    item.refundAmount = refundAmount;
+                    item.refundDate = new Date();
+
+                    // Update product stock
+                    await Product.findByIdAndUpdate(
+                        item.productId,
+                        { $inc: { stock: item.quantity || 0 } },
+                        { new: true }
+                    );
+                }
+            }
+
+            if (totalRefund > 0) {
+                // Add refund to wallet
+                await refundToWallet(
+                    order.userId,
+                    totalRefund,
+                    order._id,
+                    `Refund for returned order #${order.orderId}`
+                );
+
+                order.refundStatus = 'full';
+            }
+        }
+
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            messge: 'Return approved and refund processed',
+            order
+        });
+
+    } catch (error) {
+        console.error('Error approving return:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error approving return',
+            error: error.message
+        });
+
+    }
+}
+
+
 module.exports = {
     loadCheckout,
     placeOrder,
@@ -1070,6 +1361,9 @@ module.exports = {
     loadOrderDetails,
     cancelOrder,
     cancelOrderItem,
+    returnOrder,
+    returnOrderItem,
+    adminApproveReturn,
     adminGetOrders,
     adminGetOrderItems,
     adminGetOrderDetails,

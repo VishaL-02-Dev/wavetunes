@@ -1,4 +1,4 @@
-const Coupon=require('../model/coupons');
+const Coupon=require('../model/couponsModel');
 
 //Get coupons
 const getCoupon=async(req,res)=>{

@@ -19,6 +19,17 @@ const orderItemSchema=new mongoose.Schema({
         type:String,
         enum:['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'return_requested', 'returned', 'payment_failed'],
         default:'pending'
+    },
+    refunded:{
+        type:Boolean,
+        default:false
+    },
+    refundAmount:{
+        type:Number,
+        default:0
+    },
+    refundDate:{
+        type:Date
     }
 });
 
@@ -55,6 +66,11 @@ const orderSchema= new mongoose.Schema({
         type:String,
         enum:['Credit Card','Razorpay','COD'],
         required:true
+    },
+    refundStatus: {
+        type: String,
+        enum: ['none', 'partial', 'full'],
+        default: 'none'
     }    
 },
 {timestamps:true});
