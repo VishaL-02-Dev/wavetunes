@@ -10,6 +10,7 @@ const addressController=require('../controllers/addressController');
 const wishlistController=require('../controllers/wishlistController');
 const cartController=require('../controllers/cartController');
 const orderController=require('../controllers/orderController');
+const walletController = require('../controllers/walletController');
 
 router.use(express.static('public'));
 router.use(express.json());
@@ -74,14 +75,20 @@ router.post('/checkout/verify-razorpay', orderController.verifyRazorpay);
 router.post('/checkout/addAddress',addressController.addAddress);
 router.post('/checkout/apply-coupon',orderController.applyCoupon);
 router.post('/placeOrder',orderController.placeOrder);
+router.post('/checkout/process-wallet-payment',orderController.processWalletPayment);
 router.get('/myOrders',orderController.loadMyOrders);
 router.get('/orders/:id',orderController.loadOrderDetails);
 router.post('/orders/:id/cancel',orderController.cancelOrder);
 router.post('/orders/:orderId/items/:itemId/cancel',orderController.cancelOrderItem);
 
-router.get('/wallet',userController.getUserWallet);
-router.post('/wallet/initiate-razorpay', userController.initiateRazorpayForWallet);
-router.post('/wallet/verify-razorpay', userController.verifyRazorpayForWallet);
+//Wallet
+router.get('/wallet',walletController.getUserWallet);
+router.get('/wallet/balance',walletController.getWalletBalance);
+router.post('/wallet/add-funds', walletController.addFunds);
+router.post('/wallet/deduct-funds',walletController.deductFunds);
+router.get('/wallet/transactions', walletController.getTransactionHistory);
+router.post('/wallet/initiate-razorpay',walletController.initiateRazorpayForWallet);
+router.post('/wallet/verify-razorpay', walletController.verifyRazorpayForWallet);
 
 //Return
 router.post('/orders/:id/return',orderController.returnOrder);

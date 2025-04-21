@@ -80,7 +80,7 @@
                                                 </td>
                                                 <td>
                                                     <button class="btn btn-success btn-sm"
-                                                        onclick="approveReturn('<%= request.order.orderId %>', '<%= request.item %>' ? '<%=request.item._id %>' : '')">
+                                                        onclick="approveReturn('<%= request.order.orderId %>', '<%= request.item ? request.item._id : '' %>')">
                                                         Approve
                                                     </button>
                                                 </td>

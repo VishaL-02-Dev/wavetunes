@@ -230,6 +230,11 @@
                                         class="w-4 h-4 text-blue-600 focus:ring-blue-500">
                                     <label for="cod" class="ml-2 text-gray-700">Cash on Delivery</label>
                                 </div>
+                                <div class="flex items-center">
+                                    <input type="radio" id="wallet" name="paymentMethod" value="wallet"
+                                        class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                    <label for="wallet" class="ml-2 text-gray-700">Wallet</label>
+                                </div>
                             </div>
 
                             <div id="credit-card-form">
@@ -269,6 +274,47 @@
                                 <p class="text-gray-700">You will be redirected to Razorpay to complete your payment
                                     securely.</p>
                             </div>
+                            <div id="wallet-form" class="hidden">
+                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <div>
+                                            <h3 class="text-lg font-medium text-gray-800">Wallet Balance</h3>
+                                            <p class="text-gray-600" id="wallet-balance">₹<span
+                                                    id="available-balance">0.00</span></p>
+                                        </div>
+                                        <a href="/user/wallet"
+                                            class="text-blue-600 hover:text-blue-800 font-medium text-sm">
+                                            Add Money
+                                        </a>
+                                    </div>
+
+                                    <div id="insufficient-funds" class="hidden text-red-600 text-sm mb-4">
+                                        <div class="flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1"
+                                                viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd"
+                                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+                                            Insufficient funds in your wallet. Please add money or choose a different
+                                            payment method.
+                                        </div>
+                                    </div>
+
+                                    <div id="sufficient-funds" class="hidden text-green-600 text-sm mb-4">
+                                        <div class="flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1"
+                                                viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd"
+                                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+                                            You have sufficient balance to complete this purchase.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div id="cod-form" class="hidden">
                                 <p class="text-gray-700">Pay at the time of delivery.</p>
                             </div>
@@ -375,43 +421,115 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-
+            // Initialize variables
             const subtotal = parseFloat('<%= cart.subtotal %>');
             const shipping = parseFloat('<%= cart.shipping %>');
             const tax = parseFloat('<%= cart.tax %>');
             let discount = 0;
             let total = subtotal + shipping + tax;
 
+            // Update orderTotal to reflect the initial total
+            let orderTotal = total;
+
             // Toggle payment method forms
             const creditCardRadio = document.getElementById('credit-card');
             const razorpayRadio = document.getElementById('razorpay');
+            const walletRadio = document.getElementById('wallet');
             const codRadio = document.getElementById('cod');
             const creditCardForm = document.getElementById('credit-card-form');
             const razorpayForm = document.getElementById('razorpay-form');
             const codForm = document.getElementById('cod-form');
+            const walletForm = document.getElementById('wallet-form');
 
+            // Fetch wallet balance on page load
+            fetchWalletBalance();
+
+            // Payment method change listeners
             creditCardRadio.addEventListener('change', function () {
                 if (this.checked) {
                     creditCardForm.classList.remove('hidden');
-                    codForm.classList.add('hidden');
                     razorpayForm.classList.add('hidden');
+                    walletForm.classList.add('hidden');
+                    codForm.classList.add('hidden');
+                    enablePlaceOrderButton();
                 }
             });
 
             razorpayRadio.addEventListener('change', function () {
                 if (this.checked) {
                     creditCardForm.classList.add('hidden');
-                    codForm.classList.add('hidden');
                     razorpayForm.classList.remove('hidden');
+                    walletForm.classList.add('hidden');
+                    codForm.classList.add('hidden');
+                    enablePlaceOrderButton();
                 }
             });
+
+            walletRadio.addEventListener('change', function () {
+                if (this.checked) {
+                    creditCardForm.classList.add('hidden');
+                    razorpayForm.classList.add('hidden');
+                    codForm.classList.add('hidden');
+                    walletForm.classList.remove('hidden');
+                    checkWalletBalance();
+                }
+            });
+
             codRadio.addEventListener('change', function () {
                 if (this.checked) {
                     creditCardForm.classList.add('hidden');
                     razorpayForm.classList.add('hidden');
+                    walletForm.classList.add('hidden');
                     codForm.classList.remove('hidden');
+                    enablePlaceOrderButton();
                 }
             });
+
+            // Function to fetch wallet balance
+            function fetchWalletBalance() {
+                fetch('/user/wallet/balance')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('available-balance').textContent = data.balance.toFixed(2);
+                            if (walletRadio.checked) {
+                                checkWalletBalance();
+                            }
+                        } else {
+                            console.error('Error fetching wallet balance:', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+
+            // Function to check wallet balance
+            function checkWalletBalance() {
+                const walletBalance = parseFloat(document.getElementById('available-balance').textContent);
+                const insufficientFunds = document.getElementById('insufficient-funds');
+                const sufficientFunds = document.getElementById('sufficient-funds');
+                const placeOrderBtn = document.getElementById('place-order-btn');
+
+                if (walletBalance < orderTotal) {
+                    insufficientFunds.classList.remove('hidden');
+                    sufficientFunds.classList.add('hidden');
+                    placeOrderBtn.disabled = true;
+                    placeOrderBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    insufficientFunds.classList.add('hidden');
+                    sufficientFunds.classList.remove('hidden');
+                    placeOrderBtn.disabled = false;
+                    placeOrderBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+
+            // Function to enable place order button
+            function enablePlaceOrderButton() {
+                const placeOrderBtn = document.getElementById('place-order-btn');
+                placeOrderBtn.disabled = false;
+                placeOrderBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
 
             // Address selection
             const addressCards = document.querySelectorAll('.address-card');
@@ -419,8 +537,6 @@
                 card.addEventListener('click', function () {
                     const radioInput = this.querySelector('input[type="radio"]');
                     radioInput.checked = true;
-
-                    // Update visual selection
                     addressCards.forEach(c => c.classList.remove('selected'));
                     this.classList.add('selected');
                 });
@@ -442,8 +558,6 @@
                 cancelAddressBtn.addEventListener('click', function () {
                     newAddressForm.classList.add('hidden');
                     addNewAddressBtn.classList.remove('hidden');
-
-                    // Clear form fields
                     const formFields = newAddressForm.querySelectorAll('input, select');
                     formFields.forEach(field => {
                         if (field.type === 'checkbox') {
@@ -459,7 +573,6 @@
             const saveAddressBtn = document.getElementById('save-address');
             if (saveAddressBtn) {
                 saveAddressBtn.addEventListener('click', function () {
-                    // Basic validation
                     const requiredFields = ['address', 'city', 'district', 'state', 'pinCode', 'phone'];
                     let isValid = true;
 
@@ -483,7 +596,6 @@
                         return;
                     }
 
-                    // Prepare data
                     const addressData = {
                         address: document.getElementById('address').value,
                         city: document.getElementById('city').value,
@@ -495,12 +607,9 @@
                         isDefault: document.getElementById('setDefault').checked
                     };
 
-                    // Send request to save address
                     fetch('/user/checkout/addAddress', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(addressData),
                     })
                         .then(response => response.json())
@@ -512,7 +621,7 @@
                                     icon: 'success',
                                     confirmButtonColor: '#3B82F6'
                                 }).then(() => {
-                                    location.reload(); // Reload to show the new address
+                                    location.reload();
                                 });
                             } else {
                                 Swal.fire({
@@ -556,16 +665,17 @@
                         if (data.success) {
                             const coupon = data.coupon;
                             discount = data.discount;
-                            const total = data.total;
+                            orderTotal = data.total;
 
-                            // Update order summary
                             document.getElementById('coupon-code-display').textContent = coupon.code;
                             document.getElementById('discount-amount').textContent = `-₹${discount.toFixed(2)}`;
                             document.getElementById('discount-row').classList.remove('hidden');
-                            document.getElementById('total-amount').textContent = `₹${total.toFixed(2)}`;
-
-                            // Set hidden field for form submission
+                            document.getElementById('total-amount').textContent = `₹${orderTotal.toFixed(2)}`;
                             hiddenCouponCode.value = coupon.code;
+
+                            if (walletRadio.checked) {
+                                checkWalletBalance();
+                            }
 
                             Swal.fire({ title: 'Success!', text: 'Coupon applied successfully!', icon: 'success', confirmButtonColor: '#3B82F6' });
                         } else {
@@ -577,7 +687,6 @@
                         Swal.fire({ title: 'Error', text: 'An error occurred. Please try again.', icon: 'error', confirmButtonColor: '#EF4444' });
                     });
             });
-
 
             // Handle coupon removal
             document.getElementById('remove-coupon').addEventListener('click', function () {
@@ -592,27 +701,18 @@
                     cancelButtonText: 'Cancel'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        // Reset discount
                         discount = 0;
+                        orderTotal = subtotal + shipping + tax;
 
-                        // Recalculate total properly
-                        total = subtotal + shipping + tax;
-
-                        // Update order summary
                         document.getElementById('discount-row').classList.add('hidden');
-                        document.getElementById('total-amount').textContent = `₹${total.toFixed(2)}`;
+                        document.getElementById('total-amount').textContent = `₹${orderTotal.toFixed(2)}`;
                         document.getElementById('coupon-code-display').textContent = '';
-
-                        // Reset coupon selection
-                        const couponSelect = document.getElementById('couponCode');
-                        if (couponSelect) {
-                            couponSelect.selectedIndex = 0; // Reset to first option instead of empty string
-                        } else {
-                            console.error('Coupon select element not found');
-                        }
-
-                        // Clear the hidden coupon code field
+                        document.getElementById('couponCode').selectedIndex = 0;
                         document.getElementById('hiddenCouponCode').value = '';
+
+                        if (walletRadio.checked) {
+                            checkWalletBalance();
+                        }
 
                         Swal.fire({
                             title: 'Coupon Removed',
@@ -624,12 +724,11 @@
                 });
             });
 
-
-            // Form validation before submission
+            // Form submission handler
             document.getElementById('checkout-form').addEventListener('submit', function (event) {
                 event.preventDefault();
 
-                // Check if an address is selected
+                // Validate address
                 const addressSelected = document.querySelector('input[name="addressId"]:checked');
                 if (!addressSelected && document.getElementById('new-address-form').classList.contains('hidden')) {
                     Swal.fire({
@@ -641,7 +740,6 @@
                     return;
                 }
 
-                // If no address is selected and new address form is visible, validate the new address
                 if (!addressSelected && !document.getElementById('new-address-form').classList.contains('hidden')) {
                     const requiredFields = ['address', 'city', 'district', 'state', 'pinCode', 'phone'];
                     let isValid = true;
@@ -667,36 +765,69 @@
                     }
                 }
 
-                // Payment method validation
+                // Get payment method
                 const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
 
-                // For Razorpay, handle differently
+                // Handle wallet payment
+                if (paymentMethod === 'wallet') {
+                    const walletBalance = parseFloat(document.getElementById('available-balance').textContent);
+
+                    if (walletBalance < orderTotal) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Insufficient wallet balance. Please add money to your wallet or choose a different payment method.',
+                            icon: 'error',
+                            confirmButtonColor: '#EF4444'
+                        });
+                        return;
+                    }
+
+                    Swal.fire({
+                        title: 'Confirm Wallet Payment',
+                        text: `Are you sure you want to pay ₹${orderTotal.toFixed(2)} from your wallet?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#10B981',
+                        cancelButtonColor: '#6B7280',
+                        confirmButtonText: 'Yes, pay now',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({
+                                title: 'Processing Payment',
+                                text: 'Please wait while we process your payment...',
+                                allowOutsideClick: false,
+                                allowEscapeKey: false,
+                                showConfirmButton: false,
+                                willOpen: () => {
+                                    Swal.showLoading();
+                                }
+                            });
+
+                            processWalletPayment();
+                        }
+                    });
+                    return;
+                }
+
+                // Handle Razorpay payment
                 if (paymentMethod === 'razorpay') {
-                    // Show loading state
                     const submitButton = document.getElementById('place-order-btn');
                     submitButton.disabled = true;
                     submitButton.innerHTML = 'Processing...';
 
-                    // Get form data for Razorpay
                     const formData = new FormData(this);
                     const addressId = formData.get('addressId');
                     const couponCode = document.getElementById('hiddenCouponCode').value;
 
-                    // Create order in Razorpay
                     fetch('/user/checkout/initiate-razorpay', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            addressId,
-                            couponCode
-                        }),
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ addressId, couponCode }),
                     })
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
-                                // Initialize Razorpay checkout
                                 const options = {
                                     key: data.key,
                                     amount: data.amount,
@@ -705,7 +836,6 @@
                                     description: "Purchase from WaveTunes",
                                     order_id: data.order.id,
                                     handler: function (response) {
-                                        // Handle successful payment
                                         verifyPayment(response, data.order);
                                     },
                                     prefill: {
@@ -713,12 +843,9 @@
                                         email: data.userInfo.email,
                                         contact: data.userInfo.contact
                                     },
-                                    theme: {
-                                        color: "#3B82F6"
-                                    },
+                                    theme: { color: "#3B82F6" },
                                     modal: {
                                         ondismiss: function () {
-                                            // Re-enable the button if user dismisses Razorpay modal
                                             submitButton.disabled = false;
                                             submitButton.innerHTML = 'Place Order';
                                         }
@@ -727,9 +854,7 @@
 
                                 const razorpayPayment = new Razorpay(options);
                                 razorpayPayment.open();
-
                             } else {
-                                // Handle error
                                 submitButton.disabled = false;
                                 submitButton.innerHTML = 'Place Order';
                                 Swal.fire({
@@ -751,15 +876,11 @@
                                 confirmButtonColor: '#EF4444'
                             });
                         });
-
                     return;
                 }
 
-
-
-
-                // Credit card validation if that payment method is selected
-                if (document.getElementById('credit-card').checked) {
+                // Handle credit card payment
+                if (paymentMethod === 'creditCard') {
                     const cardFields = ['cardNumber', 'cardName', 'expiry', 'cvv'];
                     let isValid = true;
 
@@ -784,7 +905,7 @@
                     }
                 }
 
-                // If all validation passes, show loading state and submit
+                // Handle COD or credit card submission
                 const submitButton = document.getElementById('place-order-btn');
                 submitButton.disabled = true;
                 submitButton.innerHTML = 'Processing...';
@@ -800,7 +921,6 @@
                     cancelButtonText: 'Cancel'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        // Show processing message
                         Swal.fire({
                             title: 'Processing Order',
                             text: 'Please wait while we process your order...',
@@ -812,53 +932,90 @@
                             }
                         });
 
-                        // Submit the form
                         this.submit();
                     } else {
-                        // Re-enable the button if user cancels
                         submitButton.disabled = false;
                         submitButton.innerHTML = 'Place Order';
                     }
                 });
+            });
 
-                // Function to verify Razorpay payment
-                function verifyPayment(paymentData, orderData) {
-                    // Show payment verification message
-                    Swal.fire({
-                        title: 'Verifying Payment',
-                        text: 'Please wait while we verify your payment...',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        showConfirmButton: false,
-                        willOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-
-                    // Create a form to submit payment data
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = '/user/checkout/verify-razorpay';
-
-                    const fields = {
-                        razorpay_payment_id: paymentData.razorpay_payment_id,
-                        razorpay_order_id: paymentData.razorpay_order_id,
-                        razorpay_signature: paymentData.razorpay_signature
-                    };
-
-                    for (const [key, value] of Object.entries(fields)) {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = key;
-                        input.value = value;
-                        form.appendChild(input);
+            // Function to verify Razorpay payment
+            function verifyPayment(paymentData, orderData) {
+                Swal.fire({
+                    title: 'Verifying Payment',
+                    text: 'Please wait while we verify your payment...',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    willOpen: () => {
+                        Swal.showLoading();
                     }
+                });
 
-                    document.body.appendChild(form);
-                    form.submit();
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/user/checkout/verify-razorpay';
+
+                const fields = {
+                    razorpay_payment_id: paymentData.razorpay_payment_id,
+                    razorpay_order_id: paymentData.razorpay_order_id,
+                    razorpay_signature: paymentData.razorpay_signature
+                };
+
+                for (const [key, value] of Object.entries(fields)) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = value;
+                    form.appendChild(input);
                 }
 
-            });
+                document.body.appendChild(form);
+                form.submit();
+            }
+
+            // Function to process wallet payment
+            function processWalletPayment() {
+                const formData = new FormData(document.getElementById('checkout-form'));
+                const addressId = formData.get('addressId');
+                const couponCode = document.getElementById('hiddenCouponCode').value;
+
+                fetch('/user/checkout/process-wallet-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ addressId, couponCode, amount: orderTotal }),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                title: 'Payment Successful!',
+                                text: 'Your order has been placed successfully.',
+                                icon: 'success',
+                                confirmButtonColor: '#3B82F6'
+                            }).then(() => {
+                                window.location.href = `/user/orders/${data.orderId}`;
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Payment Failed',
+                                text: data.message || 'Payment processing failed. Please try again.',
+                                icon: 'error',
+                                confirmButtonColor: '#EF4444'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'An error occurred while processing your payment. Please try again.',
+                            icon: 'error',
+                            confirmButtonColor: '#EF4444'
+                        });
+                    });
+            }
         });
     </script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>

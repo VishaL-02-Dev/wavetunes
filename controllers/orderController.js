@@ -277,6 +277,165 @@ const placeOrder = async (req, res) => {
         });
     }
 }
+const processWalletPayment = async (req, res) => {
+    const { addressId, couponCode, amount } = req.body;
+    const token = req.cookies.jwt;
+
+    try {
+        // Verify user
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Fetch and validate address
+        const address = await Address.findOne({ _id: addressId, userId });
+        if (!address) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid address selected'
+            });
+        }
+
+        // Get cart
+        const cart = await Cart.findOne({ user: userId }).populate('items.product');
+        if (!cart || !cart.items.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cart is empty'
+            });
+        }
+
+        // Calculate totals
+        let subtotal = 0;
+        cart.items.forEach(item => {
+            if (!item.product || !item.product.price) {
+                throw new Error(`Invalid product data for item ${item._id}`);
+            }
+            subtotal += item.product.price * item.quantity;
+        });
+        const shipping = cart.shipping || 0;
+        const tax = cart.tax || 0;
+        let discount = 0;
+
+        // Apply coupon if provided
+        if (couponCode) {
+            const coupon = await Coupon.findOne({ code: couponCode, isActive: true });
+            if (!coupon) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid or inactive coupon'
+                });
+            }
+
+            if (coupon.discountType === 'percentage') {
+                discount = (subtotal * coupon.discountAmount) / 100;
+                if (coupon.maxDiscount && discount > coupon.maxDiscount) {
+                    discount = coupon.maxDiscount;
+                }
+            } else {
+                discount = coupon.discountAmount;
+            }
+
+            if (discount > subtotal) {
+                discount = subtotal;
+            }
+        }
+
+        const total = subtotal + shipping + tax - discount;
+
+        // Validate amount matches
+        // if (Math.abs(total - amount) > 0.01) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: 'Order total mismatch'
+        //     });
+        // }
+
+        // Check wallet balance
+        const wallet = await WalletService.getWallet(userId);
+        if (wallet.balance < total) {
+            return res.status(400).json({
+                success: false,
+                message: 'Insufficient wallet balance'
+            });
+        }
+
+        // Deduct funds from wallet
+        await WalletService.deductFunds(
+            userId,
+            total,
+            `Payment for order`,
+            null // No orderId yet, will be updated after order creation
+        );
+
+        // Create order items
+        const orderItems = cart.items.map(item => {
+            if (!item.product || !item.product._id) {
+                throw new Error(`Invalid product ID for item ${item._id}`);
+            }
+            return {
+                productId: item.product._id, // Use productId as per schema
+                quantity: item.quantity,
+                price: item.product.price,
+                status: 'pending'
+            };
+        });
+
+        // Generate a unique order ID
+        const generateOrderId = () => {
+            return 'ORD' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        };
+
+        // Create order
+        const order = new Order({
+            orderId: generateOrderId(),
+            userId,
+            totalAmount: total, 
+            addressId, // Use addressId as per schema
+            items: orderItems,
+            paymentMethod: 'Wallet',
+            subtotal,
+            shipping,
+            tax,
+            discount,
+            status: 'pending',
+            couponCode: couponCode || null
+        });
+
+        // Log order for debugging
+        // console.log('Order to be saved:', JSON.stringify(order, null, 2));
+
+        await order.save();
+
+        // Update wallet transaction with orderId
+        // await WalletService.updateTransactionOrderId(userId, total, order._id);
+
+        // Clear cart
+        await Cart.findOneAndUpdate(
+            { userId },
+            { items: [], subtotal: 0, shipping: 0, tax: 0, total: 0 }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: 'Order placed successfully',
+            orderId: order._id
+        });
+    } catch (error) {
+        console.error('Error processing wallet payment:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error processing wallet payment',
+            error: error.message
+        });
+    }
+};
 
 //RazorPay order
 const razorpayOrder = async (req, res) => {
@@ -512,7 +671,7 @@ const verifyRazorpay = async (req, res) => {
         });
 
         const savedOrder = await newOrder.save();
-        console.log('order saved', savedOrder._id);
+        // console.log('order saved', savedOrder._id);
 
         // Clear cart
         await Cart.findOneAndDelete({ user: user._id });
@@ -526,7 +685,7 @@ const verifyRazorpay = async (req, res) => {
             });
 
         const address = await Address.findById(addressId);
-        console.log('Rendering orderConfirm.....');
+        // console.log('Rendering orderConfirm.....');
 
         res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
@@ -538,7 +697,7 @@ const verifyRazorpay = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error verifying Razorpay payment:', error);
+        // console.error('Error verifying Razorpay payment:', error);
         res.status(500).json({
             success: false,
             message: 'Error verifying payment',
@@ -810,7 +969,7 @@ const cancelOrderItem = async (req, res) => {
             item.refundAmount = refundAmount;
             item.refundDate = new Date();
 
-            console.log(`Refunding ${refundAmount} for cancelled item in order #${order.orderId}`);
+            // console.log(`Refunding ${refundAmount} for cancelled item in order #${order.orderId}`);
             await refundToWallet(
                 userId,
                 refundAmount,
@@ -1308,7 +1467,7 @@ const adminApproveReturn = async (req, res) => {
     const { orderId, itemId } = req.params;
 
     try {
-        const order = await Order.findOne({ orderId: orderId });
+        const order = await Order.findOne({ orderId: orderId }).populate('items.productId');
 
         if (!order) {
             return res.status(404).json({
@@ -1327,30 +1486,48 @@ const adminApproveReturn = async (req, res) => {
                 });
             }
 
+            // Validate item price
+            const product = await Product.findById(item.productId);
+            if (!product || !item.price) {
+                // console.error(`Invalid price data for item ${itemId} in order ${orderId}`);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Invalid product price data'
+                });
+            }
+            item.price = item.price || product.price; // Fallback to product price if item.price is missing
+
             item.status = 'returned';
 
             if (!item.refunded && order.paymentMethod !== 'COD') {
                 let refundAmount;
+                const itemSubtotal = Number(item.price) * Number(item.quantity);
+                // console.log(`Item Subtotal: ${itemSubtotal}, Price: ${item.price}, Quantity: ${item.quantity}`);
+
                 if (order.items.length === 1) {
-                    // Single-item order: refund the full order.totalAmount
-                    refundAmount = order.totalAmount;
-                } else {
-                    // Multi-item order: prorate the discount
-                    const itemSubtotal = item.price * item.quantity;
-                    if (order.discount > 0) {
-                        const totalSubtotal = order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-                        const discountRatio = order.discount / totalSubtotal;
-                        refundAmount = itemSubtotal * (1 - discountRatio);
-                    } else {
-                        refundAmount = itemSubtotal;
+                    refundAmount = Number(order.totalAmount);
+                } else if (order.discount > 0) {
+                    const totalSubtotal = order.items.reduce((sum, i) => sum + (Number(i.price) * Number(i.quantity)), 0);
+                    if (totalSubtotal === 0) {
+                        // console.error(`Total subtotal is zero for order ${orderId}`);
+                        return res.status(500).json({
+                            success: false,
+                            message: 'Invalid order subtotal'
+                        });
                     }
+                    const discountRatio = Number(order.discount) / totalSubtotal;
+                    refundAmount = itemSubtotal * (1 - discountRatio);
+                    // console.log(`Discount Ratio: ${discountRatio}, Refund Amount: ${refundAmount}`);
+                } else {
+                    refundAmount = itemSubtotal;
                 }
 
+                refundAmount = Math.max(0, Number(refundAmount.toFixed(2))); // Ensure non-negative and rounded
                 item.refunded = true;
                 item.refundAmount = refundAmount;
                 item.refundDate = new Date();
 
-                console.log(`Refunding ${refundAmount} for returned item in order #${order.orderId}`);
+                // console.log(`Refunding ${refundAmount} for returned item ${itemId} in order #${order.orderId}`);
                 await refundToWallet(
                     order.userId,
                     refundAmount,
@@ -1382,8 +1559,16 @@ const adminApproveReturn = async (req, res) => {
 
             for (const item of order.items) {
                 if (item.status === 'return_requested' && !item.refunded && order.paymentMethod !== 'COD') {
+                    // Validate item price
+                    const product = await Product.findById(item.productId);
+                    if (!product || !item.price) {
+                        console.error(`Invalid price data for item ${item._id} in order ${orderId}`);
+                        continue; // Skip invalid items
+                    }
+                    item.price = item.price || product.price;
+
                     item.status = 'returned';
-                    const itemRefund = item.price * item.quantity;
+                    const itemRefund = Number(item.price) * Number(item.quantity);
                     totalRefund += itemRefund;
 
                     item.refunded = true;
@@ -1398,15 +1583,10 @@ const adminApproveReturn = async (req, res) => {
                 }
             }
 
-            // For full order return, use order.totalAmount adjusted for prior refunds
             if (totalRefund > 0 && order.paymentMethod !== 'COD') {
-                // Subtract any previous refunds
-                const priorRefunds = order.items
-                    .filter(i => i.refunded && i.refundDate < new Date())
-                    .reduce((sum, i) => sum + (i.refundAmount || 0), 0);
-                totalRefund = order.totalAmount - priorRefunds;
-
-                console.log(`Refunding ${totalRefund} for returned order #${order.orderId}`);
+                // Use calculated totalRefund instead of adjusting with prior refunds
+                totalRefund = Math.max(0, Number(totalRefund.toFixed(2)));
+                // console.log(`Refunding ${totalRefund} for returned order #${order.orderId}`);
                 await refundToWallet(
                     order.userId,
                     totalRefund,
@@ -1436,6 +1616,7 @@ const adminApproveReturn = async (req, res) => {
 
 module.exports = {
     loadCheckout,
+    processWalletPayment,
     placeOrder,
     razorpayOrder,
     initiateRazorpayOrder,
