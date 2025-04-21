@@ -1,0 +1,506 @@
+<head>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <title>My Wallet | WaveTunes</title>
+    <%- include('./partials/user/header') %>
+        <style>
+            .transaction-card {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+
+            .transaction-card:hover {
+                transform: scale(1.01);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            }
+
+            .type-badge {
+                font-size: 0.75rem;
+                padding: 0.25rem 0.5rem;
+                border-radius: 9999px;
+                font-weight: 500;
+            }
+
+            .type-credit {
+                background-color: #10B981;
+                color: white;
+            }
+
+            .type-debit {
+                background-color: #EF4444;
+                color: white;
+            }
+
+            .empty-wallet {
+                min-height: 300px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .balance-card {
+                background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%);
+                border-radius: 1rem;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            }
+        </style>
+</head>
+
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <nav class="mb-8" aria-label="Breadcrumb">
+            <ol class="flex text-sm">
+                <li><a href="/" class="text-white hover:text-blue-700">Home</a></li>
+                <li class="mx-2 text-white">/</li>
+                <li class="text-white font-medium">My Wallet</li>
+            </ol>
+        </nav>
+
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-white">My Wallet</h1>
+            <a href="/" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition">
+                Continue Shopping
+            </a>
+        </div>
+
+        <!-- Wallet Balance Card -->
+        <div class="balance-card p-6 mb-8">
+            <div class="flex flex-col md:flex-row justify-between">
+                <div>
+                    <h2 class="text-xl text-white font-medium mb-1">Current Balance</h2>
+                    <p class="text-4xl font-bold text-white">₹<%= wallet.balance.toFixed(2) %>
+                    </p>
+                </div>
+                <div class="mt-4 md:mt-0">
+                    <button onclick="showAddMoneyModal()"
+                        class="bg-white text-blue-600 hover:bg-gray-100 font-bold py-2 px-6 rounded-md transition mr-2">
+                        Add Money
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <form action="/user/wallet" method="GET" id="filterForm">
+                <input type="hidden" name="limit" value="<%= limit %>" id="limitInput">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-grow">
+                        <input type="text" name="search" placeholder="Search transactions..." value="<%= search %>"
+                            class="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            oninput="debounceSearch()">
+                    </div>
+                    <div class="flex gap-2">
+                        <select name="type"
+                            class="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onchange="document.getElementById('filterForm').submit();">
+                            <option value="" <%=type==='' ? 'selected' : '' %>>All Types</option>
+                            <option value="credit" <%=type==='credit' ? 'selected' : '' %>>Credit</option>
+                            <option value="debit" <%=type==='debit' ? 'selected' : '' %>>Debit</option>
+                        </select>
+                        <select name="sort"
+                            class="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onchange="document.getElementById('filterForm').submit();">
+                            <option value="desc" <%=sortOrder==='desc' ? 'selected' : '' %>>Newest First</option>
+                            <option value="asc" <%=sortOrder==='asc' ? 'selected' : '' %>>Oldest First</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <% if (wallet.transactions && wallet.transactions.length> 0) { %>
+            <div class="space-y-4">
+                <% wallet.transactions.forEach(function(transaction, index) { %>
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden transaction-card">
+                        <div class="p-4 md:p-6">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                                <div class="flex items-center">
+                                    <div
+                                        class="mr-4 p-3 rounded-full <%= transaction.type === 'credit' ? 'bg-green-100' : 'bg-red-100' %>">
+                                        <% if (transaction.type==='credit' ) { %>
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="h-6 w-6 <%= transaction.type === 'credit' ? 'text-green-600' : 'text-red-600' %>"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 4v16m8-8H4" />
+                                            </svg>
+                                            <% } else { %>
+                                                <svg xmlns="http://www.w3.org/2000/svg"
+                                                    class="h-6 w-6 <%= transaction.type === 'credit' ? 'text-green-600' : 'text-red-600' %>"
+                                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2" d="M20 12H4" />
+                                                </svg>
+                                                <% } %>
+                                    </div>
+                                    <div>
+                                        <span class="type-badge type-<%= transaction.type %>">
+                                            <%= transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1) %>
+                                        </span>
+                                        <p class="font-medium text-gray-900 mt-1">
+                                            <%= transaction.description %>
+                                        </p>
+                                        <p class="text-sm text-gray-500">
+                                            <%= new Date(transaction.date).toLocaleDateString('en-US', { year: 'numeric'
+                                                , month: 'long' , day: 'numeric' , hour: '2-digit' , minute: '2-digit'
+                                                }) %>
+                                        </p>
+                                        <% if (transaction.orderId) { %>
+                                            <a href="/user/orders/<%= transaction.orderId %>"
+                                                class="text-sm text-blue-600 hover:text-blue-800">
+                                                View related order
+                                            </a>
+                                            <% } %>
+                                    </div>
+                                </div>
+                                <div
+                                    class="mt-3 md:mt-0 font-bold <%= transaction.type === 'credit' ? 'text-green-600' : 'text-red-600' %>">
+                                    <%= transaction.type==='credit' ? '+' : '-' %>₹<%=
+                                            Math.abs(transaction.amount).toFixed(2) %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <% }); %>
+            </div>
+
+            <!-- Pagination -->
+            <% if (totalPages> 1) { %>
+                <div class="mt-8 flex justify-center">
+                    <nav class="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        <!-- Previous Page Button -->
+                        <% if (currentPage> 1) { %>
+                            <a href="/user/wallet?page=<%= currentPage - 1 %>&limit=<%= limit %>&type=<%= encodeURIComponent(type) %>&search=<%= encodeURIComponent(search) %>&sort=<%= sortOrder %>"
+                                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <span class="sr-only">Previous</span>
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                                    fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd"
+                                        d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </a>
+                            <% } else { %>
+                                <span
+                                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
+                                    <span class="sr-only">Previous</span>
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                                        fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd"
+                                            d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+                                <% } %>
+
+                                    <!-- Page Numbers -->
+                                    <% let startPage=Math.max(1, currentPage - 2); %>
+                                        <% let endPage=Math.min(totalPages, startPage + 4); %>
+                                            <% if (endPage - startPage < 4) { startPage=Math.max(1, endPage - 4); } %>
+
+                                                <% if (startPage> 1) { %>
+                                                    <a href="/user/wallet?page=1&limit=<%= limit %>&type=<%= encodeURIComponent(type) %>&search=<%= encodeURIComponent(search) %>&sort=<%= sortOrder %>"
+                                                        class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">1</a>
+                                                    <% if (startPage> 2) { %>
+                                                        <span
+                                                            class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>
+                                                        <% } %>
+                                                            <% } %>
+
+                                                                <% for (let i=startPage; i <=endPage; i++) { %>
+                                                                    <% if (i===currentPage) { %>
+                                                                        <a href="#" aria-current="page"
+                                                                            class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-medium text-blue-600">
+                                                                            <%= i %>
+                                                                        </a>
+                                                                        <% } else { %>
+                                                                            <a href="/user/wallet?page=<%= i %>&limit=<%= limit %>&type=<%= encodeURIComponent(type) %>&search=<%= encodeURIComponent(search) %>&sort=<%= sortOrder %>"
+                                                                                class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                                                                <%= i %>
+                                                                            </a>
+                                                                            <% } %>
+                                                                                <% } %>
+
+                                                                                    <% if (endPage < totalPages) { %>
+                                                                                        <% if (endPage < totalPages - 1)
+                                                                                            { %>
+                                                                                            <span
+                                                                                                class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>
+                                                                                            <% } %>
+                                                                                                <a href="/user/wallet?page=<%= totalPages %>&limit=<%= limit %>&type=<%= encodeURIComponent(type) %>&search=<%= encodeURIComponent(search) %>&sort=<%= sortOrder %>"
+                                                                                                    class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                                                                                    <%= totalPages %>
+                                                                                                </a>
+                                                                                                <% } %>
+
+                                                                                                    <!-- Next Page Button -->
+                                                                                                    <% if (currentPage <
+                                                                                                        totalPages) { %>
+                                                                                                        <a href="/user/wallet?page=<%= currentPage + 1 %>&limit=<%= limit %>&type=<%= encodeURIComponent(type) %>&search=<%= encodeURIComponent(search) %>&sort=<%= sortOrder %>"
+                                                                                                            class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                                                                                            <span
+                                                                                                                class="sr-only">Next</span>
+                                                                                                            <svg class="h-5 w-5"
+                                                                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                                                                viewBox="0 0 20 20"
+                                                                                                                fill="currentColor"
+                                                                                                                aria-hidden="true">
+                                                                                                                <path
+                                                                                                                    fill-rule="evenodd"
+                                                                                                                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                                                                                                                    clip-rule="evenodd" />
+                                                                                                            </svg>
+                                                                                                        </a>
+                                                                                                        <% } else { %>
+                                                                                                            <span
+                                                                                                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
+                                                                                                                <span
+                                                                                                                    class="sr-only">Next</span>
+                                                                                                                <svg class="h-5 w-5"
+                                                                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                                                                    viewBox="0 0 20 20"
+                                                                                                                    fill="currentColor"
+                                                                                                                    aria-hidden="true">
+                                                                                                                    <path
+                                                                                                                        fill-rule="evenodd"
+                                                                                                                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                                                                                                                        clip-rule="evenodd" />
+                                                                                                                </svg>
+                                                                                                            </span>
+                                                                                                            <% } %>
+                    </nav>
+                </div>
+                <% } %>
+                    <% } else { %>
+                        <!-- Empty Wallet State -->
+                        <div class="bg-white rounded-lg shadow-md p-8 empty-wallet">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-gray-400 mb-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                            <h2 class="text-2xl font-semibold text-gray-700 mb-2">No Transactions Found</h2>
+                            <p class="text-gray-600 mb-6 text-center">You don't have any wallet transactions yet. Add
+                                money to your wallet to get started.</p>
+                            <button onclick="showAddMoneyModal()"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition">
+                                Add Money to Wallet
+                            </button>
+                        </div>
+                        <% } %>
+    </div>
+
+    <!-- Add Money Modal -->
+    <div id="addMoneyModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Add Money to Wallet</h3>
+                <button onclick="hideAddMoneyModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <form id="addMoneyForm" action="/user/wallet/add" method="POST">
+                <div class="mb-4">
+                    <label for="amount" class="block text-gray-700 text-sm font-medium mb-2">Amount (₹)</label>
+                    <input type="number" id="amount" name="amount" min="1" required
+                        class="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter amount">
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="button" onclick="hideAddMoneyModal()"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition mr-2">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition">
+                        Add Money
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let debounceTimeout;
+        function debounceSearch() {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                document.getElementById('filterForm').submit();
+            }, 500);
+        }
+
+        function showAddMoneyModal() {
+            document.getElementById('addMoneyModal').classList.remove('hidden');
+        }
+
+        function hideAddMoneyModal() {
+            document.getElementById('addMoneyModal').classList.add('hidden');
+        }
+
+        // Form submission with fetch API
+        document.getElementById('addMoneyForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const amount = document.getElementById('amount').value;
+
+            if (!amount || amount <= 0) {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Please enter a valid amount.',
+                    icon: 'error',
+                    confirmButtonColor: '#EF4444'
+                });
+                return;
+            }
+
+            // Show processing
+            Swal.fire({
+                title: 'Processing',
+                text: 'Initializing payment...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Initiate Razorpay
+            fetch('/user/wallet/initiate-razorpay', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    amount: amount
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    Swal.close();
+
+                    if (data.success) {
+                        // Initialize Razorpay checkout
+                        const options = {
+                            key: data.key,
+                            amount: data.amount,
+                            currency: "INR",
+                            name: "WaveTunes",
+                            description: "Add Money to WaveTunes Wallet",
+                            order_id: data.order.id,
+                            handler: function (response) {
+                                // Handle successful payment
+                                verifyWalletPayment(response, data.order);
+                            },
+                            prefill: {
+                                name: data.userInfo.name,
+                                email: data.userInfo.email,
+                                contact: data.userInfo.contact
+                            },
+                            theme: {
+                                color: "#3B82F6"
+                            },
+                            modal: {
+                                ondismiss: function () {
+                                    hideAddMoneyModal();
+                                }
+                            }
+                        };
+
+                        const razorpayPayment = new Razorpay(options);
+                        razorpayPayment.open();
+                    } else {
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.message || 'Failed to initialize payment.',
+                            icon: 'error',
+                            confirmButtonColor: '#EF4444'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'There was an error processing your request.',
+                        icon: 'error',
+                        confirmButtonColor: '#EF4444'
+                    });
+                    hideAddMoneyModal();
+                });
+        });
+
+        // Function to verify wallet payment
+        function verifyWalletPayment(paymentData, orderData) {
+            // Show payment verification message
+            Swal.fire({
+                title: 'Verifying Payment',
+                text: 'Please wait while we verify your payment...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Verify payment with server
+            fetch('/user/wallet/verify-razorpay', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    razorpay_payment_id: paymentData.razorpay_payment_id,
+                    razorpay_order_id: paymentData.razorpay_order_id,
+                    razorpay_signature: paymentData.razorpay_signature
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            title: 'Success',
+                            text: 'Money added to your wallet successfully!',
+                            icon: 'success',
+                            confirmButtonColor: '#3B82F6'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.message || 'Payment verification failed.',
+                            icon: 'error',
+                            confirmButtonColor: '#EF4444'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'There was an error verifying your payment.',
+                        icon: 'error',
+                        confirmButtonColor: '#EF4444'
+                    });
+                });
+        }
+
+        // Close modal if user clicks outside of it
+        window.onclick = function (event) {
+            const modal = document.getElementById('addMoneyModal');
+            if (event.target === modal) {
+                hideAddMoneyModal();
+            }
+        }
+    </script>
+
+    <%- include('./partials/user/footer') %>
+</body>

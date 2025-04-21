@@ -1,15 +1,17 @@
-const bcrypt=require('bcrypt');
-const User=require('../model/userModel');
-const nodemailer=require('nodemailer');
-const env=require('dotenv').config(); 
+const bcrypt = require('bcrypt');
+const User = require('../model/userModel');
+const nodemailer = require('nodemailer');
 const jwt = require("jsonwebtoken");
+const WalletService = require('./walletService');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
 require('dotenv').config();
 
- 
+
 //Password hashing
-const sPass= async(password)=>{
+const sPass = async (password) => {
     try {
-        const hashPass= await bcrypt.hash(password,10);
+        const hashPass = await bcrypt.hash(password, 10);
         return hashPass;
     } catch (error) {
         console.log(error.message);
@@ -17,7 +19,7 @@ const sPass= async(password)=>{
 }
 
 //Sign up page
-const signup=async(req,res)=>{
+const signup = async (req, res) => {
     try {
         console.log("Signup rendered")
         res.render('user/signup');
@@ -28,7 +30,7 @@ const signup=async(req,res)=>{
 
 
 //Adding user to the DB
-const addUser=async(req,res)=>{
+const addUser = async (req, res) => {
     try {
         // console.log("Incoming Signup Request:", req.body); // Debugging
 
@@ -75,32 +77,32 @@ const addUser=async(req,res)=>{
         const emailSent = await sendVerificationEmail(email, otp);
 
         if (!emailSent) {
-           
+
             return res.status(400).json({ error: "Failed to send OTP. Try again" });
 
         }
 
         req.session.userOtp = otp;
-        req.session.userData = { 
+        req.session.userData = {
             fname,
             lname,
-            phone, 
-            email, 
-            password 
+            phone,
+            email,
+            password
         };
 
-        console.log("Session stored",req.session.userData);
-       
+        console.log("Session stored", req.session.userData);
+
         console.log("OTP sent successfully:", otp);
-        return res.status(200).json({ 
+        return res.status(200).json({
             message: "OTP sent successfully",
             redirectUrl: "/user/otpverify"
         });
-        
+
     } catch (error) {
         console.log('catch invoked');
         console.log(error);
-        return res.status(500).json({error: "Internal server error"})
+        return res.status(500).json({ error: "Internal server error" })
     }
 };
 
@@ -108,34 +110,34 @@ const addUser=async(req,res)=>{
 const verifyOtp = async (req, res) => {
     try {
         const { otp } = req.body;
-        const userData=req.session.userData;
+        const userData = req.session.userData;
         console.log(userData);
 
         console.log("Received OTP:", otp);
         console.log("Stored OTP:", req.session.userOtp);
 
-        if(!otp){
-            return res.status(400).json({success:false,message:"OTP is required"})
+        if (!otp) {
+            return res.status(400).json({ success: false, message: "OTP is required" })
         }
 
         if (!req.session.userOtp) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Expired OTP" 
+            return res.status(400).json({
+                success: false,
+                message: "Expired OTP"
             });
         }
 
-        if(req.session.userOtp !== otp){
+        if (req.session.userOtp !== otp) {
             return res.status(400).json({
-                success:false,
-                message:"Invalid OTP"
+                success: false,
+                message: "Invalid OTP"
             })
         }
 
         if (!userData) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "User data not found in session" 
+            return res.status(400).json({
+                success: false,
+                message: "User data not found in session"
             });
         }
 
@@ -143,17 +145,17 @@ const verifyOtp = async (req, res) => {
         // console.log('req.session.userdata ethi');
 
         // Retrieve user data from session and hash the password
-        const sPassword=await sPass(userData.password);
-        const newUser= new User({
-            fname:userData.fname,
-            lname:userData.lname,
-            email:userData.email,
-            phone:userData.phone,
-            password:sPassword,
-            status:'Unblocked',
+        const sPassword = await sPass(userData.password);
+        const newUser = new User({
+            fname: userData.fname,
+            lname: userData.lname,
+            email: userData.email,
+            phone: userData.phone,
+            password: sPassword,
+            status: 'Unblocked',
         });
 
-        const savedUser= await newUser.save();
+        const savedUser = await newUser.save();
         console.log("User created");
 
         const token = jwt.sign(
@@ -172,14 +174,15 @@ const verifyOtp = async (req, res) => {
         // Clear session
         delete req.session.userOtp;
         delete req.session.userData;
-        
+
         // req.session.save();
 
-        return res.status(200).json({ 
-            success: true, 
-            message:"User registration successful" ,
-            token, 
-            redirectUrl: "/user/login" });
+        return res.status(200).json({
+            success: true,
+            message: "User registration successful",
+            token,
+            redirectUrl: "/user/login"
+        });
 
     } catch (error) {
         console.error("Error verifying OTP:", error);
@@ -221,12 +224,12 @@ const sendVerificationEmail = async (email, otp) => {
 const resendOtp = async (req, res) => {
     try {
 
-        console.log("Session Data at resend: ",req.session.userData);
+        console.log("Session Data at resend: ", req.session.userData);
 
         if (!req.session.userData || !req.session.userData.email) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "User data not found" 
+            return res.status(400).json({
+                success: false,
+                message: "User data not found"
             });
         }
 
@@ -234,12 +237,12 @@ const resendOtp = async (req, res) => {
         const newOtp = generateOtp();
         req.session.userOtp = newOtp;
 
-        await new Promise((resolve,reject)=>{
-            req.session.save((err)=>{
-                if(err){
+        await new Promise((resolve, reject) => {
+            req.session.save((err) => {
+                if (err) {
                     console.log("Session save error: ", err);
                     reject(err);
-                }else{
+                } else {
                     resolve();
                 }
             })
@@ -252,40 +255,40 @@ const resendOtp = async (req, res) => {
             return res.status(200).json({ success: true, message: "OTP resent successfully" });
         }
 
-        return res.status(500).json({ 
-            success: false, 
-            message: "Failed to resend OTP. Try again" 
+        return res.status(500).json({
+            success: false,
+            message: "Failed to resend OTP. Try again"
         });
 
     } catch (error) {
         console.error("Error resending OTP:", error);
-        res.status(500).json({ 
-            success: false, 
-            message: "Internal server error. Try again" 
+        res.status(500).json({
+            success: false,
+            message: "Internal server error. Try again"
         });
     }
 };
 
 //Load OTP
-const loadOtp= async(req,res)=>{
+const loadOtp = async (req, res) => {
     try {
-        if(!req.session.userOtp || !req.session.userData){
+        if (!req.session.userOtp || !req.session.userData) {
             return res.redirect('/user/signup');
         }
 
-        await new Promise((resolve)=>{
+        await new Promise((resolve) => {
             req.session.save(resolve);
         });
 
-        res.render('user/otpverify',{ context: "registration" });
+        res.render('user/otpverify', { context: "registration" });
     } catch (error) {
-        console.log("Error loading OTP page",error);
+        console.log("Error loading OTP page", error);
         res.redirect('/user/signup')
     }
 }
 
 //Login page
-const loadLogin= async (req,res)=>{
+const loadLogin = async (req, res) => {
     try {
         console.log("Login rendered")
         res.render('user/login');
@@ -304,7 +307,7 @@ const login = async (req, res) => {
         if (!user) {
             return res.status(400).json({
                 success: false,
-                field: "email",  
+                field: "email",
                 message: "Invalid email!"
             });
         }
@@ -312,7 +315,7 @@ const login = async (req, res) => {
         if (user.status === "Blocked") {
             return res.status(400).json({
                 success: false,
-                field: "general", 
+                field: "general",
                 message: "User is blocked!"
             });
         }
@@ -321,26 +324,26 @@ const login = async (req, res) => {
         if (!matchPass) {
             return res.status(401).json({
                 success: false,
-                field: "password",  
+                field: "password",
                 message: "Incorrect password!"
             });
         }
 
         const token = jwt.sign(
-            { 
-                id:user._id, 
-                email:user.email, 
-                fname:user.fname, 
-                lname:user.lname,
-                role:'user'
+            {
+                id: user._id,
+                email: user.email,
+                fname: user.fname,
+                lname: user.lname,
+                role: 'user'
             },
             process.env.JWT_SECRET,
-            {expiresIn:'3d'}
+            { expiresIn: '3d' }
         );
-        res.cookie('jwt',token, {
-            httpOnly:true, 
-            secure:false,
-            maxAge:3 * 24* 60 * 60 * 1000
+        res.cookie('jwt', token, {
+            httpOnly: true,
+            secure: false,
+            maxAge: 3 * 24 * 60 * 60 * 1000
         });
         // res.cookie('user',user)
 
@@ -349,14 +352,14 @@ const login = async (req, res) => {
             token,
             user,
             message: "Login successful",
-            redirectUrl:'/'
+            redirectUrl: '/'
         });
 
     } catch (error) {
         console.log("Login error", error);
         res.status(500).json({
             success: false,
-            field: "general",  
+            field: "general",
             message: "Internal Server Error"
         });
     }
@@ -364,7 +367,7 @@ const login = async (req, res) => {
 
 
 //Home page
-const loadHome= async(req,res)=>{
+const loadHome = async (req, res) => {
     try {
         console.log("Homepage rendered")
         res.render('home');
@@ -375,49 +378,49 @@ const loadHome= async(req,res)=>{
 
 
 //Load Forgot Password Page
-const loadForgotPassword = async(req,res)=>{
+const loadForgotPassword = async (req, res) => {
     try {
         res.render('user/forgotPassword');
     } catch (error) {
-        console.log('Error loading the forgot password page',error);
+        console.log('Error loading the forgot password page', error);
     }
 }
 
 
 //Forgot Password
-const forgotPassword=async(req,res)=>{
+const forgotPassword = async (req, res) => {
     try {
-        const { email }=req.body;
-        
-        const user= await User.findOne({email});
+        const { email } = req.body;
 
-        if(!user){
+        const user = await User.findOne({ email });
+
+        if (!user) {
             return res.status(400).json({
                 success: false,
-                field: "email",  
+                field: "email",
                 message: "Email not found"
             });
         }
 
-        const otp= generateOtp();
-        const emailSent= await sendPasswordResetEmail(email,otp);
+        const otp = generateOtp();
+        const emailSent = await sendPasswordResetEmail(email, otp);
 
-        if(!emailSent){
+        if (!emailSent) {
             return res.status(400).json({
-                success:false,
-                field:'general',
-                message:'Failed to send OTP. Please try again'
+                success: false,
+                field: 'general',
+                message: 'Failed to send OTP. Please try again'
             });
         }
 
-        req.session.resetOtp=otp;
-        req.session.resetEmail=email;
+        req.session.resetOtp = otp;
+        req.session.resetEmail = email;
 
-        console.log('Password reset OTP sent: ',otp);
+        console.log('Password reset OTP sent: ', otp);
         return res.status(200).json({
-            success:true,
-            message:"OTP sent successfully",
-            
+            success: true,
+            message: "OTP sent successfully",
+
         });
 
     } catch (error) {
@@ -432,164 +435,164 @@ const forgotPassword=async(req,res)=>{
 
 
 //Send OTP for password Reset
-const sendPasswordResetEmail= async(email,otp)=>{
+const sendPasswordResetEmail = async (email, otp) => {
     try {
-        const transporter= nodemailer.createTransport({
-            service:'gmail',
-            auth:{
-                user:process.env.NODEMAILER_EMAIL,
-                pass:process.env.NODEMAILER_PASSWORD,
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.NODEMAILER_EMAIL,
+                pass: process.env.NODEMAILER_PASSWORD,
             },
         });
 
-        const info= await transporter.sendMail({
+        const info = await transporter.sendMail({
             fron: process.env.NODEMAILER_EMAIL,
             to: email,
-            subject:'Password Reset Request',
-            text:`Your OTP for password reset is ${otp}. This otp will expire in 10 minutes`
+            subject: 'Password Reset Request',
+            text: `Your OTP for password reset is ${otp}. This otp will expire in 10 minutes`
         });
-        
-        return info.accepted.length>0;
+
+        return info.accepted.length > 0;
 
     } catch (error) {
-        consol.error('Error sending password reset emial: ',error);
+        consol.error('Error sending password reset emial: ', error);
         return false;
     }
 }
 
-const loadVerifyResetOtp= async(req,res)=>{
+const loadVerifyResetOtp = async (req, res) => {
     try {
-        if(!req.session.resetOtp || !req.session.resetEmail){
+        if (!req.session.resetOtp || !req.session.resetEmail) {
             return res.redirect('/user/forgotPassword');
         }
 
-        await new Promise((resolve)=>{
+        await new Promise((resolve) => {
             req.session.save(resolve);
         });
 
-        res.render('user/otpVerify',{ context: "passwordReset" });
+        res.render('user/otpVerify', { context: "passwordReset" });
 
     } catch (error) {
-        console.log('Error loading reset OTP page',error);
+        console.log('Error loading reset OTP page', error);
         res.redirect('/user/forgoPassword');
     }
 };
 
 
-const verifyResetOtp= async(req,res)=>{
+const verifyResetOtp = async (req, res) => {
     try {
-        const {otp} = req.body;
+        const { otp } = req.body;
 
-        console.log("Recieved OTP: ",otp);
-        console.log('Stored Reset OTP: ',req.session.resetOtp);
+        console.log("Recieved OTP: ", otp);
+        console.log('Stored Reset OTP: ', req.session.resetOtp);
 
-        if(!otp){
+        if (!otp) {
             return res.status(400).json({
-                success:false,
-                message:"OTP is required"
+                success: false,
+                message: "OTP is required"
             });
         }
 
-        if(!req.session.resetOtp){
+        if (!req.session.resetOtp) {
             return res.status(400).json({
-                success:false,
-                message:'Expired OTP'
+                success: false,
+                message: 'Expired OTP'
             });
         }
 
-        if(req.session.resetOtp !=otp){
+        if (req.session.resetOtp != otp) {
             return res.status(400).json({
-                success:false,
-                message:'Invalid OTP'
-            });   
-        }
-
-        if(!req.session.resetEmail){
-            return res.status(400).json({
-                success:false,
-                message:'User data not found in session'
+                success: false,
+                message: 'Invalid OTP'
             });
         }
 
-        const resetToken=jwt.sign(
-            {email:req.session.resetEmail},
+        if (!req.session.resetEmail) {
+            return res.status(400).json({
+                success: false,
+                message: 'User data not found in session'
+            });
+        }
+
+        const resetToken = jwt.sign(
+            { email: req.session.resetEmail },
             process.env.JWT_SECRET,
-            {expiresIn:'10m'}
+            { expiresIn: '10m' }
         );
 
         delete req.session.resetOtp;
 
         return res.status(200).json({
-            success:true,
-            message:'OTP verified successfully',
-            token:resetToken,
+            success: true,
+            message: 'OTP verified successfully',
+            token: resetToken,
             // redirectUrl:`/user/resetPassword`,
             redirectUrl: `/user/resetPassword?token=${resetToken}`
         });
 
 
     } catch (error) {
-        console.error('Error verifying reset OTP:',error );
+        console.error('Error verifying reset OTP:', error);
         return res.status(500).json({
-            success:false,
-            message:'Server error, try again'
+            success: false,
+            message: 'Server error, try again'
         });
     }
 }
 
 
-const resendResetOtp= async(req,res)=>{
+const resendResetOtp = async (req, res) => {
     try {
-        if(!req.session.resetEmail){
+        if (!req.session.resetEmail) {
             return res.status(400).json({
-                success:false,
-                message:'User data not found'
+                success: false,
+                message: 'User data not found'
             });
         }
 
-        const newOtp=generateOtp();
-        req.session.resetOtp= newOtp();
+        const newOtp = generateOtp();
+        req.session.resetOtp = newOtp();
 
-        await new Promise((resolve, reject)=>{
-            req.session.save((err)=>{
-                if(err){
+        await new Promise((resolve, reject) => {
+            req.session.save((err) => {
+                if (err) {
                     console.log('Session save error:', err);
                     reject(err);
-                }else{
+                } else {
                     resolve();
                 }
             });
         });
-         
-        const emailSent= await sendPasswordResetEmail(req.session.resetEmail, newOtp);
 
-        if(emailSent){
-            console.log('New reset OTP sent:',newOtp);
+        const emailSent = await sendPasswordResetEmail(req.session.resetEmail, newOtp);
+
+        if (emailSent) {
+            console.log('New reset OTP sent:', newOtp);
             return res.status(200).json({
-                success:true,
-                message:'OTP resent successfully'
+                success: true,
+                message: 'OTP resent successfully'
             });
         }
 
         return res.status(500).json({
-            success:false,
-            message:'OTP resent succesfully'
+            success: false,
+            message: 'OTP resent succesfully'
         });
 
     } catch (error) {
         console.error('Error resending reset OTP. Tr again'.error);
         res.status(500).json({
-            success:false,
-            message:'Internal server error. Try again'
+            success: false,
+            message: 'Internal server error. Try again'
         });
     }
 }
 
 //Load the reset password page
-const loadResetPassword = async(req,res)=>{
+const loadResetPassword = async (req, res) => {
     try {
-        const{token}=req.query;
-        res.render('user/resetPassword',{token});
+        const { token } = req.query;
+        res.render('user/resetPassword', { token });
     } catch (error) {
         console.log('Error loading the reset password page', error);
         res.redirect('/user/forgotPassword');
@@ -597,60 +600,60 @@ const loadResetPassword = async(req,res)=>{
 };
 
 //Reset password
-const resetPassword= async(req,res)=>{
+const resetPassword = async (req, res) => {
     try {
-        const {token,password}= req.body;
+        const { token, password } = req.body;
 
-        if(!token || !password){
+        if (!token || !password) {
             return res.status(400).json({
-                success:false,
-                field:'general',
-                message:'Missing required fields'
+                success: false,
+                field: 'general',
+                message: 'Missing required fields'
             });
         }
 
-        if(password.length<6){
+        if (password.length < 6) {
             return res.status(400).json({
-                success:false,
-                field:'password',
-                message:'Password must be at least 6 characters'
+                success: false,
+                field: 'password',
+                message: 'Password must be at least 6 characters'
             });
         }
 
         let decodedToken;
         try {
-            decodedToken=jwt.verify(token,process.env.JWT_SECRET);
+            decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         } catch (error) {
             return res.status(400).json({
-                succss:false,
-                field:'general',
-                message:'Invalid or expired reset OTP'
+                succss: false,
+                field: 'general',
+                message: 'Invalid or expired reset OTP'
             });
         }
 
-        const email=decodedToken.email;
+        const email = decodedToken.email;
 
-        const user= await User.findOne({email});
+        const user = await User.findOne({ email });
 
-        if(!user){
+        if (!user) {
             return res.status(400).json({
-                success:false,
-                field:'general',
-                message:'User not found'
+                success: false,
+                field: 'general',
+                message: 'User not found'
             });
         }
-        
-        const hashedPassword= await sPass(password);
 
-        user.password=hashedPassword;
+        const hashedPassword = await sPass(password);
+
+        user.password = hashedPassword;
         await user.save();
 
         delete req.session.resetEmail;
-        
+
         return res.status(200).json({
-            success:true,
-            message:'Password reset successful',
-            redirectUrl:'/user/login'
+            success: true,
+            message: 'Password reset successful',
+            redirectUrl: '/user/login'
         });
 
     } catch (error) {
@@ -682,7 +685,208 @@ const logout = async (req, res) => {
     }
 };
 
-module.exports={
+//User Wallet render
+const getUserWallet = async (req, res) => {
+    const token = req.cookies.jwt;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id; // Assuming user is available in request from auth middleware
+
+        // Get query parameters with defaults
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const type = req.query.type || '';
+        const search = req.query.search || '';
+        const sortOrder = req.query.sort || 'desc';
+
+        // Get wallet data
+        const wallet = await WalletService.getWallet(userId);
+
+        // Filter transactions based on type and search
+        let filteredTransactions = wallet.transactions;
+
+        if (type) {
+            filteredTransactions = filteredTransactions.filter(t => t.type === type);
+        }
+
+        if (search) {
+            const searchLower = search.toLowerCase();
+            filteredTransactions = filteredTransactions.filter(t =>
+                t.description.toLowerCase().includes(searchLower) ||
+                t.amount.toString().includes(searchLower)
+            );
+        }
+
+        // Sort transactions
+        filteredTransactions.sort((a, b) => {
+            if (sortOrder === 'asc') {
+                return new Date(a.date) - new Date(b.date);
+            } else {
+                return new Date(b.date) - new Date(a.date);
+            }
+        });
+
+        // Calculate pagination
+        const totalTransactions = filteredTransactions.length;
+        const totalPages = Math.ceil(totalTransactions / limit);
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+
+        // Get paginated transactions
+        const paginatedTransactions = filteredTransactions.slice(startIndex, endIndex);
+
+        // Create wallet object with paginated transactions
+        const walletWithPagination = {
+            ...wallet.toObject(),
+            transactions: paginatedTransactions
+        };
+
+        res.render('user/wallet', {
+            wallet: walletWithPagination,
+            currentPage: page,
+            totalPages,
+            limit,
+            type,
+            search,
+            sortOrder,
+            user: req.user // Pass user for header/footer templates
+        });
+    } catch (error) {
+        console.error('Error fetching wallet:', error);
+        req.flash('error', 'Failed to load wallet information');
+        res.redirect('/dashboard');
+    }
+};
+
+// Handle adding money to wallet
+const initiateRazorpayForWallet = async (req, res) => {
+    const token = req.cookies.jwt;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+        const { amount } = req.body;
+
+        // Validate amount
+        const amountNum = parseFloat(amount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please enter a valid amount'
+            });
+        }
+
+        // Get user information (you may need to adjust this based on your actual user model)
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Create Razorpay instance
+        const razorpay = new Razorpay({
+            key_id: process.env.RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_SECRET
+        });
+
+        // Create an order
+        const options = {
+            amount: Math.round(amountNum * 100), 
+            currency: 'INR',
+            receipt: `wallet_${Math.random().toString(36).substring(2, 15)}`,
+            payment_capture: 1
+        };
+
+        const order = await razorpay.orders.create(options);
+
+        // Return the order and key to the client
+        return res.status(200).json({
+            success: true,
+            key: process.env.RAZORPAY_KEY_ID,
+            amount: Math.round(amountNum * 100),
+            order: order,
+            userInfo: {
+                name: user.name || '',
+                email: user.email || '',
+                contact: user.phone || ''
+            }
+        });
+    } catch (error) {
+        console.error('Error initiating Razorpay payment:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to initiate payment'
+        });
+    }
+};
+
+// Verify Razorpay payment and add money to wallet
+const verifyRazorpayForWallet = async (req, res) => {
+    const token = req.cookies.jwt;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+        
+        const {
+            razorpay_payment_id,
+            razorpay_order_id,
+            razorpay_signature
+        } = req.body;
+
+        // Verify signature
+        const generatedSignature = crypto
+            .createHmac('sha256', process.env.RAZORPAY_SECRET)
+            .update(razorpay_order_id + '|' + razorpay_payment_id)
+            .digest('hex');
+
+        if (generatedSignature !== razorpay_signature) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid payment signature'
+            });
+        }
+
+        // Fetch payment details from Razorpay to confirm amount
+        const razorpay = new Razorpay({
+            key_id: process.env.RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_SECRET
+        });
+
+        const payment = await razorpay.payments.fetch(razorpay_payment_id);
+        
+        if (payment.status !== 'captured') {
+            return res.status(400).json({
+                success: false,
+                message: 'Payment not captured'
+            });
+        }
+
+        // Add funds to wallet (amount in rupees)
+        const amountInRupees = payment.amount / 100;
+        
+        await WalletService.addFunds(
+            userId,
+            amountInRupees,
+            'Added via Razorpay',
+            null
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: 'Money added to wallet successfully'
+        });
+    } catch (error) {
+        console.error('Error verifying Razorpay payment:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to verify payment'
+        });
+    }
+};
+
+
+module.exports = {
     loadLogin,
     login,
     loadHome,
@@ -699,5 +903,8 @@ module.exports={
     resendResetOtp,
     loadResetPassword,
     resetPassword,
+    getUserWallet,
+    initiateRazorpayForWallet,
+    verifyRazorpayForWallet
 }
 

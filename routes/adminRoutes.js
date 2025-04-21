@@ -20,6 +20,9 @@ router.get('/logout',verifyAdmin,adminController.logout);
 router.get('/customers',verifyAdmin,customerController.getCustomers);
 router.post('/customers/:id',customerController.userStatus);
 
+//Sales report
+router.get('/sales-report', adminController.getSalesReport);
+
 //Categories
 router.get('/categories',verifyAdmin,categoryController.loadCategory);
 router.post('/categories',categoryController.addCategory);

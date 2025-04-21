@@ -12,7 +12,7 @@ const Product=require('./model/productModel');
 const Category=require('./model/categoryModel');
 db();
 const cookieParser = require('cookie-parser');
-
+app.use(express.static('node_modules/xlsx/dist'));
 const session = require('express-session');
 
 app.use(session({

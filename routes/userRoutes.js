@@ -79,6 +79,10 @@ router.get('/orders/:id',orderController.loadOrderDetails);
 router.post('/orders/:id/cancel',orderController.cancelOrder);
 router.post('/orders/:orderId/items/:itemId/cancel',orderController.cancelOrderItem);
 
+router.get('/wallet',userController.getUserWallet);
+router.post('/wallet/initiate-razorpay', userController.initiateRazorpayForWallet);
+router.post('/wallet/verify-razorpay', userController.verifyRazorpayForWallet);
+
 //Return
 router.post('/orders/:id/return',orderController.returnOrder);
 router.post('/orders/:orderId/items/:itemId/return',orderController.returnOrderItem);

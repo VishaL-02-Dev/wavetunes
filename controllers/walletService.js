@@ -41,7 +41,7 @@ class WalletService {
                 amount,
                 type:'credit',
                 description,
-                orderId
+                orderId: orderId || null
             });
 
             await wallet.save();

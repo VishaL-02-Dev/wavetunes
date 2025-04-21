@@ -1,7 +1,30 @@
 <%- include('partials/admin/header') %>
-    <!-- Add Chart.js -->
+    <!-- Add Chart.js, jsPDF, xlsx, moment.js, and moment-timezone -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.43/moment-timezone-with-data.min.js"></script>
+    <style>
+        .filter-section {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .download-btn {
+            margin-left: 10px;
+        }
+
+        #salesChart {
+            max-height: 400px;
+            width: 100%;
+        }
+    </style>
     </head>
 
     <!-- Main Content -->
@@ -24,7 +47,8 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2>Dashboard</h2>
                     <div>
-                        <span class="text-white">Welcome, Admin!</span>
+                        <span class="text-white">Welcome, <%= admin.fname %>
+                                <%= admin.lname %>!</span>
                     </div>
                 </div>
 
@@ -71,11 +95,37 @@
                     </div>
                 </div>
 
-                <!-- Sales Chart -->
+                <!-- Sales Report Section -->
                 <div class="card bg-dark text-white mb-4">
                     <div class="card-body">
-                        <h5 class="card-title">Monthly Sales</h5>
+                        <h5 class="card-title">Sales Report</h5>
+                        <div class="filter-section">
+                            <select id="periodFilter" class="form-select bg-dark text-white" style="width: 200px;">
+                                <option value="monthly">Monthly</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="daily">Daily</option>
+                            </select>
+                            <button id="downloadPdf" class="btn btn-primary download-btn">Download PDF</button>
+                            <button id="downloadExcel" class="btn btn-success download-btn">Download Excel</button>
+                        </div>
                         <canvas id="salesChart" height="100"></canvas>
+                    </div>
+                </div>
+
+                <!-- Sales Data Table -->
+                <div class="card bg-dark text-white mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Sales Data</h5>
+                        <table id="salesTable" class="table table-dark table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Total Sales (₹)</th>
+                                    <th>Order Count</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesTableBody"></tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -124,25 +174,60 @@
                                 <% } %>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
 
     <script>
+        // Chart.js setup
+        let salesChartInstance = null;
 
-        // Chart.js for Sales
-        document.addEventListener('DOMContentLoaded', function () {
+        function updateChart(labels, sales, period) {
+            // console.log('Chart Data:', { labels, sales, period });
             const ctx = document.getElementById('salesChart').getContext('2d');
-            const salesChart = new Chart(ctx, {
+
+            // Destroy existing chart if it exists
+            if (salesChartInstance) {
+                salesChartInstance.destroy();
+            }
+
+            // Format labels based on period, using IST
+            moment.tz.setDefault('Asia/Kolkata');
+            const formattedLabels = labels.map(label => {
+                if (period === 'daily') {
+                    return moment(label).format('MMM DD, YYYY');
+                } else if (period === 'weekly') {
+                    const [year, week] = label.split('-Wk');
+                    const startDate = moment().year(year).week(week).startOf('week');
+                    return `${startDate.format('MMM DD')} - ${startDate.endOf('week').format('MMM DD, YYYY')}`;
+                } else {
+                    return moment(label, 'YYYY-MM').format('MMM YYYY');
+                }
+            });
+
+            // Ensure today is visible for daily period
+            if (period === 'daily') {
+                const todayStr = moment().format('YYYY-MM-DD'); // e.g., '2025-04-20'
+                if (!labels.includes(todayStr)) {
+                    labels.push(todayStr);
+                    sales.push('0.00');
+                    formattedLabels.push(moment().format('MMM DD, YYYY'));
+                }
+            }
+
+            salesChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: '<%- JSON.stringify(chartData.months) %>',
+                    labels: formattedLabels,
                     datasets: [{
                         label: 'Sales (₹)',
-                        data: '<%- JSON.stringify(chartData.sales) %>',
+                        data: sales,
                         borderColor: '#0d6efd',
-                        backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                        backgroundColor: 'rgba(13, 110, 253, 0.5)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#0d6efd',
+                        pointBorderColor: '#ffffff',
+                        pointRadius: 5,
                         fill: true,
                         tension: 0.4
                     }]
@@ -155,44 +240,194 @@
                             title: {
                                 display: true,
                                 text: 'Revenue (₹)',
-                                color: '#ffffff'
+                                color: '#ffffff',
+                                font: { size: 14 }
                             },
-                            ticks: { color: '#ffffff' }
+                            ticks: {
+                                color: '#ffffff',
+                                callback: value => `₹${value.toFixed(2)}`
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
                         },
                         x: {
+                            display: true,
                             title: {
                                 display: true,
-                                text: 'Months',
-                                color: '#ffffff'
+                                text: period.charAt(0).toUpperCase() + period.slice(1),
+                                color: '#ffffff',
+                                font: { size: 14 }
                             },
-                            ticks: { color: '#ffffff' }
+                            ticks: {
+                                color: '#ffffff',
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
                         }
                     },
                     plugins: {
-                        legend: { labels: { color: '#ffffff' } }
+                        legend: {
+                            labels: { color: '#ffffff', font: { size: 14 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: context => `₹${parseFloat(context.raw).toFixed(2)}`
+                            }
+                        }
                     }
                 }
             });
+        }
 
-            // Logout functionality (unchanged)
-            const logoutButton = document.getElementById("logout-button");
+        function updateTable(salesData) {
+            // console.log('Table Data:', salesData); 
+            const tbody = document.getElementById('salesTableBody');
+            tbody.innerHTML = '';
+            salesData.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${moment(item.date).tz('Asia/Kolkata').format('MMM DD, YYYY')}</td>
+                    <td>₹${parseFloat(item.totalSales).toFixed(2)}</td>
+                    <td>${item.orderCount}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function fetchSalesData(period) {
+            Swal.fire({ title: 'Loading...', allowOutsideClick: false });
+            Swal.showLoading();
+            fetch(`/admin/sales-report?period=${period}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    Swal.close();
+                    if (data.success) {
+                        // console.log('Sales Report Response:', data); 
+                        updateChart(data.chartData.labels, data.chartData.sales, period);
+                        updateTable(data.salesData);
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    Swal.close();
+                    // console.error('Error fetching sales data:', error);
+                    Swal.fire('Error', 'Failed to load sales data', 'error');
+                });
+        }
+
+        // Download PDF
+        document.getElementById('downloadPdf').addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const period = document.getElementById('periodFilter').value;
+            const tableData = Array.from(document.querySelectorAll('#salesTableBody tr')).map(row => {
+                const cells = row.querySelectorAll('td');
+                return [cells[0].textContent, cells[1].textContent, cells[2].textContent];
+            });
+
+            doc.text(`WaveTune Sales Report (${period.charAt(0).toUpperCase() + period.slice(1)})`, 14, 20);
+            doc.autoTable({
+                head: [['Date', 'Total Sales (₹)', 'Order Count']],
+                body: tableData,
+                startY: 30,
+                theme: 'grid',
+                styles: { textColor: [0, 0, 0], fillColor: [255, 255, 255] },
+                headStyles: { fillColor: [13, 110, 253], textColor: [255, 255, 255] }
+            });
+
+            doc.save(`sales-report-${period}-${moment().tz('Asia/Kolkata').format('YYYYMMDD')}.pdf`);
+        });
+
+        // Download Excel
+        document.getElementById('downloadExcel').addEventListener('click', () => {
+            const period = document.getElementById('periodFilter').value;
+            const tableRows = document.querySelectorAll('#salesTableBody tr');
+            console.log('Excel Table Rows:', tableRows.length);
+            console.log('Table HTML:', document.getElementById('salesTableBody').innerHTML);
+
+            if (tableRows.length === 0) {
+                Swal.fire('Error', 'No sales data available to export.', 'error');
+                return;
+            }
+
+            const tableData = Array.from(tableRows).map((row, index) => {
+                const cells = row.querySelectorAll('td');
+                console.log(`Row ${index} Cells:`, Array.from(cells).map(cell => cell.textContent));
+                return {
+                    Date: cells[0]?.textContent?.trim() || '',
+                    'Total Sales': cells[1]?.textContent?.trim().replace('₹', '') || '', // Remove ₹
+                    'Order Count': cells[2]?.textContent?.trim() || ''
+                };
+            });
+
+            // Validate tableData
+            const isValidData = tableData.every(row =>
+                row.Date && row['Total Sales'] && row['Order Count'] &&
+                !isNaN(parseFloat(row['Total Sales'])) && !isNaN(parseInt(row['Order Count']))
+            );
+
+            console.log('Excel Table Data:', tableData);
+            console.log('Is Valid Data:', isValidData);
+
+            if (!isValidData) {
+                Swal.fire('Error', 'Invalid or incomplete sales data. Please refresh and try again.', 'error');
+                return;
+            }
+
+            try {
+                const ws = XLSX.utils.json_to_sheet(tableData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Sales Report');
+                XLSX.write(wb, `sales-report-${period}-${typeof moment.tz !== 'undefined'
+                    ? moment().tz('Asia/Kolkata').format('YYYYMMDD')
+                    : new Date().toISOString().split('T')[0]}.xlsx`);
+            } catch (error) {
+                console.error('Excel Export Error:', {
+                    message: error.message,
+                    stack: error.stack,
+                    tableData
+                });
+                Swal.fire('Error', 'Failed to export Excel file: ' + error.message, 'error');
+            }
+        });
+
+        // Initialize with monthly data
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial fetch
+            fetchSalesData('monthly');
+
+            // Period filter change
+            document.getElementById('periodFilter').addEventListener('change', (e) => {
+                fetchSalesData(e.target.value);
+            });
+
+            // Logout functionality
+            const logoutButton = document.getElementById('logout-button');
             if (logoutButton) {
-                logoutButton.addEventListener("click", function (event) {
+                logoutButton.addEventListener('click', (event) => {
                     event.preventDefault();
                     Swal.fire({
-                        title: "Are you sure?",
-                        text: "You will be logged out!",
-                        icon: "warning",
+                        title: 'Are you sure?',
+                        text: 'You will be logged out!',
+                        icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonText: "Yes, logout!",
-                        cancelButtonText: "Cancel"
+                        confirmButtonText: 'Yes, logout!',
+                        cancelButtonText: 'Cancel'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            fetch("/admin/logout", {
-                                method: "GET",
+                            fetch('/admin/logout', {
+                                method: 'GET',
                                 headers: {
-                                    "Content-Type": "application/json",
-                                    "Accept": "application/json"
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json'
                                 },
                                 credentials: 'include'
                             })
@@ -200,21 +435,21 @@
                                 .then(data => {
                                     if (data.success) {
                                         Swal.fire({
-                                            title: "Logged Out!",
-                                            text: "You have been successfully logged out.",
-                                            icon: "success",
+                                            title: 'Logged Out!',
+                                            text: 'You have been successfully logged out.',
+                                            icon: 'success',
                                             timer: 1500,
                                             showConfirmButton: false
                                         }).then(() => {
                                             window.location.href = data.redirectUrl;
                                         });
                                     } else {
-                                        Swal.fire("Error", data.message, "error");
+                                        Swal.fire('Error', data.message, 'error');
                                     }
                                 })
                                 .catch(error => {
-                                    console.error("Logout Error:", error);
-                                    Swal.fire("Error", "Something went wrong!", "error");
+                                    // console.error('Logout Error:', error);
+                                    Swal.fire('Error', 'Something went wrong!', 'error');
                                 });
                         }
                     });
@@ -222,7 +457,7 @@
             }
         });
     </script>
-    <%- include("partials/admin/footer") %>
+    <%- include('partials/admin/footer') %>
         </body>
 
         </html>
