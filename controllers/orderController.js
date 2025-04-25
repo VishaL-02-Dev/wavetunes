@@ -277,6 +277,8 @@ const placeOrder = async (req, res) => {
         });
     }
 }
+
+//Wallet Payment
 const processWalletPayment = async (req, res) => {
     const { addressId, couponCode, amount } = req.body;
     const token = req.cookies.jwt;
@@ -324,7 +326,7 @@ const processWalletPayment = async (req, res) => {
         let discount = 0;
 
         // Apply coupon if provided
-        if (couponCode) {
+        if (couponCode && couponCode.trim() !== '') {
             const coupon = await Coupon.findOne({ code: couponCode, isActive: true });
             if (!coupon) {
                 return res.status(400).json({
@@ -345,17 +347,10 @@ const processWalletPayment = async (req, res) => {
             if (discount > subtotal) {
                 discount = subtotal;
             }
+            await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usedCount: 1 } });
         }
 
         const total = subtotal + shipping + tax - discount;
-
-        // Validate amount matches
-        // if (Math.abs(total - amount) > 0.01) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: 'Order total mismatch'
-        //     });
-        // }
 
         // Check wallet balance
         const wallet = await WalletService.getWallet(userId);
@@ -366,24 +361,16 @@ const processWalletPayment = async (req, res) => {
             });
         }
 
-        // Deduct funds from wallet
-        await WalletService.deductFunds(
-            userId,
-            total,
-            `Payment for order`,
-            null // No orderId yet, will be updated after order creation
-        );
-
         // Create order items
         const orderItems = cart.items.map(item => {
             if (!item.product || !item.product._id) {
                 throw new Error(`Invalid product ID for item ${item._id}`);
             }
             return {
-                productId: item.product._id, // Use productId as per schema
+                productId: item.product._id,
                 quantity: item.quantity,
                 price: item.product.price,
-                status: 'pending'
+                status: 'processing'
             };
         });
 
@@ -396,47 +383,56 @@ const processWalletPayment = async (req, res) => {
         const order = new Order({
             orderId: generateOrderId(),
             userId,
-            totalAmount: total, 
-            addressId, // Use addressId as per schema
+            totalAmount: total,
+            addressId,
             items: orderItems,
             paymentMethod: 'Wallet',
             subtotal,
             shipping,
             tax,
             discount,
-            status: 'pending',
-            couponCode: couponCode || null
+            status: 'processing',
+            couponCode: couponCode || null,
+            date: new Date()
         });
-
-        // Log order for debugging
-        // console.log('Order to be saved:', JSON.stringify(order, null, 2));
 
         await order.save();
 
-        // Update wallet transaction with orderId
-        // await WalletService.updateTransactionOrderId(userId, total, order._id);
-
-        // Clear cart
-        await Cart.findOneAndUpdate(
-            { userId },
-            { items: [], subtotal: 0, shipping: 0, tax: 0, total: 0 }
+        // Deduct funds from wallet
+        await WalletService.deductFunds(
+            userId,
+            total,
+            `Payment for order ${order.orderId}`,
+            order._id
         );
 
-        return res.status(200).json({
-            success: true,
-            message: 'Order placed successfully',
-            orderId: order._id
+        // Clear cart
+        await Cart.findOneAndDelete({ user: userId });
+
+        // Fetch complete order details for rendering
+        const completeOrder = await Order.findById(order._id)
+            .populate('addressId')
+            .populate({
+                path: 'items.productId',
+                select: 'name price images'
+            });
+
+        // Render order confirmation page
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        return res.render('user/orderConfirm', {
+            order: completeOrder,
+            user,
+            address: completeOrder.addressId
         });
+
     } catch (error) {
         console.error('Error processing wallet payment:', error);
         return res.status(500).json({
             success: false,
-            message: 'Error processing wallet payment',
-            error: error.message
+            message: 'Error processing wallet payment: ' + error.message
         });
     }
 };
-
 //RazorPay order
 const razorpayOrder = async (req, res) => {
     try {
@@ -1522,7 +1518,7 @@ const adminApproveReturn = async (req, res) => {
                     refundAmount = itemSubtotal;
                 }
 
-                refundAmount = Math.max(0, Number(refundAmount.toFixed(2))); // Ensure non-negative and rounded
+                refundAmount = Math.max(0, Number(refundAmount.toFixed(2))); 
                 item.refunded = true;
                 item.refundAmount = refundAmount;
                 item.refundDate = new Date();

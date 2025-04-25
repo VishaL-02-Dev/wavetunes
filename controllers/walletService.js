@@ -65,9 +65,10 @@ class WalletService {
                 amount,
                 type:'debit',
                 description,
-                orderId
+                orderId: orderId || null
             });
 
+            await wallet.save();
             return wallet;
         } catch (error) {
             console.error('Error deducting funds from wallet:',error);

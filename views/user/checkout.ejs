@@ -767,7 +767,6 @@
 
                 // Get payment method
                 const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
-
                 // Handle wallet payment
                 if (paymentMethod === 'wallet') {
                     const walletBalance = parseFloat(document.getElementById('available-balance').textContent);
@@ -804,7 +803,33 @@
                                 }
                             });
 
-                            processWalletPayment();
+                            // Create a form for submission
+                            const form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = '/user/checkout/process-wallet-payment';
+
+                            // Get values from the original form
+                            const addressId = document.querySelector('input[name="addressId"]:checked')?.value;
+                            const couponCode = document.getElementById('hiddenCouponCode').value;
+
+                            // Add form fields
+                            const fields = {
+                                addressId: addressId,
+                                couponCode: couponCode,
+                                amount: orderTotal
+                            };
+
+                            for (const [key, value] of Object.entries(fields)) {
+                                const input = document.createElement('input');
+                                input.type = 'hidden';
+                                input.name = key;
+                                input.value = value || '';
+                                form.appendChild(input);
+                            }
+
+                            // Add form to document and submit
+                            document.body.appendChild(form);
+                            form.submit();
                         }
                     });
                     return;
@@ -976,46 +1001,46 @@
             }
 
             // Function to process wallet payment
-            function processWalletPayment() {
-                const formData = new FormData(document.getElementById('checkout-form'));
-                const addressId = formData.get('addressId');
-                const couponCode = document.getElementById('hiddenCouponCode').value;
+            // function processWalletPayment() {
+            //     const formData = new FormData(document.getElementById('checkout-form'));
+            //     const addressId = formData.get('addressId');
+            //     const couponCode = document.getElementById('hiddenCouponCode').value;
 
-                fetch('/user/checkout/process-wallet-payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ addressId, couponCode, amount: orderTotal }),
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            Swal.fire({
-                                title: 'Payment Successful!',
-                                text: 'Your order has been placed successfully.',
-                                icon: 'success',
-                                confirmButtonColor: '#3B82F6'
-                            }).then(() => {
-                                window.location.href = `/user/orders/${data.orderId}`;
-                            });
-                        } else {
-                            Swal.fire({
-                                title: 'Payment Failed',
-                                text: data.message || 'Payment processing failed. Please try again.',
-                                icon: 'error',
-                                confirmButtonColor: '#EF4444'
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        Swal.fire({
-                            title: 'Error',
-                            text: 'An error occurred while processing your payment. Please try again.',
-                            icon: 'error',
-                            confirmButtonColor: '#EF4444'
-                        });
-                    });
-            }
+            //     fetch('/user/checkout/process-wallet-payment', {
+            //         method: 'POST',
+            //         headers: { 'Content-Type': 'application/json' },
+            //         body: JSON.stringify({ addressId, couponCode, amount: orderTotal }),
+            //     })
+            //         .then(response => response.json())
+            //         .then(data => {
+            //             if (data.success) {
+            //                 Swal.fire({
+            //                     title: 'Payment Successful!',
+            //                     text: 'Your order has been placed successfully.',
+            //                     icon: 'success',
+            //                     confirmButtonColor: '#3B82F6'
+            //                 }).then(() => {
+            //                     window.location.href 
+            //                 });
+            //             } else {
+            //                 Swal.fire({
+            //                     title: 'Payment Failed',
+            //                     text: data.message || 'Payment processing failed. Please try again.',
+            //                     icon: 'error',
+            //                     confirmButtonColor: '#EF4444'
+            //                 });
+            //             }
+            //         })
+            //         .catch(error => {
+            //             console.error('Error:', error);
+            //             Swal.fire({
+            //                 title: 'Error',
+            //                 text: 'An error occurred while processing your payment. Please try again.',
+            //                 icon: 'error',
+            //                 confirmButtonColor: '#EF4444'
+            //             });
+            //         });
+            // }
         });
     </script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
