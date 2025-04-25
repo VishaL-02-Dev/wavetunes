@@ -278,7 +278,7 @@ const placeOrder = async (req, res) => {
     }
 }
 
-//Wallet Payment
+//Wallet Payment Method
 const processWalletPayment = async (req, res) => {
     const { addressId, couponCode, amount } = req.body;
     const token = req.cookies.jwt;
