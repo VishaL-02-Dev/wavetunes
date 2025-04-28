@@ -47,7 +47,17 @@ const productSchema = new mongoose.Schema({
             rating: { type: Number, required: true },
             comment: { type: String }
         }
-    ]
+    ],
+    offerPercentage: {
+        type: Number,
+        default: 0,
+        min: [0, 'Offer percentage cannot be negative'],
+        max: [100, 'Offer percentage cannot exceed 100']
+    },
+    offerEndDate: {
+        type: Date,
+        default: null
+    },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Product', productSchema);

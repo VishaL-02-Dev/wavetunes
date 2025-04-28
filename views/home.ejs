@@ -38,7 +38,6 @@
         <div class="container mx-auto px-4">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-3xl font-bold">Latest Releases</h2>
-                <!-- <a href="/user/latest" class="text-blue-600 hover:text-blue-800 transition">View All</a> -->
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -54,9 +53,18 @@
                                         <img src="/images/default.jpg" class="w-full h-48 object-contain"
                                             alt="No Image Available">
                                         <% } %>
+                                            <!-- New Badge -->
                                             <div
                                                 class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-                                                NEW</div>
+                                                NEW
+                                            </div>
+                                            <!-- Offer Badge -->
+                                            <% if (product.offerPercentage && product.offerPercentage> 0) { %>
+                                                <div
+                                                    class="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
+                                                    <%= product.offerPercentage %>% OFF
+                                                </div>
+                                                <% } %>
                             </div>
                             <div class="p-4">
                                 <h3 class="text-lg font-semibold mb-2">
@@ -81,7 +89,14 @@
                                     <span class="text-gray-500 text-sm ml-1">(<%= product.numOfReviews %>)</span>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-gray-900 font-bold">₹<%= product.price %></span>
+                                    <div class="flex items-center gap-2">
+                                        <% if (product.offerPrice) { %>
+                                            <span class="text-gray-900 font-bold">₹<%= product.offerPrice %></span>
+                                            <span class="text-gray-500 line-through">₹<%= product.price %></span>
+                                            <% } else { %>
+                                                <span class="text-gray-900 font-bold">₹<%= product.price %></span>
+                                                <% } %>
+                                    </div>
                                     <a href="/user/product/<%= product._id %>"
                                         class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition">View
                                         Details</a>
@@ -99,7 +114,8 @@
                                                 alt="Coming Soon">
                                             <div
                                                 class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-                                                NEW</div>
+                                                NEW
+                                            </div>
                                         </div>
                                         <div class="p-4">
                                             <h3 class="text-lg font-semibold mb-2">Coming Soon</h3>

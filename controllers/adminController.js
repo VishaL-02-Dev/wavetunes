@@ -370,7 +370,7 @@ const getSalesReportDetails = async (req, res) => {
 
         // console.log(`getSalesReportDetails (${period}) - Orders Count:`, orders.length);
         if (orders.length > 0) {
-            console.log(`getSalesReportDetails (${period}) - Sample Order:`, JSON.stringify(orders[0], null, 2));
+            // console.log(`getSalesReportDetails (${period}) - Sample Order:`, JSON.stringify(orders[0], null, 2));
         }
 
         const formattedSalesData = salesData.map(item => ({

@@ -40,7 +40,7 @@
             </div>
             <div class="content-wrapper">
                 <div class="container-fluid">
-                    <table class="table table-bordered table-hover ">
+                    <table class="table table-bordered table-hover">
                         <thead class="table-dark">
                             <tr>
                                 <th>Sl.No</th>
@@ -48,9 +48,11 @@
                                 <th>Name</th>
                                 <th>Brand</th>
                                 <th>Category</th>
-                                <th>Desription</th>
+                                <th>Description</th>
                                 <th>Specifications</th>
                                 <th>Price</th>
+                                <th>Offer (%)</th>
+                                <th>Offer End</th>
                                 <th>Stock</th>
                                 <th>Actions</th>
                             </tr>
@@ -62,7 +64,7 @@
                                         <%= ((page - 1) * itemsPerPage) + index + 1 %>
                                     </td>
                                     <td>
-                                        <% if (product.images) { %>
+                                        <% if (product.images && product.images.length> 0) { %>
                                             <img src="<%= product.images[0].url %>" alt="<%= product.name %>"
                                                 width="200">
                                             <% } else { %>
@@ -84,7 +86,14 @@
                                     <td>
                                         <%= product.specifications %>
                                     </td>
-                                    <td>₹<%= product.price %>
+                                    <td>Rs.<%= product.price.toFixed(2) %>
+                                    </td>
+                                    <td>
+                                        <%= product.offerPercentage %>%
+                                    </td>
+                                    <td>
+                                        <%= product.offerEndDate ? new Date(product.offerEndDate).toLocaleDateString()
+                                            : '-' %>
                                     </td>
                                     <td>
                                         <%= product.stock %>
@@ -111,7 +120,6 @@
                                         href="?page=<%= page - 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %>"
                                         tabindex="-1">Previous</a>
                                 </li>
-                                
                                 <% for(let i=1; i <=totalPages; i++) { %>
                                     <li class="page-item <%= page === i ? 'active' : '' %>">
                                         <a class="page-link"
@@ -119,12 +127,11 @@
                                             <%= i %>
                                         </a>
                                     </li>
-                                <% } %>
-                                
-                                <li class="page-item <%= page === totalPages ? 'disabled' : '' %>">
-                                    <a class="page-link"
-                                        href="?page=<%= page + 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %>">Next</a>
-                                </li>
+                                    <% } %>
+                                        <li class="page-item <%= page === totalPages ? 'disabled' : '' %>">
+                                            <a class="page-link"
+                                                href="?page=<%= page + 1 %><%= typeof search !== 'undefined' && search ? '&search=' + encodeURIComponent(search) : '' %>">Next</a>
+                                        </li>
                             </ul>
                         </nav>
                         <% } %>
@@ -145,40 +152,43 @@
                         <form method="post" action="/admin/products" id="addProductForm" enctype="multipart/form-data">
                             <div class="mb-3">
                                 <label for="productName" class="form-label text-black">Product Name</label>
-                                <input type="text" class="form-control" id="productName" name="name">
+                                <input type="text" class="form-control" id="productName" name="name" required>
                             </div>
 
                             <div class="mb-3">
                                 <label for="productBrand" class="form-label text-black">Brand</label>
-                                <input type="text" class="form-control" id="productBrand" name="brand">
+                                <input type="text" class="form-control" id="productBrand" name="brand" required>
                             </div>
 
                             <div class="mb-3">
                                 <label for="productDescription" class="form-label text-black">Description</label>
-                                <textarea class="form-control" id="productDescription" name="description"></textarea>
+                                <textarea class="form-control" id="productDescription" name="description"
+                                    required></textarea>
                             </div>
 
                             <div class="mb-3">
                                 <label for="productSpecification" class="form-label text-black">Specifications</label>
-                                <textarea class="form-control" id="productSpecification"
-                                    name="specifications"></textarea>
+                                <textarea class="form-control" id="productSpecification" name="specifications"
+                                    required></textarea>
                             </div>
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="productPrice" class="form-label text-black">Price</label>
-                                    <input type="number" class="form-control" id="productPrice" name="price" min="0">
+                                    <input type="number" class="form-control" id="productPrice" name="price" min="0"
+                                        step="0.01" required>
                                 </div>
 
                                 <div class="col-md-6 mb-3">
                                     <label for="productStock" class="form-label text-black">Stock</label>
-                                    <input type="number" class="form-control" id="productStock" name="stock" min="0">
+                                    <input type="number" class="form-control" id="productStock" name="stock" min="0"
+                                        required>
                                 </div>
                             </div>
 
                             <div class="mb-3">
                                 <label for="productCategory" class="form-label text-black">Category</label>
-                                <select class="form-control" id="productCategory" name="category">
+                                <select class="form-control" id="productCategory" name="category" required>
                                     <option value="">Select Category</option>
                                     <% categories.forEach(category=> { %>
                                         <option value="<%= category._id %>">
@@ -188,17 +198,30 @@
                                 </select>
                             </div>
 
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="productOfferPercentage" class="form-label text-black">Offer Percentage
+                                        (%)</label>
+                                    <input type="number" class="form-control" id="productOfferPercentage"
+                                        name="offerPercentage" min="0" max="100" step="0.1" placeholder="e.g., 10">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="productOfferEndDate" class="form-label text-black">Offer End
+                                        Date</label>
+                                    <input type="date" class="form-control" id="productOfferEndDate"
+                                        name="offerEndDate">
+                                </div>
+                            </div>
+
                             <!-- Image input section with cropping functionality -->
                             <div class="mb-3">
-                                <label for="productImages" class="form-label text-black">Product Images (Max
-                                    4)</label>
+                                <label for="productImages" class="form-label text-black">Product Images (Max 4)</label>
                                 <input type="file" class="form-control" id="productImages" name="images"
                                     accept="image/*" multiple>
-                                <!-- Hidden inputs to store cropped image data -->
                                 <div id="croppedImagesContainer"></div>
                             </div>
 
-                            <!-- ADDED: Image preview and cropping section -->
+                            <!-- Image preview and cropping section -->
                             <div class="mb-3 image-cropping-container">
                                 <div class="row">
                                     <div class="col-md-8">
@@ -235,7 +258,6 @@
                 </div>
             </div>
         </div>
-
 
         <!-- Edit Product Modal -->
         <div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel"
@@ -276,7 +298,7 @@
                                 <div class="col-md-6 mb-3">
                                     <label for="editProductPrice" class="form-label text-black">Price</label>
                                     <input type="number" class="form-control" id="editProductPrice" name="price" min="0"
-                                        required>
+                                        step="0.01" required>
                                 </div>
 
                                 <div class="col-md-6 mb-3">
@@ -296,6 +318,21 @@
                                         </option>
                                         <% }) %>
                                 </select>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="editProductOfferPercentage" class="form-label text-black">Offer
+                                        Percentage (%)</label>
+                                    <input type="number" class="form-control" id="editProductOfferPercentage"
+                                        name="offerPercentage" min="0" max="100" step="0.1" placeholder="e.g., 10">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="editProductOfferEndDate" class="form-label text-black">Offer End
+                                        Date</label>
+                                    <input type="date" class="form-control" id="editProductOfferEndDate"
+                                        name="offerEndDate">
+                                </div>
                             </div>
 
                             <div class="mb-3">
@@ -351,14 +388,13 @@
                 </div>
             </div>
         </div>
-
-
     </div>
     </div>
 
-    <!-- ADDED: Include Cropperjs CSS and JS -->
+    <!-- Include Cropperjs CSS and JS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         // Global variables
@@ -378,7 +414,6 @@
                 return;
             }
 
-            // Start processing the first image
             if (filesToProcess.length > 0) {
                 currentFileIndex = 0;
                 processNextImage();
@@ -392,21 +427,17 @@
                 const reader = new FileReader();
 
                 reader.onload = function (e) {
-                    // Show the cropper container
                     const cropperContainer = document.getElementById('imageCropperContainer');
                     cropperContainer.style.display = 'block';
-
-                    // Set the image source
                     const image = document.getElementById('imageToCrop');
                     image.src = e.target.result;
 
-                    // Initialize cropper on the image
                     if (cropper) {
                         cropper.destroy();
                     }
 
                     cropper = new Cropper(image, {
-                        aspectRatio: 1, // Square crop
+                        aspectRatio: 1,
                         viewMode: 1,
                         responsive: true,
                         restore: false
@@ -421,32 +452,24 @@
         document.getElementById('cropImageBtn').addEventListener('click', function () {
             if (!cropper) return;
 
-            // Get the cropped canvas
             const canvas = cropper.getCroppedCanvas({
                 width: 500,
                 height: 500
             });
 
-            // Convert canvas to blob
             canvas.toBlob(function (blob) {
-                // Create a new File object from the blob
                 const croppedFile = new File([blob], filesToProcess[currentFileIndex].name, {
                     type: filesToProcess[currentFileIndex].type,
                     lastModified: Date.now()
                 });
 
-                // Add to cropped images array
                 croppedImages.push(croppedFile);
-
-                // Add preview
                 addCroppedImagePreview(canvas.toDataURL());
 
-                // Move to next image or finish
                 currentFileIndex++;
                 if (currentFileIndex < filesToProcess.length) {
                     processNextImage();
                 } else {
-                    // Hide cropper when all images are processed
                     document.getElementById('imageCropperContainer').style.display = 'none';
                     if (cropper) {
                         cropper.destroy();
@@ -458,12 +481,10 @@
 
         // Cancel crop button
         document.getElementById('cancelCropBtn').addEventListener('click', function () {
-            // Skip current image and move to next
             currentFileIndex++;
             if (currentFileIndex < filesToProcess.length) {
                 processNextImage();
             } else {
-                // Hide cropper when all images are processed
                 document.getElementById('imageCropperContainer').style.display = 'none';
                 if (cropper) {
                     cropper.destroy();
@@ -478,12 +499,12 @@
             const previewDiv = document.createElement('div');
             previewDiv.className = 'preview-item position-relative m-1';
             previewDiv.innerHTML = `
-        <img src="${dataUrl}" alt="Preview image" 
-             style="width: 80px; height: 80px; object-fit: cover;">
-        <button type="button" class="btn btn-danger btn-sm position-absolute" 
-                style="top: 0; right: 0; padding: 0 5px;" 
-                onclick="removeCroppedImage(${croppedImages.length - 1})">×</button>
-    `;
+                <img src="${dataUrl}" alt="Preview image" 
+                     style="width: 80px; height: 80px; object-fit: cover;">
+                <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                        style="top: 0; right: 0; padding: 0 5px;" 
+                        onclick="removeCroppedImage(${croppedImages.length - 1})">×</button>
+            `;
             previewContainer.appendChild(previewDiv);
         }
 
@@ -504,19 +525,19 @@
                     const previewDiv = document.createElement('div');
                     previewDiv.className = 'preview-item position-relative m-1';
                     previewDiv.innerHTML = `
-                <img src="${e.target.result}" alt="Preview image" 
-                     style="width: 80px; height: 80px; object-fit: cover;">
-                <button type="button" class="btn btn-danger btn-sm position-absolute" 
-                        style="top: 0; right: 0; padding: 0 5px;" 
-                        onclick="removeCroppedImage(${index})">×</button>
-            `;
+                        <img src="${e.target.result}" alt="Preview image" 
+                             style="width: 80px; height: 80px; object-fit: cover;">
+                        <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                                style="top: 0; right: 0; padding: 0 5px;" 
+                                onclick="removeCroppedImage(${index})">×</button>
+                    `;
                     previewContainer.appendChild(previewDiv);
                 };
                 reader.readAsDataURL(file);
             });
         }
 
-        // Modify the form submission to use cropped images
+        // Form submission for add product
         document.getElementById("addProductForm").addEventListener("submit", async function (event) {
             event.preventDefault();
 
@@ -527,14 +548,9 @@
 
             try {
                 const formData = new FormData(this);
-
-                // Remove the original file input images
                 formData.delete('images');
 
-                // Upload cropped images to Cloudinary
                 const uploadedImages = await uploadImagesToCloudinary(croppedImages);
-
-                // Add uploaded image URLs to the form data
                 uploadedImages.forEach(imageUrl => {
                     formData.append('imageUrls', imageUrl);
                 });
@@ -559,26 +575,17 @@
 
         // Helper function to upload images to Cloudinary
         async function uploadImagesToCloudinary(files) {
-            console.log("Starting upload to Cloudinary with files:", files);
-
             const uploadPromises = Array.from(files).map(file => {
-                console.log("Preparing to upload file:", file.name);
                 const formData = new FormData();
                 formData.append("file", file);
-                formData.append("upload_preset", "my_upload_preset"); // Make sure this is correct
+                formData.append("upload_preset", "my_upload_preset");
 
                 return fetch(`https://api.cloudinary.com/v1_1/drdggqz62/image/upload`, {
                     method: "POST",
                     body: formData,
                 })
-                    .then(response => {
-                        console.log("Cloudinary response status:", response.status);
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log("Cloudinary response data:", data);
-                        return data.secure_url;
-                    })
+                    .then(response => response.json())
+                    .then(data => data.secure_url)
                     .catch(error => {
                         console.error("Error uploading to Cloudinary:", error);
                         throw error;
@@ -590,7 +597,6 @@
 
         // ---- EDIT PRODUCT SECTION ---- //
 
-        // Similar implementation for the edit product form
         let editCropper;
         let editCurrentFileIndex = 0;
         let editFilesToProcess = [];
@@ -605,7 +611,6 @@
                 return;
             }
 
-            // Start processing the first image
             if (editFilesToProcess.length > 0) {
                 editCurrentFileIndex = 0;
                 processNextEditImage();
@@ -618,21 +623,17 @@
                 const reader = new FileReader();
 
                 reader.onload = function (e) {
-                    // Show the cropper container
                     const cropperContainer = document.getElementById('editImageCropperContainer');
                     cropperContainer.style.display = 'block';
-
-                    // Set the image source
                     const image = document.getElementById('editImageToCrop');
                     image.src = e.target.result;
 
-                    // Initialize cropper on the image
                     if (editCropper) {
                         editCropper.destroy();
                     }
 
                     editCropper = new Cropper(image, {
-                        aspectRatio: 1, // Square crop
+                        aspectRatio: 1,
                         viewMode: 1,
                         responsive: true,
                         restore: false
@@ -646,32 +647,24 @@
         document.getElementById('editCropImageBtn').addEventListener('click', function () {
             if (!editCropper) return;
 
-            // Get the cropped canvas
             const canvas = editCropper.getCroppedCanvas({
                 width: 500,
                 height: 500
             });
 
-            // Convert canvas to blob
             canvas.toBlob(function (blob) {
-                // Create a new File object from the blob
                 const croppedFile = new File([blob], editFilesToProcess[editCurrentFileIndex].name, {
                     type: editFilesToProcess[editCurrentFileIndex].type,
                     lastModified: Date.now()
                 });
 
-                // Add to cropped images array
                 editCroppedImages.push(croppedFile);
-
-                // Add preview
                 addEditCroppedImagePreview(canvas.toDataURL());
 
-                // Move to next image or finish
                 editCurrentFileIndex++;
                 if (editCurrentFileIndex < editFilesToProcess.length) {
                     processNextEditImage();
                 } else {
-                    // Hide cropper when all images are processed
                     document.getElementById('editImageCropperContainer').style.display = 'none';
                     if (editCropper) {
                         editCropper.destroy();
@@ -682,12 +675,10 @@
         });
 
         document.getElementById('editCancelCropBtn').addEventListener('click', function () {
-            // Skip current image and move to next
             editCurrentFileIndex++;
             if (editCurrentFileIndex < editFilesToProcess.length) {
                 processNextEditImage();
             } else {
-                // Hide cropper when all images are processed
                 document.getElementById('editImageCropperContainer').style.display = 'none';
                 if (editCropper) {
                     editCropper.destroy();
@@ -701,12 +692,12 @@
             const previewDiv = document.createElement('div');
             previewDiv.className = 'preview-item position-relative m-1';
             previewDiv.innerHTML = `
-        <img src="${dataUrl}" alt="Preview image" 
-             style="width: 80px; height: 80px; object-fit: cover;">
-        <button type="button" class="btn btn-danger btn-sm position-absolute" 
-                style="top: 0; right: 0; padding: 0 5px;" 
-                onclick="removeEditCroppedImage(${editCroppedImages.length - 1})">×</button>
-    `;
+                <img src="${dataUrl}" alt="Preview image" 
+                     style="width: 80px; height: 80px; object-fit: cover;">
+                <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                        style="top: 0; right: 0; padding: 0 5px;" 
+                        onclick="removeEditCroppedImage(${editCroppedImages.length - 1})">×</button>
+            `;
             previewContainer.appendChild(previewDiv);
         }
 
@@ -725,12 +716,12 @@
                     const previewDiv = document.createElement('div');
                     previewDiv.className = 'preview-item position-relative m-1';
                     previewDiv.innerHTML = `
-                <img src="${e.target.result}" alt="Preview image" 
-                     style="width: 80px; height: 80px; object-fit: cover;">
-                <button type="button" class="btn btn-danger btn-sm position-absolute" 
-                        style="top: 0; right: 0; padding: 0 5px;" 
-                        onclick="removeEditCroppedImage(${index})">×</button>
-            `;
+                        <img src="${e.target.result}" alt="Preview image" 
+                             style="width: 80px; height: 80px; object-fit: cover;">
+                        <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                                style="top: 0; right: 0; padding: 0 5px;" 
+                                onclick="removeEditCroppedImage(${index})">×</button>
+                    `;
                     previewContainer.appendChild(previewDiv);
                 };
                 reader.readAsDataURL(file);
@@ -745,13 +736,11 @@
             const formData = new FormData(this);
 
             try {
-                // Add cropped images if any
                 if (editCroppedImages.length > 0) {
                     const uploadedImages = await uploadImagesToCloudinary(editCroppedImages);
                     uploadedImages.forEach(url => formData.append("imageUrls", url));
                 }
 
-                // Add images to remove
                 if (imagesToRemove.length > 0) {
                     formData.append("removeImages", JSON.stringify(imagesToRemove));
                 }
@@ -782,7 +771,6 @@
 
         // Function to delete a product
         function deleteProduct(productId) {
-            // Confirm deletion with the user
             Swal.fire({
                 title: 'Are you sure?',
                 text: "You won't be able to revert this!",
@@ -793,7 +781,6 @@
                 confirmButtonText: 'Yes, delete it!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Send delete request to the server
                     fetch(`/admin/products/${productId}`, {
                         method: 'DELETE',
                     })
@@ -805,7 +792,6 @@
                                     'Product has been deleted.',
                                     'success'
                                 ).then(() => {
-                                    // Reload the page to update the product list
                                     window.location.reload();
                                 });
                             } else {
@@ -830,38 +816,34 @@
 
         // Function to edit a product
         function editProduct(productId) {
-            // Reset the forms and previews
             document.getElementById('editProductForm').reset();
             document.getElementById('editExistingImagesContainer').innerHTML = '';
             document.getElementById('editCroppedImagesPreviews').innerHTML = '';
             editCroppedImages = [];
             imagesToRemove = [];
 
-            // Set the form action
             document.getElementById('editProductForm').action = `/admin/products/edit/${productId}`;
             document.getElementById('editProductId').value = productId;
 
-            // Fetch product data
             fetch(`/admin/products/${productId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         const product = data.product;
 
-                        // Populate form fields
                         document.getElementById('editProductName').value = product.name;
                         document.getElementById('editProductBrand').value = product.brand;
                         document.getElementById('editProductDescription').value = product.description;
                         document.getElementById('editProductSpecification').value = product.specifications;
                         document.getElementById('editProductPrice').value = product.price;
                         document.getElementById('editProductStock').value = product.stock;
+                        document.getElementById('editProductOfferPercentage').value = product.offerPercentage;
+                        document.getElementById('editProductOfferEndDate').value = product.offerEndDate ? new Date(product.offerEndDate).toISOString().split('T')[0] : '';
 
-                        // Set category
                         if (product.category) {
                             document.getElementById('editProductCategory').value = product.category._id;
                         }
 
-                        // Display existing images
                         const imagesContainer = document.getElementById('editExistingImagesContainer');
                         imagesContainer.innerHTML = '';
 
@@ -870,17 +852,16 @@
                                 const imageDiv = document.createElement('div');
                                 imageDiv.className = 'position-relative m-2';
                                 imageDiv.innerHTML = `
-                            <img src="${image.url}" alt="Product image" 
-                                style="width: 100px; height: 100px; object-fit: cover;">
-                            <button type="button" class="btn btn-danger btn-sm position-absolute" 
-                                    style="top: 0; right: 0; padding: 0 5px;" 
-                                    onclick="removeExistingImage(${index})">×</button>
-                        `;
+                                    <img src="${image.url}" alt="Product image" 
+                                        style="width: 100px; height: 100px; object-fit: cover;">
+                                    <button type="button" class="btn btn-danger btn-sm position-absolute" 
+                                            style="top: 0; right: 0; padding: 0 5px;" 
+                                            onclick="removeExistingImage(${index})">×</button>
+                                `;
                                 imagesContainer.appendChild(imageDiv);
                             });
                         }
 
-                        // Show the modal
                         const editModal = new bootstrap.Modal(document.getElementById('editProductModal'));
                         editModal.show();
                     } else {

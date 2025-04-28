@@ -1,45 +1,45 @@
-const mongoose=require('mongoose');
+const mongoose = require('mongoose');
 const Product = require("../model/productModel");
 const Category = require("../model/categoryModel");
 const User = require("../model/userModel")
-const cloudinary= require('../config/cloudinary');
+const cloudinary = require('../config/cloudinary');
 
 
 
 //Load Product Page for admin
 const adminProduct = async (req, res) => {
     try {
-        const itemsPerPage= 5;
-        const page=parseInt(req.query.page) || 1;
-        let skip=(page - 1) * itemsPerPage;
-        const search=req.query.search || '';
-       
+        const itemsPerPage = 5;
+        const page = parseInt(req.query.page) || 1;
+        let skip = (page - 1) * itemsPerPage;
+        const search = req.query.search || '';
 
-        const query={};
-        if(search){
-            query.$or=[
-                {name: {$regex: search, $options: "i"}},
-                {brand:{$regex: search, $options: 'i'}},
-                {descriptions:{$regex:search, $options:'i'}}
+
+        const query = {};
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: "i" } },
+                { brand: { $regex: search, $options: 'i' } },
+                { descriptions: { $regex: search, $options: 'i' } }
             ];
         }
-        
-        const totalCount= await Product.countDocuments();
-        
+
+        const totalCount = await Product.countDocuments();
+
         const products = await Product.find(query)
-        .populate("category", "name")
-        .sort({createdAt:-1})
-        .skip(skip)
-        .limit(itemsPerPage);
-        
+            .populate("category", "name")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(itemsPerPage);
+
         const categories = await Category.find();
         res.render('admin/product', {
             products,
             totalCount,
-            totalPages:Math.ceil(totalCount/itemsPerPage),
+            totalPages: Math.ceil(totalCount / itemsPerPage),
             itemsPerPage,
             page,
-            currentPage:'products',
+            currentPage: 'products',
             categories,
             search
         });
@@ -52,15 +52,15 @@ const adminProduct = async (req, res) => {
 //Create Product admin side
 const createProduct = async (req, res) => {
     try {
-        const { name, brand, description, specifications, price, category, stock } = req.body;
+        const { name, brand, description, specifications, price, category, stock, offerPercentage, offerEndDate } = req.body;
 
-        const imageUrls=req.body.imageUrls || [];
+        const imageUrls = req.body.imageUrls || [];
 
         // Basic field validation
         if (!name || !description || !price || !category || stock == null) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "All fields are required." 
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required."
             });
         }
 
@@ -72,9 +72,30 @@ const createProduct = async (req, res) => {
             });
         }
 
+
+        if (offerPercentage) {
+            const offerPercent = parseFloat(offerPercentage);
+            if (isNaN(offerPercent) || offerPercent < 0 || offerPercent > 100) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Offer percentage must be a valid future date.'
+                });
+            }
+        }
+
+        if (offerEndDate) {
+            const endDate = new Date(offerDate);
+            if (isNaN(endDate.getTime()) || endDate <= new Date()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Offer end date must be a valid date.'
+                });
+            }
+        }
+
         // Handle images from frontend (array of Cloudinary URLs)
         let productImages = [];
-        if (imageUrls && imageUrls.length>0) {
+        if (imageUrls && imageUrls.length > 0) {
             const imageArray = Array.isArray(imageUrls) ? imageUrls : [imageUrls]; // Handle single or multiple images
             if (imageArray.length > 4) {
                 return res.status(400).json({
@@ -104,7 +125,9 @@ const createProduct = async (req, res) => {
             price,
             category,
             stock,
-            images: productImages
+            images: productImages,
+            offerPercentage: offerPercentage ? parseFloat(offerPercentage) : 0,
+            offerEndDate: offerEndDate || null
         });
 
         await newProduct.save();
@@ -140,10 +163,10 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, brand, description, specifications, price, category, stock } = req.body;
+        const { name, brand, description, specifications, price, category, stock, offerPercentage, offerEndDate } = req.body;
 
-        const imageUrls=req.body.imageUrls || [];
-        const removeImages=req.body.removeImages;
+        const imageUrls = req.body.imageUrls || [];
+        const removeImages = req.body.removeImages;
 
         const existingProduct = await Product.findById(id);
         if (!existingProduct) {
@@ -151,6 +174,27 @@ const updateProduct = async (req, res) => {
                 success: false,
                 message: "Product not found"
             });
+        }
+
+
+        if (offerPercentage) {
+            const offerPercent = parseFloat(offerPercentage);
+            if (isNaN(offerPercent) || offerPercent < 0 || offerPercent > 100) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Offer percentage must be between 0 and 100'
+                });
+            }
+        }
+
+        if (offerEndDate) {
+            const endDate = new Date(offerEndDate);
+            if (isNaN(endDate.getTime()) || endDate <= new Date()) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Offer end date must be a valid future date."
+                });
+            }
         }
 
         // Prepare updated images array
@@ -171,7 +215,7 @@ const updateProduct = async (req, res) => {
         }
 
         // Handle new images (Cloudinary URLs from frontend)
-        if (imageUrls && imageUrls.length>0) {
+        if (imageUrls && imageUrls.length > 0) {
             const newImages = Array.isArray(imageUrls) ? imageUrls : [imageUrls];
             if (updatedImages.length + newImages.length > 4) {
                 return res.status(400).json({
@@ -196,16 +240,18 @@ const updateProduct = async (req, res) => {
             price,
             category,
             stock,
-            images: updatedImages
+            images: updatedImages,
+            offerPercentage: offerPercentage ? parseFloat(offerPercentage) : existingProduct.offerPercentage,
+            offerEndDate: offerEndDate || existingProduct.offerEndDate
         };
 
         const updatedProduct = await Product.findByIdAndUpdate(id, updates, { new: true })
             .populate('category', 'name');
 
-        res.status(200).json({ 
-            success: true, 
-            message: "Product updated successfully", 
-            product: updatedProduct 
+        res.status(200).json({
+            success: true,
+            message: "Product updated successfully",
+            product: updatedProduct
         });
 
     } catch (error) {
@@ -233,13 +279,13 @@ const deleteProduct = async (req, res) => {
 
         const product = await Product.findById(id);
         if (!product) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "Product not found" 
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
             });
         }
 
-        
+
         // for (const img of product.images) {
         //     await cloudinary.uploader.destroy(img.public_id);
         // }
@@ -259,16 +305,16 @@ const deleteProduct = async (req, res) => {
         }
 
 
-        res.status(200).json({ 
-            success: true, 
-            message: "Product deleted successfully" 
+        res.status(200).json({
+            success: true,
+            message: "Product deleted successfully"
         });
 
     } catch (error) {
         console.error('Product deletion error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: "Internal server error" 
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
         });
     }
 };
@@ -277,9 +323,9 @@ const deleteProduct = async (req, res) => {
 const getProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         const product = await Product.findById(id).populate("category");
-        
+
         if (!product) {
             return res.status(404).json({
                 success: false,
@@ -290,7 +336,7 @@ const getProduct = async (req, res) => {
             success: true,
             product
         });
-        
+
     } catch (error) {
         console.error('Error fetching product:', error);
         res.status(500).json({
@@ -303,32 +349,30 @@ const getProduct = async (req, res) => {
 const getProductById = async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         // Check if ID is valid
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(404).render('error', { 
+            return res.status(404).render('error', {
                 message: 'Invalid product ID format',
                 error: { status: 400 }
             });
         }
-        
+
         let product = await Product.findById(id).populate('category');
 
         if (!product) {
-            return res.status(404).render('error', { 
+            return res.status(404).render('error', {
                 message: 'Product not found',
                 error: { status: 404 }
             });
         }
 
-        // if (product.images && product.images.length > 0) {
-        //     product.imageBase64 = product.images.map(img => 
-        //         `data:${img.contentType};base64,${img.data.toString('base64')}`
-        //     );
-        // } else {
-        //     product.imageBase64 = [];
-        // }
-
+        // Add offerPrice to product
+        const productObj = product.toObject();
+        if (product.offerPercentage && product.offerPercentage > 0 && (product.offerEndDate === null || product.offerEndDate >= new Date())) {
+            productObj.offerPrice = Math.round(product.price * (1 - product.offerPercentage / 100));
+        }
+        product = productObj;
 
         const categorySlugMap = {
             "Neckbands": "neckbands",
@@ -338,32 +382,38 @@ const getProductById = async (req, res) => {
 
         const categorySlug = categorySlugMap[product.category.name] || "unknown";
 
-
         // Fetch related products (optional)
         let relatedProducts = [];
         if (product.category) {
             relatedProducts = await Product.find({
                 category: product.category._id,
                 _id: { $ne: product._id } // Exclude current product
-            }).limit(4)
-              .populate('images');
+            }).limit(4);
+            // Add offerPrice to related products
+            relatedProducts = relatedProducts.map(related => {
+                const relatedObj = related.toObject();
+                if (related.offerPercentage && related.offerPercentage > 0 && (related.offerEndDate === null || related.offerEndDate >= new Date())) {
+                    relatedObj.offerPrice = Math.round(related.price * (1 - related.offerPercentage / 100));
+                }
+                return relatedObj;
+            });
         }
-        
+
         // Increment view count (optional)
         product.views = (product.views || 0) + 1;
-        await product.save();
+        await Product.findByIdAndUpdate(id, { views: product.views });
 
         // Render the product detail page
-        res.render('user/product-detail', { 
+        res.render('user/product-detail', {
             product,
             relatedProducts,
-            categoryName: product.category.name, 
+            categoryName: product.category.name,
             categorySlug
         });
 
     } catch (error) {
         console.error(error);
-        res.status(500).render('error', { 
+        res.status(500).render('error', {
             message: 'Internal server error',
             error: { status: 500 }
         });
@@ -371,30 +421,35 @@ const getProductById = async (req, res) => {
 };
 
 
-
-const displayProduct=async (req, res) => {
+const displayProduct = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 12;
         let category = req.query.category;
         const search = req.query.search;
-        const sort = req.query.sort || 'newest'; // sorting option
-        const categories = await Category.find({status:{$ne:'Unlisted'}}).select('name');
+        const sort = req.query.sort || 'newest';
+        const categories = await Category.find({ status: { $ne: 'Unlisted' } }).select('name');
 
         // Build query
         const query = {};
         if (category) {
-            const categoryDoc = await Category.findOne({name: category, status:{$ne:'Unlisted'}}).select('_id');
-            if(categoryDoc){
+            const categoryDoc = await Category.findOne({ name: category, status: { $ne: 'Unlisted' } }).select('_id');
+            if (categoryDoc) {
                 query.category = categoryDoc._id;
             }
         }
-            if (search) {
+        if (search) {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
                 { description: { $regex: search, $options: 'i' } }
             ];
         }
+        // Only show offers that are not expired
+        query.$or = [
+            { offerEndDate: { $gte: new Date() } }, // Offers that are still valid
+            { offerEndDate: null }, // Offers without an end date
+            { offerPercentage: 0 } // Products without offers
+        ];
 
         // Build sort options
         let sortOption = {};
@@ -418,17 +473,24 @@ const displayProduct=async (req, res) => {
 
         let products = await Product.find(query)
             .populate({
-                path:'category',
-                match:{status:{$ne:'Unlisted'}},
-                select:'name'
+                path: 'category',
+                match: { status: { $ne: 'Unlisted' } },
+                select: 'name'
             })
             .sort(sortOption)
             .skip((page - 1) * limit)
             .limit(limit);
 
-            console.log('products passed');
+        // Add offerPrice to each product
+        products = products.map(product => {
+            const productObj = product.toObject();
+            if (product.offerPercentage && product.offerPercentage > 0) {
+                productObj.offerPrice = Math.round(product.price * (1 - product.offerPercentage / 100));
+            }
+            return productObj;
+        });
 
-        return res.render('user/products',{
+        return res.render('user/products', {
             products,
             categories,
             currentPage: page,
@@ -440,7 +502,6 @@ const displayProduct=async (req, res) => {
             search,
             sort
         });
-
     } catch (error) {
         console.error('Error fetching products:', error);
         res.status(500).json({ message: 'Error fetching products' });
@@ -461,8 +522,8 @@ const getCategoryProducts = async (req, res) => {
     }
 
     try {
-        //  Find the corresponding category ObjectId from the database
-        const category = await Category.findOne({ name: categoryMap[categorySlug],status:'Listed'});
+        // Find the corresponding category ObjectId from the database
+        const category = await Category.findOne({ name: categoryMap[categorySlug], status: 'Listed' });
 
         if (!category) {
             return res.status(404).send("Category not found in the database");
@@ -474,7 +535,14 @@ const getCategoryProducts = async (req, res) => {
         const sort = req.query.sort || 'newest';
 
         // Use the found category's ObjectId to query products
-        const filter = { category: category._id };
+        const filter = {
+            category: category._id,
+            $or: [
+                { offerEndDate: { $gte: new Date() } }, // Offers that are still valid
+                { offerEndDate: null }, // Offers without an end date
+                { offerPercentage: 0 } // Products without offers
+            ]
+        };
 
         if (search) {
             filter.name = { $regex: search, $options: 'i' };
@@ -502,16 +570,14 @@ const getCategoryProducts = async (req, res) => {
             .limit(limit)
             .skip((page - 1) * limit);
 
-            // products = products.map(product => {
-            //     return {
-            //         ...product.toObject(),
-            //         images: product.images.map(img => 
-            //             `data:${img.contentType};base64,${img.data.toString('base64')}`
-            //         )
-            //     };
-            // });
-
-            // console.log('products passed',products);
+        // Add offerPrice to each product
+        products = products.map(product => {
+            const productObj = product.toObject();
+            if (product.offerPercentage && product.offerPercentage > 0) {
+                productObj.offerPrice = Math.round(product.price * (1 - product.offerPercentage / 100));
+            }
+            return productObj;
+        });
 
         res.render('user/category', {
             products,

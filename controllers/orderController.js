@@ -321,7 +321,7 @@ const processWalletPayment = async (req, res) => {
             }
             subtotal += item.product.price * item.quantity;
         });
-        const shipping = cart.shipping || 0;
+        const shipping = cart.shipping || 10;
         const tax = cart.tax || 0;
         let discount = 0;
 
@@ -433,6 +433,8 @@ const processWalletPayment = async (req, res) => {
         });
     }
 };
+
+
 //RazorPay order
 const razorpayOrder = async (req, res) => {
     try {

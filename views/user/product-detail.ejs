@@ -173,13 +173,15 @@
                 </div>
 
                 <div class="mb-6">
-                    <span class="text-3xl font-bold text-white">₹<%= product.price %></span>
-                    <% if (product.originalPrice && product.originalPrice> product.price) { %>
-                        <span class="text-lg text-gray-500 line-through ml-2">₹<%= product.originalPrice %></span>
+                    <% if (product.offerPrice) { %>
+                        <span class="text-3xl font-bold text-white">₹<%= product.offerPrice %></span>
+                        <span class="text-lg text-gray-500 line-through ml-2">₹<%= product.price %></span>
                         <span class="ml-2 bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                            <%= Math.round((1 - product.price / product.originalPrice) * 100) %>% OFF
+                            <%= product.offerPercentage %>% OFF
                         </span>
-                        <% } %>
+                    <% } else { %>
+                        <span class="text-3xl font-bold text-white">₹<%= product.price %></span>
+                    <% } %>
                 </div>
 
                 <div class="mb-6">
