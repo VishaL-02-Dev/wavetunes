@@ -22,6 +22,7 @@ router.post('/customers/:id',customerController.userStatus);
 
 //Sales report
 router.get('/sales-report', adminController.getSalesReport);
+router.get('/sales-report-details', adminController.getSalesReportDetails);
 
 //Categories
 router.get('/categories',verifyAdmin,categoryController.loadCategory);
