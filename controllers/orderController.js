@@ -886,7 +886,7 @@ const cancelOrder = async (req, res) => {
                 userId,
                 order.totalAmount,
                 order._id,
-                `Redund for cancelled order #${order.orderId}`
+                `Refund for cancelled order #${order.orderId}`
             );
         }
 
@@ -930,50 +930,69 @@ const cancelOrderItem = async (req, res) => {
             });
         }
 
-        const item = order.items.id(itemId);
-        if (!item || item.status !== 'pending') {
+        // Try finding item by item._id or productId
+        const item = order.items.find(
+            item => item._id.toString() === itemId || item.productId.toString() === itemId
+        );
+
+        if (!item || !['pending', 'processing'].includes(item.status)) {
             return res.status(404).json({
                 success: false,
                 message: 'Item not found or cannot be cancelled'
             });
         }
 
+        console.log('Canceling item:', JSON.stringify(item, null, 2));
+
+        // Restore product stock
         await Product.findByIdAndUpdate(
             item.productId,
             { $inc: { stock: item.quantity || 0 } },
             { new: true }
         );
 
-        const itemSubtotal = item.price * item.quantity;
+        // Calculate refund amount
+        const itemSubtotal = Number(item.price) * Number(item.quantity);
         let refundAmount;
+
         if (order.items.length === 1) {
-            // Single-item order: refund the full order.totalAmount
-            refundAmount = order.totalAmount;
-        } else {
-            // Multi-item order: prorate the discount
-            if (order.discount > 0) {
-                const totalSubtotal = order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-                const discountRatio = order.discount / totalSubtotal;
-                refundAmount = itemSubtotal * (1 - discountRatio);
-            } else {
-                refundAmount = itemSubtotal;
+            refundAmount = Number(order.totalAmount);
+        } else if (order.discount > 0) {
+            const totalSubtotal = order.items.reduce(
+                (sum, i) => sum + (Number(i.price) * Number(i.quantity)),
+                0
+            );
+            if (totalSubtotal === 0) {
+                throw new Error('Invalid total subtotal for discount calculation');
             }
+            const discountRatio = Number(order.discount) / totalSubtotal;
+            refundAmount = itemSubtotal * (1 - discountRatio);
+        } else {
+            refundAmount = itemSubtotal;
         }
 
-        item.status = 'cancelled';
+        refundAmount = Math.max(0, Number(refundAmount.toFixed(2)));
+        console.log('Refund amount:', refundAmount, 'for item subtotal:', itemSubtotal);
 
+        // Update item status and refund details
+        item.status = 'cancelled';
         if (order.paymentMethod !== 'COD') {
             item.refunded = true;
             item.refundAmount = refundAmount;
             item.refundDate = new Date();
 
-            // console.log(`Refunding ${refundAmount} for cancelled item in order #${order.orderId}`);
-            await refundToWallet(
-                userId,
-                refundAmount,
-                order._id,
-                `Refund for cancelled item in order #${order.orderId}`
-            );
+            try {
+                await refundToWallet(
+                    userId,
+                    refundAmount,
+                    order._id,
+                    `Refund for cancelled item in order #${order.orderId}`
+                );
+                console.log('Refund processed to wallet:', refundAmount);
+            } catch (walletError) {
+                console.error('Wallet refund failed:', walletError);
+                throw new Error('Failed to process refund to wallet');
+            }
         }
 
         // Update order total and status
@@ -981,29 +1000,49 @@ const cancelOrderItem = async (req, res) => {
         if (activeItems.length === 0) {
             order.status = 'cancelled';
             order.refundStatus = order.paymentMethod !== 'COD' ? 'full' : 'none';
+            order.totalAmount = 0;
         } else {
-            order.totalAmount = activeItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+            order.totalAmount = activeItems.reduce(
+                (sum, i) => sum + (Number(i.price) * Number(i.quantity)),
+                0
+            );
             order.totalAmount += 10; // Add shipping
-            order.totalAmount -= order.discount || 0; // Reapply discount
+            order.totalAmount -= Number(order.discount || 0); // Reapply discount
+            order.totalAmount = Math.max(0, Number(order.totalAmount.toFixed(2)));
             order.refundStatus = order.paymentMethod !== 'COD' ? 'partial' : 'none';
         }
 
+        console.log('Updated order totalAmount:', order.totalAmount, 'refundStatus:', order.refundStatus);
+
         await order.save();
+
+        const updatedOrder = await Order.findById(order._id)
+            .populate('addressId')
+            .populate({
+                path: 'items.productId',
+                select: 'name price images'
+            });
 
         return res.status(200).json({
             success: true,
             message: 'Item cancelled successfully',
-            order
+            order: updatedOrder
         });
     } catch (error) {
         console.error('Error cancelling item:', error);
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token'
+            });
+        }
         return res.status(500).json({
             success: false,
             message: 'Error cancelling item',
             error: error.message
         });
     }
-}
+};
 
 //Refund to wallet
 const refundToWallet = async (userId, amount, orderId, descrioption) => {
@@ -1520,7 +1559,7 @@ const adminApproveReturn = async (req, res) => {
                     refundAmount = itemSubtotal;
                 }
 
-                refundAmount = Math.max(0, Number(refundAmount.toFixed(2))); 
+                refundAmount = Math.max(0, Number(refundAmount.toFixed(2)));
                 item.refunded = true;
                 item.refundAmount = refundAmount;
                 item.refundDate = new Date();
