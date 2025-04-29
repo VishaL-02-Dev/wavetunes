@@ -144,7 +144,6 @@
                                     <% } %>
 
             </div>
-
             <!-- Product Info -->
             <div>
                 <h1 class="text-3xl font-bold mb-2 text-white">
@@ -179,9 +178,9 @@
                         <span class="ml-2 bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">
                             <%= product.offerPercentage %>% OFF
                         </span>
-                    <% } else { %>
-                        <span class="text-3xl font-bold text-white">₹<%= product.price %></span>
-                    <% } %>
+                        <% } else { %>
+                            <span class="text-3xl font-bold text-white">₹<%= product.price %></span>
+                            <% } %>
                 </div>
 
                 <div class="mb-6">
@@ -210,8 +209,8 @@
                                     <button type="button" class="px-3 py-1 text-gray-600 hover:bg-gray-100"
                                         onclick="decrementQuantity()">-</button>
                                     <input type="number" id="quantity" name="quantity" min="1"
-                                        max="<%= product.stock || 1 %>" value="1"
-                                        class="w-12 text-center border-0 focus:ring-0">
+                                        max="<%= product.stock ? Math.min(product.stock, 5) : 5 %>" value="1"
+                                        class="w-12 text-center border-0 focus:ring-0" readonly>
                                     <button type="button" class="px-3 py-1 text-gray-600 hover:bg-gray-100"
                                         onclick="incrementQuantity()">+</button>
                                 </div>
@@ -219,16 +218,16 @@
 
                             <button onclick="addToCart('<%= product._id %>')"
                                 class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition"
-                                <%= product.stock <=0
-                                    ? 'class="flex-1 bg-gray-400 cursor-not-allowed text-white font-medium py-2 px-4 rounded-md"'
-                                    : '' %>>
-                                    Add to Cart
+                                <%=product.stock <=0
+                                ? 'class="flex-1 bg-gray-400 cursor-not-allowed text-white font-medium py-2 px-4 rounded-md"'
+                                : '' %>>
+                                Add to Cart
                             </button>
 
                             <button onclick="addToWishlist('<%= product._id %>')"
                                 class="bg-red-600 hover:bg-red-700 text-white font-medium p-2 m-2 rounded-md transition"
                                 title="Add to Wishlist">
-                                <svg class="w-6 h-6 fill-current " viewBox="0 0 24 24">
+                                <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
                                     <path
                                         d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                                 </svg>
@@ -240,20 +239,18 @@
                                 <div class="mb-4">
                                     <h3 class="text-lg font-semibold mb-2 text-white">Specifications</h3>
                                     <ul class="text-white list-disc pl-6 space-y-1">
-                                        <% 
-                                            // Option A: If specifications is a string with line breaks
-                                            if (typeof product.specifications === 'string') {
-                                                const specLines = product.specifications.split('\n').filter(line => line.trim() !== '');
-                                                specLines.forEach(spec => { %>
-                                                    <li><%= spec.trim() %></li>
-                                                <% });
-                                            } 
-                                        %>
+                                        <% if (typeof product.specifications==='string' ) { const
+                                            specLines=product.specifications.split('\n').filter(line=> line.trim() !==
+                                            '');
+                                            specLines.forEach(spec => { %>
+                                            <li>
+                                                <%= spec.trim() %>
+                                            </li>
+                                            <% }); } %>
                                     </ul>
                                 </div>
-                            <% } %>
+                                <% } %>
                         </div>
-                        
             </div>
         </div>
 
@@ -346,241 +343,243 @@
     </div>
 
     <!-- Related Products -->
-    <% if (relatedProducts && relatedProducts.length > 0) { %>
+    <% if (relatedProducts && relatedProducts.length> 0) { %>
         <div class="mx-auto px-4 py-8">
             <h2 class="text-2xl font-bold mb-6">You May Also Like</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <% relatedProducts.forEach(relatedProduct => { %>
+                <% relatedProducts.forEach(relatedProduct=> { %>
                     <div class="bg-white shadow-lg rounded-lg overflow-hidden">
-                        <% if (relatedProduct.images && relatedProduct.images.length > 0) { %>
-                            <img src="<%= relatedProduct.images[0].url %>" 
-                                 class="w-full h-48 object-contain" 
-                                 alt="<%= relatedProduct.name %>">
-                        <% } else { %>
-                            <img src="/images/default.jpg" 
-                                 class="w-full h-48 object-contain" 
-                                 alt="Default product image">
-                        <% } %>
-                        <div class="p-4">
-                            <h3 class="text-lg font-semibold mb-2"><%= relatedProduct.name %></h3>
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-900 font-bold">₹<%= relatedProduct.price %></span>
-                                <a href="/user/product/<%= relatedProduct._id %>" 
-                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition">
-                                    View Details
-                                </a>
-                            </div>
-                        </div>
+                        <% if (relatedProduct.images && relatedProduct.images.length> 0) { %>
+                            <img src="<%= relatedProduct.images[0].url %>" class="w-full h-48 object-contain"
+                                alt="<%= relatedProduct.name %>">
+                            <% } else { %>
+                                <img src="/images/default.jpg" class="w-full h-48 object-contain"
+                                    alt="Default product image">
+                                <% } %>
+                                    <div class="p-4">
+                                        <h3 class="text-lg font-semibold mb-2">
+                                            <%= relatedProduct.name %>
+                                        </h3>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-900 font-bold">₹<%= relatedProduct.price %>
+                                            </span>
+                                            <a href="/user/product/<%= relatedProduct._id %>"
+                                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition">
+                                                View Details
+                                            </a>
+                                        </div>
+                                    </div>
                     </div>
-                <% }); %>
+                    <% }); %>
             </div>
         </div>
-    <% } %>
-    </div>
+        <% } %>
+            </div>
 
-    <script>
-        // Track current selected image index
-        let currentImageIndex = 0;
-        let imagesList = [];
+            <script>
+                // Track current selected image index
+                let currentImageIndex = 0;
+                let imagesList = [];
 
-        // Set up image array if available
-        window.addEventListener("DOMContentLoaded", function () {
-            const mainImage = document.getElementById("mainImage");
-            if (!mainImage) return;
+                // Set up image array if available
+                window.addEventListener("DOMContentLoaded", function () {
+                    const mainImage = document.getElementById("mainImage");
+                    if (!mainImage) return;
 
-            // Initialize zoom functionality
-            initializeZoom();
-        });
+                    // Initialize zoom functionality
+                    initializeZoom();
+                });
 
-        // Initialize zoom functionality
-        function initializeZoom() {
-            const mainImage = document.getElementById("mainImage");
-            const zoomOverlay = document.getElementById("zoomOverlay");
-            const zoomResult = document.getElementById("zoomResult");
+                // Initialize zoom functionality
+                function initializeZoom() {
+                    const mainImage = document.getElementById("mainImage");
+                    const zoomOverlay = document.getElementById("zoomOverlay");
+                    const zoomResult = document.getElementById("zoomResult");
 
-            if (!mainImage || !zoomOverlay || !zoomResult) return;
+                    if (!mainImage || !zoomOverlay || !zoomResult) return;
 
-            // Add event listeners for zoom
-            mainImage.addEventListener("mousemove", handleZoom);
-            mainImage.addEventListener("mouseenter", showZoom);
-            mainImage.addEventListener("mouseleave", hideZoom);
+                    // Add event listeners for zoom
+                    mainImage.addEventListener("mousemove", handleZoom);
+                    mainImage.addEventListener("mouseenter", showZoom);
+                    mainImage.addEventListener("mouseleave", hideZoom);
 
-            // Function to show zoom overlay
-            function showZoom() {
-                zoomOverlay.style.display = "block";
-            }
+                    // Function to show zoom overlay
+                    function showZoom() {
+                        zoomOverlay.style.display = "block";
+                    }
 
-            // Function to hide zoom overlay
-            function hideZoom() {
-                zoomOverlay.style.display = "none";
-            }
+                    // Function to hide zoom overlay
+                    function hideZoom() {
+                        zoomOverlay.style.display = "none";
+                    }
 
-            // Function to handle zoom effect
-            function handleZoom(e) {
-                const { left, top, width, height } = mainImage.getBoundingClientRect();
+                    // Function to handle zoom effect
+                    function handleZoom(e) {
+                        const { left, top, width, height } = mainImage.getBoundingClientRect();
 
-                // Calculate mouse position percentage within the image
-                const x = (e.clientX - left) / width;
-                const y = (e.clientY - top) / height;
+                        // Calculate mouse position percentage within the image
+                        const x = (e.clientX - left) / width;
+                        const y = (e.clientY - top) / height;
 
-                // Zoom factor - higher means more zoom
-                const zoomFactor = 2.5;
+                        // Zoom factor - higher means more zoom
+                        const zoomFactor = 2.5;
 
-                // Set background position and size for zoom result
-                zoomResult.style.backgroundImage = `url('${mainImage.src}')`;
-                zoomResult.style.backgroundSize = `${width * zoomFactor}px ${height * zoomFactor}px`;
-                zoomResult.style.backgroundPosition = `${-x * (width * zoomFactor - width)}px ${-y * (height * zoomFactor - height)}px`;
-            }
-        }
-
-        // Change main image and update active thumbnail
-        function changeMainImage(src, thumbnailElement, index) {
-            const mainImage = document.getElementById("mainImage");
-            if (!mainImage) return;
-
-            // Update image source
-            mainImage.src = src;
-            currentImageIndex = index;
-
-            // Update active thumbnail
-            const thumbnails = document.querySelectorAll(".thumbnail");
-            thumbnails.forEach(thumb => {
-                thumb.classList.remove("active");
-            });
-
-            thumbnailElement.classList.add("active");
-        }
-
-        // Quantity controls
-        function incrementQuantity(max) {
-            const quantityInput = document.getElementById('quantity');
-            const currentValue = parseInt(quantityInput.value);
-            if (currentValue < max) {
-                quantityInput.value = currentValue + 1;
-            }
-        }
-
-        function decrementQuantity() {
-            const quantityInput = document.getElementById('quantity');
-            const currentValue = parseInt(quantityInput.value);
-            if (currentValue > 1) {
-                quantityInput.value = currentValue - 1;
-            }
-        }
-
-        // Rating selection
-        function setRating(rating) {
-            // Update hidden input value
-            document.getElementById('ratingInput').value = rating;
-
-            // Update stars visual
-            const stars = document.querySelectorAll('.rating-star');
-            stars.forEach((star, index) => {
-                if (index < rating) {
-                    star.classList.remove('text-gray-300');
-                    star.classList.add('text-yellow-400');
-                } else {
-                    star.classList.remove('text-yellow-400');
-                    star.classList.add('text-gray-300');
+                        // Set background position and size for zoom result
+                        zoomResult.style.backgroundImage = `url('${mainImage.src}')`;
+                        zoomResult.style.backgroundSize = `${width * zoomFactor}px ${height * zoomFactor}px`;
+                        zoomResult.style.backgroundPosition = `${-x * (width * zoomFactor - width)}px ${-y * (height * zoomFactor - height)}px`;
+                    }
                 }
-            });
-        }
 
-        // Add to cart functionality
-        function addToCart(productId) {
-            const quantity = parseInt(document.getElementById('quantity').value);
+                // Change main image and update active thumbnail
+                function changeMainImage(src, thumbnailElement, index) {
+                    const mainImage = document.getElementById("mainImage");
+                    if (!mainImage) return;
 
-            // Add to cart API call
-            fetch('/user/cart/add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    productId: productId,
-                    quantity: quantity
-                }),
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Show success message with Swal
-                        Swal.fire({
-                            title: 'Success!',
-                            text: 'Product added to cart!',
-                            icon: 'success',
-                            confirmButtonColor: '#3B82F6' // Blue color, adjust as needed
-                        }).then(() => {
-                            // Update cart count in navbar if you have one (optional)
-                            // e.g., updateCartCount();
-                        });
-                    } else {
-                        // Show error message with Swal
-                        Swal.fire({
-                            title: 'Error',
-                            text: data.message || 'Failed to add to cart',
-                            icon: 'error',
-                            confirmButtonColor: '#EF4444' // Red color, adjust as needed
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    // Show generic error message with Swal
-                    Swal.fire({
-                        title: 'Error',
-                        text: 'An error occurred. Please try again.',
-                        icon: 'error',
-                        confirmButtonColor: '#EF4444' // Red color, adjust as needed
+                    // Update image source
+                    mainImage.src = src;
+                    currentImageIndex = index;
+
+                    // Update active thumbnail
+                    const thumbnails = document.querySelectorAll(".thumbnail");
+                    thumbnails.forEach(thumb => {
+                        thumb.classList.remove("active");
                     });
-                });
-        }
 
-        // Add to wishlist
-        function addToWishlist(productId) {
-            // Add to wishlist API call
-            fetch('/user/product/addToWishlist', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    productId: productId
-                }),
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Show success message with Swal
-                        Swal.fire({
-                            title: 'Success!',
-                            text: 'Product added to wishlist!',
-                            icon: 'success',
-                            confirmButtonColor: '#3B82F6'
-                        }).then(() => {
-                            // Optional: Update wishlist count in navbar if you have one
-                            // e.g., updateWishlistCount();
-                        });
-                    } else {
-                        // Show error message with Swal
-                        Swal.fire({
-                            title: 'Error',
-                            text: data.message || 'Failed to add to wishlist',
-                            icon: 'error',
-                            confirmButtonColor: '#EF4444'
-                        });
+                    thumbnailElement.classList.add("active");
+                }
+
+                // Quantity controls
+                function incrementQuantity() {
+                    const quantityInput = document.getElementById('quantity');
+                    const max = Math.min(parseInt(quantityInput.max), 5); // Enforce max of 5
+                    const currentValue = parseInt(quantityInput.value);
+                    if (currentValue < max) {
+                        quantityInput.value = currentValue + 1;
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    // Show generic error message with Swal
-                    Swal.fire({
-                        title: 'Error',
-                        text: 'An error occurred. Please try again.',
-                        icon: 'error',
-                        confirmButtonColor: '#EF4444'
+                }
+
+                function decrementQuantity() {
+                    const quantityInput = document.getElementById('quantity');
+                    const currentValue = parseInt(quantityInput.value);
+                    if (currentValue > 1) {
+                        quantityInput.value = currentValue - 1;
+                    }
+                }
+
+                // Rating selection
+                function setRating(rating) {
+                    // Update hidden input value
+                    document.getElementById('ratingInput').value = rating;
+
+                    // Update stars visual
+                    const stars = document.querySelectorAll('.rating-star');
+                    stars.forEach((star, index) => {
+                        if (index < rating) {
+                            star.classList.remove('text-gray-300');
+                            star.classList.add('text-yellow-400');
+                        } else {
+                            star.classList.remove('text-yellow-400');
+                            star.classList.add('text-gray-300');
+                        }
                     });
-                });
-        }
-    </script>
-    <%- include('./partials/user/footer') %>
+                }
+
+                // Add to cart functionality
+                function addToCart(productId) {
+                    const quantity = parseInt(document.getElementById('quantity').value);
+
+                    // Add to cart API call
+                    fetch('/user/cart/add', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            productId: productId,
+                            quantity: quantity
+                        }),
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Show success message with Swal
+                                Swal.fire({
+                                    title: 'Success!',
+                                    text: 'Product added to cart!',
+                                    icon: 'success',
+                                    confirmButtonColor: '#3B82F6' // Blue color, adjust as needed
+                                }).then(() => {
+                                    // Update cart count in navbar if you have one (optional)
+                                    // e.g., updateCartCount();
+                                });
+                            } else {
+                                // Show error message with Swal
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: data.message || 'Failed to add to cart',
+                                    icon: 'error',
+                                    confirmButtonColor: '#EF4444' // Red color, adjust as needed
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            // Show generic error message with Swal
+                            Swal.fire({
+                                title: 'Error',
+                                text: 'An error occurred. Please try again.',
+                                icon: 'error',
+                                confirmButtonColor: '#EF4444' // Red color, adjust as needed
+                            });
+                        });
+                }
+
+                // Add to wishlist
+                function addToWishlist(productId) {
+                    // Add to wishlist API call
+                    fetch('/user/product/addToWishlist', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            productId: productId
+                        }),
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Show success message with Swal
+                                Swal.fire({
+                                    title: 'Success!',
+                                    text: 'Product added to wishlist!',
+                                    icon: 'success',
+                                    confirmButtonColor: '#3B82F6'
+                                }).then(() => {
+                                    // Optional: Update wishlist count in navbar if you have one
+                                    // e.g., updateWishlistCount();
+                                });
+                            } else {
+                                // Show error message with Swal
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: data.message || 'Failed to add to wishlist',
+                                    icon: 'error',
+                                    confirmButtonColor: '#EF4444'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            // Show generic error message with Swal
+                            Swal.fire({
+                                title: 'Error',
+                                text: 'An error occurred. Please try again.',
+                                icon: 'error',
+                                confirmButtonColor: '#EF4444'
+                            });
+                        });
+                }
+            </script>
+            <%- include('./partials/user/footer') %>

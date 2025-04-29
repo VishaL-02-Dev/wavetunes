@@ -1,5 +1,8 @@
+<!DOCTYPE html>
+<html lang="en">
+
 <head>
-    <title>Order Confirmation | WaveTunes</title>
+    <title>Order Details | WaveTunes</title>
     <%- include('./partials/user/header') %>
         <style>
             .order-section {
@@ -43,35 +46,25 @@
                 color: white;
             }
 
-            .timeline-item {
-                position: relative;
-                padding-left: 2.5rem;
-                padding-bottom: 2rem;
+            .status-returned {
+                background-color: #F59E0B;
+                color: white;
             }
 
-            .timeline-item:before {
-                content: '';
-                position: absolute;
-                left: 0.5rem;
-                top: 0;
-                bottom: 0;
-                width: 2px;
-                background-color: #E5E7EB;
+            .strikethrough {
+                text-decoration: line-through !important;
+                color: #6b7280;
+                font-size: 0.875rem;
+                display: block;
             }
 
-            .timeline-item:last-child:before {
-                bottom: 50%;
+            .offer-percentage {
+                color: #10B981;
+                font-size: 0.875rem;
+                display: block;
             }
 
-            .timeline-dot {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 1rem;
-                height: 1rem;
-                border-radius: 50%;
-                background-color: #3B82F6;
-            }
+
 
             @media print {
                 .no-print {
@@ -174,24 +167,43 @@
                                         </span></p>
                                 </div>
                                 <div class="text-right">
-                                    <p class="text-lg font-medium text-gray-900">₹<%= item.productId.price ?
-                                            (item.productId.price * (item.quantity || 1)).toFixed(2) : '0.00' %>
-                                    </p>
-                                    <% if (item.status !='delivered' && item.status !='returned' && item.status
-                                        !='cancelled' && order.status !='delivered' && order.status !='returned' &&
-                                        order.status !='cancelled' ) { %>
-                                        <button class="text-red-600 hover:text-red-800 mt-2"
-                                            onclick="cancelItem('<%= order._id %>', '<%= item._id %>')">Cancel
-                                            Item</button>
-                                        <% } %>
-                                            <% if (order.items.length > 1 && item.status === 'delivered' && order.status
-                                                === 'delivered' &&
-                                                item.status != 'returned' && item.status != 'cancelled' &&
-                                                order.status != 'returned' && order.status != 'cancelled') { %>
-                                                <button class="text-yellow-600 hover:text-yellow-800 ml-2"
-                                                    onclick="returnItem('<%= order.orderId %>', '<%= item._id %>')">Return
-                                                    Item</button>
+                                    <% const discount=item.discount || 0; const originalPrice=item.price + discount;
+                                        const offerPercentage=originalPrice> 0 ? (discount / originalPrice) * 100 : 0;
+                                        %>
+                                        <% if (discount> 0 && offerPercentage > 0) { %>
+                                            <p class="text-lg font-medium text-gray-900">
+                                                ₹<%= (item.price * item.quantity).toFixed(2) %>
+                                            </p>
+                                            <p class="strikethrough">
+                                                ₹<%= (originalPrice * item.quantity).toFixed(2) %>
+                                            </p>
+                                            <p class="offer-percentage">
+                                                <%= offerPercentage.toFixed(0) %>% off
+                                            </p>
+                                            <% } else { %>
+                                                <p class="text-lg font-medium text-gray-900">
+                                                    ₹<%= (item.price * item.quantity).toFixed(2) %>
+                                                </p>
                                                 <% } %>
+                                                    <p class="text-sm text-gray-500">
+                                                        ₹<%= item.price.toFixed(2) %> each
+                                                    </p>
+                                                    <% if (item.status !='delivered' && item.status !='returned' &&
+                                                        item.status !='cancelled' && order.status !='delivered' &&
+                                                        order.status !='returned' && order.status !='cancelled' ) { %>
+                                                        <button class="text-red-600 hover:text-red-800 mt-2"
+                                                            onclick="cancelItem('<%= order._id %>', '<%= item._id %>')">Cancel
+                                                            Item</button>
+                                                        <% } %>
+                                                            <% if (order.items.length> 1 && item.status === 'delivered'
+                                                                && order.status === 'delivered' && item.status !=
+                                                                'returned' && item.status != 'cancelled' && order.status
+                                                                != 'returned' && order.status != 'cancelled') { %>
+                                                                <button
+                                                                    class="text-yellow-600 hover:text-yellow-800 mt-2"
+                                                                    onclick="returnItem('<%= order.orderId %>', '<%= item._id %>')">Return
+                                                                    Item</button>
+                                                                <% } %>
                                 </div>
                             </div>
                             <% }); %>
@@ -231,30 +243,25 @@
     </div>
 
     <script>
-        //Return item in an order
         function returnItem(orderId, itemId) {
             Swal.fire({
                 title: 'Return Item',
                 html: `
-        <div class="mb-4">
-          <label class="block text-gray-700 text-sm font-bold mb-2" for="returnReason">
-            Return Reason
-          </label>
-          <select id="returnReason" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            <option value="Changed my mind">Changed my mind</option>
-            <option value="Item damaged">Item damaged</option>
-            <option value="Wrong item received">Wrong item received</option>
-            <option value="Product quality issue">Product quality issue</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div id="otherReasonDiv" class="mb-4 hidden">
-          <label class="block text-gray-700 text-sm font-bold mb-2" for="otherReason">
-            Please specify
-          </label>
-          <textarea id="otherReason" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"></textarea>
-        </div>
-      `,
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="returnReason">Return Reason</label>
+                        <select id="returnReason" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                            <option value="Changed my mind">Changed my mind</option>
+                            <option value="Item damaged">Item damaged</option>
+                            <option value="Wrong item received">Wrong item received</option>
+                            <option value="Product quality issue">Product quality issue</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div id="otherReasonDiv" class="mb-4 hidden">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="otherReason">Please specify</label>
+                        <textarea id="otherReason" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"></textarea>
+                    </div>
+                `,
                 showCancelButton: true,
                 confirmButtonColor: '#3085d6',
                 cancelButtonColor: '#d33',
@@ -263,17 +270,14 @@
                     const reasonSelect = document.getElementById('returnReason');
                     const otherText = document.getElementById('otherReason');
                     let reason = reasonSelect.value;
-
                     if (reason === 'Other' && otherText.value.trim()) {
                         reason = otherText.value.trim();
                     }
-
                     return { reason };
                 },
                 didOpen: () => {
                     const reasonSelect = document.getElementById('returnReason');
                     const otherDiv = document.getElementById('otherReasonDiv');
-
                     reasonSelect.addEventListener('change', function () {
                         if (this.value === 'Other') {
                             otherDiv.classList.remove('hidden');
@@ -286,9 +290,7 @@
                 if (result.isConfirmed) {
                     fetch(`/user/orders/${orderId}/items/${itemId}/return`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ reason: result.value.reason })
                     })
                         .then(response => response.json())
@@ -299,9 +301,7 @@
                                     text: 'Your return request has been submitted successfully.',
                                     icon: 'success',
                                     confirmButtonText: 'OK'
-                                }).then(() => {
-                                    window.location.reload();
-                                });
+                                }).then(() => { window.location.reload(); });
                             } else {
                                 Swal.fire({
                                     title: 'Error',
@@ -324,32 +324,25 @@
             });
         }
 
-
-        //Return an entire order
         function returnOrder(orderId) {
-            console.log(`Initiating return for orderId:${orderId}`)
             Swal.fire({
                 title: 'Return Order',
                 html: `
-        <div class="mb-4">
-          <label class="block text-gray-700 text-sm font-bold mb-2" for="returnReason">
-            Return Reason
-          </label>
-          <select id="returnReason" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            <option value="Changed my mind">Changed my mind</option>
-            <option value="Items damaged">Items damaged</option>
-            <option value="Wrong items received">Wrong items received</option>
-            <option value="Product quality issues">Product quality issues</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div id="otherReasonDiv" class="mb-4 hidden">
-          <label class="block text-gray-700 text-sm font-bold mb-2" for="otherReason">
-            Please specify
-          </label>
-          <textarea id="otherReason" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"></textarea>
-        </div>
-      `,
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="returnReason">Return Reason</label>
+                        <select id="returnReason" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                            <option value="Changed my mind">Changed my mind</option>
+                            <option value="Items damaged">Items damaged</option>
+                            <option value="Wrong items received">Wrong items received</option>
+                            <option value="Product quality issues">Product quality issues</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div id="otherReasonDiv" class="mb-4 hidden">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="otherReason">Please specify</label>
+                        <textarea id="otherReason" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"></textarea>
+                    </div>
+                `,
                 showCancelButton: true,
                 confirmButtonColor: '#3085d6',
                 cancelButtonColor: '#d33',
@@ -358,17 +351,14 @@
                     const reasonSelect = document.getElementById('returnReason');
                     const otherText = document.getElementById('otherReason');
                     let reason = reasonSelect.value;
-
                     if (reason === 'Other' && otherText.value.trim()) {
                         reason = otherText.value.trim();
                     }
-
                     return { reason };
                 },
                 didOpen: () => {
                     const reasonSelect = document.getElementById('returnReason');
                     const otherDiv = document.getElementById('otherReasonDiv');
-
                     reasonSelect.addEventListener('change', function () {
                         if (this.value === 'Other') {
                             otherDiv.classList.remove('hidden');
@@ -381,9 +371,7 @@
                 if (result.isConfirmed) {
                     fetch(`/user/orders/${orderId}/return`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ reason: result.value.reason })
                     })
                         .then(response => response.json())
@@ -394,9 +382,7 @@
                                     text: 'Your return request has been submitted successfully.',
                                     icon: 'success',
                                     confirmButtonText: 'OK'
-                                }).then(() => {
-                                    window.location.reload();
-                                });
+                                }).then(() => { window.location.reload(); });
                             } else {
                                 Swal.fire({
                                     title: 'Error',
@@ -419,7 +405,6 @@
             });
         }
 
-        // Cancel entire order
         function cancelOrder(orderId) {
             Swal.fire({
                 title: 'Are you sure?',
@@ -433,9 +418,7 @@
                 if (result.isConfirmed) {
                     fetch(`/user/orders/${orderId}/cancel`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
+                        headers: { 'Content-Type': 'application/json' }
                     })
                         .then(response => response.json())
                         .then(data => {
@@ -445,9 +428,7 @@
                                     text: 'Order cancelled successfully.',
                                     icon: 'success',
                                     confirmButtonText: 'OK'
-                                }).then(() => {
-                                    window.location.reload();
-                                });
+                                }).then(() => { window.location.reload(); });
                             } else {
                                 Swal.fire({
                                     title: 'Error',
@@ -470,7 +451,6 @@
             });
         }
 
-        // Cancel specific item
         function cancelItem(orderId, itemId) {
             Swal.fire({
                 title: 'Are you sure?',
@@ -484,9 +464,7 @@
                 if (result.isConfirmed) {
                     fetch(`/user/orders/${orderId}/items/${itemId}/cancel`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
+                        headers: { 'Content-Type': 'application/json' }
                     })
                         .then(response => response.json())
                         .then(data => {
@@ -496,9 +474,7 @@
                                     text: 'Item cancelled successfully.',
                                     icon: 'success',
                                     confirmButtonText: 'OK'
-                                }).then(() => {
-                                    window.location.reload();
-                                });
+                                }).then(() => { window.location.reload(); });
                             } else {
                                 Swal.fire({
                                     title: 'Error',
@@ -522,6 +498,7 @@
         }
     </script>
 
-
     <%- include('./partials/user/footer') %>
 </body>
+
+</html>

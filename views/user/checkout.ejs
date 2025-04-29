@@ -55,6 +55,11 @@
                 background-color: #8B5CF6;
                 color: white;
             }
+            .strikethrough {
+            text-decoration: line-through;
+            color: #6b7280; 
+            font-size: 0.875rem; 
+            }
         </style>
 </head>
 
@@ -325,7 +330,6 @@
                 <!-- Right Column - Order Summary -->
                 <div class="bg-white rounded-lg shadow-md p-6 sticky top-6 checkout-section">
                     <h2 class="text-2xl font-semibold mb-6 text-gray-800">Order Summary</h2>
-
                     <div class="space-y-4 mb-4">
                         <% if (cart && cart.items && cart.items.length> 0) { %>
                             <% cart.items.forEach(function(item) { %>
@@ -338,12 +342,27 @@
                                             <%= item.product.name %>
                                         </span>
                                     </div>
-                                    <span class="font-medium">₹<%= (item.product.price * item.quantity).toFixed(2) %>
-                                    </span>
+                                    <div class="text-right">
+                                        <% if (item.product.offerPercentage> 0) { %>
+                                            <span class="font-medium">
+                                                ₹<%= ((item.product.price * (1 - item.product.offerPercentage / 100)) *
+                                                    item.quantity).toFixed(2) %>
+                                            </span>
+                                            <span class="strikethrough block ">
+                                                ₹<%= (item.product.price * item.quantity).toFixed(2) %>
+                                            </span>
+                                            <span class="offer-percentage block text-green-600">
+                                                <%= item.product.offerPercentage %>% off
+                                            </span>
+                                            <% } else { %>
+                                                <span class="font-medium">
+                                                    ₹<%= (item.product.price * item.quantity).toFixed(2) %>
+                                                </span>
+                                                <% } %>
+                                    </div>
                                 </div>
                                 <% }); %>
                                     <% } %>
-
                                         <div class="space-y-2" id="order-summary">
                                             <div class="flex justify-between">
                                                 <span class="text-gray-700">Subtotal</span>
@@ -390,9 +409,9 @@
                                             data-amount="<%= coupon.discountAmount %>"
                                             data-max="<%= coupon.maxDiscount || 0 %>">
                                             <%= coupon.code %> -
-                                                <% if(coupon.discountType==='percentage' ) { %>
-                                                    <%= coupon.discountAmount %>% off <% if(coupon.maxDiscount) { %> (up
-                                                            to ₹<%= coupon.maxDiscount %>) <% } %>
+                                                <% if (coupon.discountType==='percentage' ) { %>
+                                                    <%= coupon.discountAmount %>% off <% if (coupon.maxDiscount) { %>
+                                                            (up to ₹<%= coupon.maxDiscount %>) <% } %>
                                                                     <% } else { %>
                                                                         ₹<%= coupon.discountAmount %> off
                                                                             <% } %>
@@ -408,8 +427,8 @@
                         <p id="coupon-description" class="text-sm text-gray-600 mt-1"></p>
                         <input type="hidden" name="couponCode" id="hiddenCouponCode">
                         <!-- Hidden field for form submission -->
+                        <input type="hidden" name="discountType" id="hiddenDiscountType">
                     </div>
-
                     <button type="submit" id="place-order-btn"
                         class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-md transition">
                         Place Order
@@ -427,15 +446,23 @@
             const tax = parseFloat('<%= cart.tax %>');
             let discount = 0;
             let total = subtotal + shipping + tax;
-
-            // Update orderTotal to reflect the initial total
             let orderTotal = total;
+
+            // Check COD eligibility based on initial total
+            const codRadio = document.getElementById('cod');
+            if (orderTotal > 1000) {
+                codRadio.disabled = true;
+                if (codRadio.checked) {
+                    document.getElementById('credit-card').checked = true;
+                    document.getElementById('credit-card-form').classList.remove('hidden');
+                    document.getElementById('cod-form').classList.add('hidden');
+                }
+            }
 
             // Toggle payment method forms
             const creditCardRadio = document.getElementById('credit-card');
             const razorpayRadio = document.getElementById('razorpay');
             const walletRadio = document.getElementById('wallet');
-            const codRadio = document.getElementById('cod');
             const creditCardForm = document.getElementById('credit-card-form');
             const razorpayForm = document.getElementById('razorpay-form');
             const codForm = document.getElementById('cod-form');
@@ -499,9 +526,7 @@
                             console.error('Error fetching wallet balance:', data.message);
                         }
                     })
-                    .catch(error => {
-                        console.error('Error:', error);
-                    });
+                    .catch(error => console.error('Error:', error));
             }
 
             // Function to check wallet balance
@@ -560,11 +585,8 @@
                     addNewAddressBtn.classList.remove('hidden');
                     const formFields = newAddressForm.querySelectorAll('input, select');
                     formFields.forEach(field => {
-                        if (field.type === 'checkbox') {
-                            field.checked = false;
-                        } else {
-                            field.value = '';
-                        }
+                        if (field.type === 'checkbox') field.checked = false;
+                        else field.value = '';
                     });
                 });
             }
@@ -620,9 +642,7 @@
                                     text: 'Address saved successfully',
                                     icon: 'success',
                                     confirmButtonColor: '#3B82F6'
-                                }).then(() => {
-                                    location.reload();
-                                });
+                                }).then(() => location.reload());
                             } else {
                                 Swal.fire({
                                     title: 'Error',
@@ -649,6 +669,7 @@
                 const couponSelect = document.getElementById('couponCode');
                 const couponCode = couponSelect.value.trim();
                 const hiddenCouponCode = document.getElementById('hiddenCouponCode');
+                const hiddenDiscountType = document.getElementById('hiddenDiscountType');
 
                 if (!couponCode) {
                     Swal.fire({ title: 'Error', text: 'Please select a coupon', icon: 'error', confirmButtonColor: '#EF4444' });
@@ -667,17 +688,29 @@
                             discount = data.discount;
                             orderTotal = data.total;
 
-                            document.getElementById('coupon-code-display').textContent = coupon.code;
+                            document.getElementById('coupon-code-display').textContent = coupon ? coupon.code : 'Offer';
                             document.getElementById('discount-amount').textContent = `-₹${discount.toFixed(2)}`;
                             document.getElementById('discount-row').classList.remove('hidden');
                             document.getElementById('total-amount').textContent = `₹${orderTotal.toFixed(2)}`;
-                            hiddenCouponCode.value = coupon.code;
+                            hiddenCouponCode.value = coupon ? coupon.code : '';
+                            hiddenDiscountType.value = data.discountType;
 
-                            if (walletRadio.checked) {
-                                checkWalletBalance();
+                            if (orderTotal > 1000) {
+                                codRadio.disabled = true;
+                                if (codRadio.checked) {
+                                    creditCardRadio.checked = true;
+                                    creditCardForm.classList.remove('hidden');
+                                    razorpayForm.classList.add('hidden');
+                                    walletForm.classList.add('hidden');
+                                    codForm.classList.add('hidden');
+                                }
+                            } else {
+                                codRadio.disabled = false;
                             }
 
-                            Swal.fire({ title: 'Success!', text: 'Coupon applied successfully!', icon: 'success', confirmButtonColor: '#3B82F6' });
+                            if (walletRadio.checked) checkWalletBalance();
+
+                            Swal.fire({ title: 'Success!', text: `${data.discountType === 'coupon' ? 'Coupon' : 'Offer'} applied successfully!`, icon: 'success', confirmButtonColor: '#3B82F6' });
                         } else {
                             Swal.fire({ title: 'Error', text: data.message || 'Invalid coupon code', icon: 'error', confirmButtonColor: '#EF4444' });
                         }
@@ -709,10 +742,10 @@
                         document.getElementById('coupon-code-display').textContent = '';
                         document.getElementById('couponCode').selectedIndex = 0;
                         document.getElementById('hiddenCouponCode').value = '';
+                        document.getElementById('hiddenDiscountType').value = '';
 
-                        if (walletRadio.checked) {
-                            checkWalletBalance();
-                        }
+                        if (orderTotal <= 1000) codRadio.disabled = false;
+                        if (walletRadio.checked) checkWalletBalance();
 
                         Swal.fire({
                             title: 'Coupon Removed',
@@ -767,6 +800,7 @@
 
                 // Get payment method
                 const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+
                 // Handle wallet payment
                 if (paymentMethod === 'wallet') {
                     const walletBalance = parseFloat(document.getElementById('available-balance').textContent);
@@ -803,20 +837,19 @@
                                 }
                             });
 
-                            // Create a form for submission
                             const form = document.createElement('form');
                             form.method = 'POST';
                             form.action = '/user/checkout/process-wallet-payment';
 
-                            // Get values from the original form
                             const addressId = document.querySelector('input[name="addressId"]:checked')?.value;
                             const couponCode = document.getElementById('hiddenCouponCode').value;
+                            const discountType = document.getElementById('hiddenDiscountType').value;
 
-                            // Add form fields
                             const fields = {
                                 addressId: addressId,
                                 couponCode: couponCode,
-                                amount: orderTotal
+                                amount: orderTotal,
+                                discountType: discountType
                             };
 
                             for (const [key, value] of Object.entries(fields)) {
@@ -827,7 +860,6 @@
                                 form.appendChild(input);
                             }
 
-                            // Add form to document and submit
                             document.body.appendChild(form);
                             form.submit();
                         }
@@ -844,11 +876,12 @@
                     const formData = new FormData(this);
                     const addressId = formData.get('addressId');
                     const couponCode = document.getElementById('hiddenCouponCode').value;
+                    const discountType = document.getElementById('hiddenDiscountType').value;
 
                     fetch('/user/checkout/initiate-razorpay', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ addressId, couponCode }),
+                        body: JSON.stringify({ addressId, couponCode, discountType }),
                     })
                         .then(response => response.json())
                         .then(data => {
@@ -985,7 +1018,8 @@
                 const fields = {
                     razorpay_payment_id: paymentData.razorpay_payment_id,
                     razorpay_order_id: paymentData.razorpay_order_id,
-                    razorpay_signature: paymentData.razorpay_signature
+                    razorpay_signature: paymentData.razorpay_signature,
+                    discountType: document.getElementById('hiddenDiscountType').value
                 };
 
                 for (const [key, value] of Object.entries(fields)) {
@@ -999,48 +1033,6 @@
                 document.body.appendChild(form);
                 form.submit();
             }
-
-            // Function to process wallet payment
-            // function processWalletPayment() {
-            //     const formData = new FormData(document.getElementById('checkout-form'));
-            //     const addressId = formData.get('addressId');
-            //     const couponCode = document.getElementById('hiddenCouponCode').value;
-
-            //     fetch('/user/checkout/process-wallet-payment', {
-            //         method: 'POST',
-            //         headers: { 'Content-Type': 'application/json' },
-            //         body: JSON.stringify({ addressId, couponCode, amount: orderTotal }),
-            //     })
-            //         .then(response => response.json())
-            //         .then(data => {
-            //             if (data.success) {
-            //                 Swal.fire({
-            //                     title: 'Payment Successful!',
-            //                     text: 'Your order has been placed successfully.',
-            //                     icon: 'success',
-            //                     confirmButtonColor: '#3B82F6'
-            //                 }).then(() => {
-            //                     window.location.href 
-            //                 });
-            //             } else {
-            //                 Swal.fire({
-            //                     title: 'Payment Failed',
-            //                     text: data.message || 'Payment processing failed. Please try again.',
-            //                     icon: 'error',
-            //                     confirmButtonColor: '#EF4444'
-            //                 });
-            //             }
-            //         })
-            //         .catch(error => {
-            //             console.error('Error:', error);
-            //             Swal.fire({
-            //                 title: 'Error',
-            //                 text: 'An error occurred while processing your payment. Please try again.',
-            //                 icon: 'error',
-            //                 confirmButtonColor: '#EF4444'
-            //             });
-            //         });
-            // }
         });
     </script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>

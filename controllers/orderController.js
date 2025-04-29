@@ -18,38 +18,48 @@ const loadCheckout = async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
 
-        let addresses = await Address.find({ userId: userId }).sort({ isDefault: -1 });
+        // Fetch user addresses
+        let addresses = await Address.find({ userId }).sort({ isDefault: -1 });
 
+        // Fetch cart with populated products
         let cart = await Cart.findOne({ user: userId }).populate({
             path: 'items.product',
-            select: 'name price images stock'
+            select: 'name price offerPercentage images stock'
         });
 
         if (!cart || !cart.items || cart.items.length === 0) {
             return res.redirect('/user/cart');
         }
 
-        cart.subtotal = cart.items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+        // Calculate totals using discounted prices
+        cart.subtotal = cart.items.reduce((sum, item) => {
+            const price = item.product.offerPercentage > 0
+                ? item.product.price * (1 - item.product.offerPercentage / 100)
+                : item.product.price;
+            return sum + (price * item.quantity);
+        }, 0);
+
         cart.shipping = cart.subtotal > 0 ? 10 : 0;
-        cart.tax = cart.subtotal * 0.00;
+        cart.tax = 0; // 0% tax as per current logic
         cart.total = cart.subtotal + cart.shipping + cart.tax;
 
+        // Fetch active coupons
         const currentDate = new Date();
         const coupons = await Coupon.find({
             isActive: true,
             startDate: { $lte: currentDate },
             endDate: { $gte: currentDate },
             minimumPurchase: { $lte: cart.subtotal }
-        })
+        });
 
         const user = await User.findById(userId);
         res.render('user/checkout', { cart, user, addresses, coupons });
 
     } catch (error) {
-        console.log('Something went wrong.', error);
-        // res.redirect('/us');
+        console.error('Error loading checkout:', error);
+        res.redirect('/user/cart');
     }
-}
+};
 
 
 // Apply Coupon
@@ -61,82 +71,102 @@ const applyCoupon = async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
 
-        // Find the coupon
-        const coupon = await Coupon.findOne({
-            code: couponCode,
-            isActive: true,
-            startDate: { $lte: new Date() },
-            endDate: { $gte: new Date() }
-        });
-
-        if (!coupon) {
-            return res.status(404).json({
-                success: false,
-                message: "Coupon not found or expired"
-            });
-        }
-
         // Find user's cart
         const cart = await Cart.findOne({ user: userId }).populate({
             path: 'items.product',
-            select: 'name price images stock'
+            select: 'name price offerPercentage images stock'
         });
         if (!cart) {
             return res.status(404).json({
                 success: false,
-                message: "Cart not found"
+                message: 'Cart not found'
             });
         }
 
-        // Calculate cart subtotal
-        const subtotal = cart.items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-        const shipping = subtotal > 0 ? 10 : 0;
-        const tax = subtotal * 0.00;
+        // Calculate original and discounted subtotal
+        const originalSubtotal = cart.items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+        const discountedSubtotal = cart.items.reduce((sum, item) => {
+            const price = item.product.offerPercentage > 0
+                ? item.product.price * (1 - item.product.offerPercentage / 100)
+                : item.product.price;
+            return sum + (price * item.quantity);
+        }, 0);
+        const offerDiscount = originalSubtotal - discountedSubtotal;
+        const shipping = discountedSubtotal > 0 ? 10 : 0;
+        const tax = 0;
 
-        // Check minimum purchase requirement
-        if (subtotal < coupon.minimumPurchase) {
-            return res.status(400).json({
-                success: false,
-                message: `Minimum purchase of ₹${coupon.minimumPurchase} required for this coupon`
+        let couponDiscount = 0;
+        let coupon = null;
+        let discountType = 'offer';
+
+        if (couponCode) {
+            // Find the coupon
+            coupon = await Coupon.findOne({
+                code: couponCode,
+                isActive: true,
+                startDate: { $lte: new Date() },
+                endDate: { $gte: new Date() }
             });
-        }
 
-        // Check if coupon has reached max uses
-        if (coupon.maxUses > 0 && coupon.usedCount >= coupon.maxUses) {
-            return res.status(400).json({
-                success: false,
-                message: "Coupon has reached maximum usage limit"
-            });
-        }
-
-        let discount = 0;
-        if (coupon.discountType === 'percentage') {
-            discount = (subtotal * coupon.discountAmount) / 100;
-            if (coupon.maxDiscount && discount > coupon.maxDiscount) {
-                discount = coupon.maxDiscount;
+            if (!coupon) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Coupon not found or expired'
+                });
             }
-        } else {
-            discount = coupon.discountAmount;
+
+            // Check minimum purchase requirement
+            if (discountedSubtotal < coupon.minimumPurchase) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Minimum purchase of ₹${coupon.minimumPurchase} required for this coupon`
+                });
+            }
+
+            // Check if coupon has reached max uses
+            if (coupon.maxUses > 0 && coupon.usedCount >= coupon.maxUses) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Coupon has reached maximum usage limit'
+                });
+            }
+
+            // Calculate coupon discount on original subtotal
+            if (coupon.discountType === 'percentage') {
+                couponDiscount = (originalSubtotal * coupon.discountAmount) / 100;
+                if (coupon.maxDiscount && couponDiscount > coupon.maxDiscount) {
+                    couponDiscount = coupon.maxDiscount;
+                }
+            } else {
+                couponDiscount = coupon.discountAmount;
+            }
         }
 
-        const total = subtotal + shipping + tax - discount;
+        // Compare discounts
+        let discount = offerDiscount;
+        if (couponDiscount > offerDiscount) {
+            discount = couponDiscount;
+            discountType = 'coupon';
+        }
+
+        const total = discountedSubtotal + shipping + tax - (discountType === 'coupon' ? couponDiscount : 0);
 
         return res.status(200).json({
             success: true,
-            message: "Coupon applied",
-            coupon: {
+            message: `${discountType === 'offer' ? 'Offer' : 'Coupon'} applied`,
+            coupon: coupon ? {
                 code: coupon.code,
                 discountType: coupon.discountType,
                 discountAmount: coupon.discountAmount,
-                maxDiscount: coupon.maxDiscount
-            },
+                maxDiscount: coupon.maxDiscount || 0
+            } : null,
             discount,
             total,
-            subtotal,
+            subtotal: discountedSubtotal,
             shipping,
-            tax
+            tax,
+            discountType
         });
-
 
     } catch (error) {
         console.error('Error applying coupon:', error);
@@ -153,138 +183,112 @@ const applyCoupon = async (req, res) => {
 //Place Order
 const placeOrder = async (req, res) => {
     const token = req.cookies.jwt;
-    const { addressId, paymentMethod, couponCode } = req.body;
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
+        const { addressId, paymentMethod, couponCode, discountType } = req.body;
 
-        const user = await User.findById(userId);
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
+        const cart = await Cart.findOne({ user: userId }).populate('items.product');
+        if (!cart || !cart.items.length) {
+            return res.status(400).json({ success: false, message: 'Cart is empty' });
         }
 
         const address = await Address.findById(addressId);
-        if (!address || address.userId.toString() !== user._id.toString()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid address selected'
-            });
+        if (!address) {
+            return res.status(400).json({ success: false, message: 'Invalid address' });
         }
 
-        const cart = await Cart.findOne({ user: user._id }).populate({
-            path: 'items.product',
-            select: 'name price images stock'
-        });
-
-        let totalAmount = 0;
-        const orderItems = cart.items
-            .filter(item => item.product)
-            .map(item => {
-                const product = item.product;
-                const price = Number(product.price);
-                const quantity = Number(item.quantity);
-
-                const itemTotal = price * quantity;
-                totalAmount += itemTotal;
-                return {
-                    productId: product._id,
-                    name: product.name,
-                    price: price,
-                    quantity: quantity,
-                    image: product.images && product.images.length > 0 ? product.images[0] : null, // Use the first image or null
-                    status: 'pending'
-                };
-            });
-        const validPaymentMethods = { "cod": "COD", "credit card": "Credit Card", "paypal": "Paypal" };
-        const selectedPaymentMethod = validPaymentMethods[paymentMethod.toLowerCase()];
-        if (!selectedPaymentMethod) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid payment method selected"
-            });
-        }
+        // Log cart items to debug product data
+        // console.log('Cart items for order:', JSON.stringify(cart.items.map(item => ({
+        //     productId: item.product._id,
+        //     name: item.product.name,
+        //     price: item.product.price,
+        //     offerPercentage: item.product.offerPercentage,
+        //     offerEndDate: item.product.offerEndDate,
+        //     quantity: item.quantity
+        // })), null, 2));
 
         let discount = 0;
-        let coupon = null;
-        if (couponCode) {
-            coupon = await Coupon.findOne({
-                code: couponCode,
-                isActive: true,
-                startDate: { $lte: new Date() },
-                endDate: { $gte: new Date() }
-            });
-
+        if (couponCode && discountType === 'coupon') {
+            const coupon = await Coupon.findOne({ code: couponCode, isActive: true });
             if (coupon) {
-                if (totalAmount >= coupon.minimumPurchase && (coupon.maxUses === 0 || coupon.usedCount < coupon.maxUses)) {
-                    if (coupon.discountType === 'percentage') {
-                        discount = (totalAmount * coupon.discountAmount) / 100;
-                        if (coupon.maxDiscount && discount > coupon.maxDiscount) {
-                            discount = coupon.maxDiscount;
-                        }
-                    } else {
-                        discount = coupon.discountAmount;
-                    }
-                    await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usedCount: 1 } });
-                } else {
-                    coupon = null; // Ignore invalid coupon
-                }
+                discount = calculateCouponDiscount(cart, coupon);
             }
         }
 
-        totalAmount += 10 + (totalAmount * 0.00) - (discount || 0);
+        const currentDate = new Date();
+        const orderItems = cart.items.map(item => {
+            // Ensure product has price
+            const originalPrice = item.product.price || 0;
+            let offerPercentage = item.product.offerPercentage || 0;
+            const offerEndDate = item.product.offerEndDate;
 
-        const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+            // Check if offer is active (offerEndDate is null or in the future)
+            if (offerEndDate && new Date(offerEndDate) < currentDate) {
+                offerPercentage = 0; // Offer expired
+            }
 
-        const newOrder = new Order({
-            orderId,
-            userId: user._id,
-            addressId: address._id,
+            // Calculate discounted price and discount amount
+            const discountedPrice = offerPercentage > 0
+                ? originalPrice * (1 - offerPercentage / 100)
+                : originalPrice;
+            const discountAmount = originalPrice - discountedPrice;
+
+            return {
+                productId: item.product._id,
+                quantity: item.quantity,
+                price: discountedPrice,
+                discount: discountAmount,
+                status: 'pending',
+                refunded: false,
+                refundAmount: 0
+            };
+        });
+
+        // Log order items to verify
+        console.log('Order items created:', JSON.stringify(orderItems.map(item => ({
+            productId: item.productId,
+            price: item.price,
+            discount: item.discount,
+            quantity: item.quantity
+        })), null, 2));
+
+        const subtotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const shipping = subtotal > 0 ? 10 : 0;
+        const tax = 0;
+        const totalAmount = subtotal + shipping + tax - discount;
+
+        const order = new Order({
+            user: userId,
+            orderId: `ORD-${Date.now()}`,
             items: orderItems,
-            status: 'pending',
+            address: address._id,
+            paymentMethod,
+            subtotal,
+            shipping,
+            tax,
             totalAmount,
-            paymentMethod: selectedPaymentMethod,
+            discount,
+            status: 'pending',
             date: new Date(),
-            coupon: coupon ? { code: coupon.code, discountType: coupon.discountType, discountAmount: coupon.discountAmount, maxDiscount: coupon.maxDiscount } : null,
-            discount: discount || 0
+            refundStatus: 'none'
         });
 
-        const savedOrder = await newOrder.save();
-        await Cart.findOneAndDelete({ user: user._id });
+        await order.save();
+        await Cart.findOneAndUpdate({ user: userId }, { items: [], subtotal: 0, shipping: 0, tax: 0, total: 0 });
 
-        const completeOrder = await Order.findById(savedOrder._id)
-            .populate('addressId')
-            .populate({
-                path: 'items.productId',
-                select: 'name price images'
-            });
-
-        return res.render('user/orderConfirm', {
-            order: completeOrder,
-            user,
-            address
-        });
-
+        res.redirect(`/user/order/confirmation/${order._id}`);
     } catch (error) {
         console.error('Error placing order:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error placing order',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Error placing order' });
     }
-}
-
+};
 //Wallet Payment Method
 const processWalletPayment = async (req, res) => {
-    const { addressId, couponCode, amount } = req.body;
+    const { addressId, couponCode, amount, discountType } = req.body;
     const token = req.cookies.jwt;
 
     try {
-        // Verify user
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
         const user = await User.findById(userId);
@@ -295,7 +299,6 @@ const processWalletPayment = async (req, res) => {
             });
         }
 
-        // Fetch and validate address
         const address = await Address.findOne({ _id: addressId, userId });
         if (!address) {
             return res.status(400).json({
@@ -304,8 +307,10 @@ const processWalletPayment = async (req, res) => {
             });
         }
 
-        // Get cart
-        const cart = await Cart.findOne({ user: userId }).populate('items.product');
+        const cart = await Cart.findOne({ user: userId }).populate({
+            path: 'items.product',
+            select: 'name price offerPercentage images stock'
+        });
         if (!cart || !cart.items.length) {
             return res.status(400).json({
                 success: false,
@@ -315,19 +320,40 @@ const processWalletPayment = async (req, res) => {
 
         // Calculate totals
         let subtotal = 0;
-        cart.items.forEach(item => {
+        let originalSubtotal = 0;
+        const orderItems = cart.items.map(item => {
             if (!item.product || !item.product.price) {
                 throw new Error(`Invalid product data for item ${item._id}`);
             }
-            subtotal += item.product.price * item.quantity;
-        });
-        const shipping = cart.shipping || 10;
-        const tax = cart.tax || 0;
-        let discount = 0;
+            const originalPrice = Number(item.product.price);
+            const discountedPrice = item.product.offerPercentage > 0
+                ? originalPrice * (1 - item.product.offerPercentage / 100)
+                : originalPrice;
+            const quantity = Number(item.quantity);
 
-        // Apply coupon if provided
-        if (couponCode && couponCode.trim() !== '') {
-            const coupon = await Coupon.findOne({ code: couponCode, isActive: true });
+            originalSubtotal += originalPrice * quantity;
+            subtotal += discountedPrice * quantity;
+
+            return {
+                productId: item.product._id,
+                name: item.product.name,
+                price: discountedPrice,
+                originalPrice: originalPrice,
+                offerPercentage: item.product.offerPercentage || 0,
+                quantity: quantity,
+                discountApplied: item.product.offerPercentage > 0 ? 'offer' : 'none',
+                image: item.product.images && item.product.images.length > 0 ? item.product.images[0] : null,
+                status: 'processing'
+            };
+        });
+
+        const shipping = subtotal > 0 ? 10 : 0;
+        const tax = 0;
+        let discount = 0;
+        let coupon = null;
+
+        if (couponCode && discountType === 'coupon') {
+            coupon = await Coupon.findOne({ code: couponCode, isActive: true });
             if (!coupon) {
                 return res.status(400).json({
                     success: false,
@@ -336,7 +362,7 @@ const processWalletPayment = async (req, res) => {
             }
 
             if (coupon.discountType === 'percentage') {
-                discount = (subtotal * coupon.discountAmount) / 100;
+                discount = (originalSubtotal * coupon.discountAmount) / 100;
                 if (coupon.maxDiscount && discount > coupon.maxDiscount) {
                     discount = coupon.maxDiscount;
                 }
@@ -348,9 +374,19 @@ const processWalletPayment = async (req, res) => {
                 discount = subtotal;
             }
             await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usedCount: 1 } });
+        } else {
+            discount = originalSubtotal - subtotal;
         }
 
-        const total = subtotal + shipping + tax - discount;
+        const total = subtotal + shipping + tax - (discountType === 'coupon' ? discount : 0);
+
+        // Validate amount
+        if (Math.abs(total - amount) > 0.01) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid order amount'
+            });
+        }
 
         // Check wallet balance
         const wallet = await WalletService.getWallet(userId);
@@ -361,22 +397,23 @@ const processWalletPayment = async (req, res) => {
             });
         }
 
-        // Create order items
-        const orderItems = cart.items.map(item => {
-            if (!item.product || !item.product._id) {
-                throw new Error(`Invalid product ID for item ${item._id}`);
+        // Decrement stock
+        for (const item of cart.items) {
+            const product = await Product.findById(item.product._id);
+            if (product.stock < item.quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Insufficient stock for ${item.product.name}`
+                });
             }
-            return {
-                productId: item.product._id,
-                quantity: item.quantity,
-                price: item.product.price,
-                status: 'processing'
-            };
-        });
+            await Product.findByIdAndUpdate(item.product._id, {
+                $inc: { stock: -item.quantity }
+            });
+        }
 
         // Generate a unique order ID
         const generateOrderId = () => {
-            return 'ORD' + Math.random().toString(36).substr(2, 9).toUpperCase();
+            return `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
         };
 
         // Create order
@@ -392,7 +429,13 @@ const processWalletPayment = async (req, res) => {
             tax,
             discount,
             status: 'processing',
-            couponCode: couponCode || null,
+            coupon: coupon ? {
+                code: coupon.code,
+                discountType: coupon.discountType,
+                discountAmount: coupon.discountAmount,
+                maxDiscount: coupon.maxDiscount || 0
+            } : null,
+            discountType: discountType || 'offer',
             date: new Date()
         });
 
@@ -417,7 +460,6 @@ const processWalletPayment = async (req, res) => {
                 select: 'name price images'
             });
 
-        // Render order confirmation page
         res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
         return res.render('user/orderConfirm', {
             order: completeOrder,
@@ -433,7 +475,6 @@ const processWalletPayment = async (req, res) => {
         });
     }
 };
-
 
 //RazorPay order
 const razorpayOrder = async (req, res) => {
@@ -464,7 +505,7 @@ const razorpayOrder = async (req, res) => {
 //Initiate razorpay payment
 const initiateRazorpayOrder = async (req, res) => {
     const token = req.cookies.jwt;
-    const { addressId } = req.body;
+    const { addressId, couponCode, discountType } = req.body;
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -488,7 +529,7 @@ const initiateRazorpayOrder = async (req, res) => {
 
         const cart = await Cart.findOne({ user: user._id }).populate({
             path: 'items.product',
-            select: 'name price images stock'
+            select: 'name price offerPercentage images stock'
         });
 
         if (!cart || !cart.items || cart.items.length === 0) {
@@ -497,16 +538,27 @@ const initiateRazorpayOrder = async (req, res) => {
                 message: 'Your cart is empty'
             });
         }
-        let subtotal = cart.items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+
+        let subtotal = 0;
+        let originalSubtotal = 0;
+        cart.items.forEach(item => {
+            const originalPrice = Number(item.product.price);
+            const discountedPrice = item.product.offerPercentage > 0
+                ? originalPrice * (1 - item.product.offerPercentage / 100)
+                : originalPrice;
+            const quantity = Number(item.quantity);
+
+            originalSubtotal += originalPrice * quantity;
+            subtotal += discountedPrice * quantity;
+        });
+
         let shipping = subtotal > 0 ? 10 : 0;
-        let tax = subtotal * 0.00;
-        let total = subtotal + shipping + tax;
-
-
+        let tax = 0;
         let discount = 0;
-        const couponCode = req.body.couponCode;
-        if (couponCode) {
-            const coupon = await Coupon.findOne({
+        let coupon = null;
+
+        if (couponCode && discountType === 'coupon') {
+            coupon = await Coupon.findOne({
                 code: couponCode,
                 isActive: true,
                 startDate: { $lte: new Date() },
@@ -515,26 +567,30 @@ const initiateRazorpayOrder = async (req, res) => {
 
             if (coupon && subtotal >= coupon.minimumPurchase) {
                 if (coupon.discountType === 'percentage') {
-                    discount = (subtotal * coupon.discountAmount) / 100;
+                    discount = (originalSubtotal * coupon.discountAmount) / 100;
                     if (coupon.maxDiscount && discount > coupon.maxDiscount) {
                         discount = coupon.maxDiscount;
                     }
                 } else {
                     discount = coupon.discountAmount;
                 }
-                total -= discount;
             }
+        } else {
+            discount = originalSubtotal - subtotal;
         }
+
+        const total = subtotal + shipping + tax - (discountType === 'coupon' ? discount : 0);
 
         const amount = Math.round(total * 100);
         const options = {
             amount: amount,
             currency: 'INR',
-            receipt: 'order_reciept_' + Date.now(),
+            receipt: `order_receipt_${Date.now()}`,
             notes: {
                 userId: user._id.toString(),
                 addressId: addressId,
-                couponCode: couponCode || ''
+                couponCode: couponCode || '',
+                discountType: discountType || 'offer'
             }
         };
 
@@ -546,9 +602,9 @@ const initiateRazorpayOrder = async (req, res) => {
             key: process.env.RAZORPAY_KEY_ID,
             amount: amount,
             userInfo: {
-                name: user.fname + ' ' + user.lname,
+                name: `${user.fname} ${user.lname}`,
                 email: user.email,
-                contact: user.phone || '',
+                contact: user.phone || ''
             }
         });
 
@@ -560,64 +616,90 @@ const initiateRazorpayOrder = async (req, res) => {
             error: error.message
         });
     }
-}
+};
 
 //Razorpay verification
 const verifyRazorpay = async (req, res) => {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, discountType } = req.body;
 
     try {
-        const body = razorpay_order_id + '|' + razorpay_payment_id;
+        const body = `${razorpay_order_id}|${razorpay_payment_id}`;
         const expectedSignature = crypto
             .createHmac('sha256', process.env.RAZORPAY_SECRET)
-            .update(body.toString())
+            .update(body)
             .digest('hex');
 
-        const isAuthentic = expectedSignature === razorpay_signature;
-
-        if (!isAuthentic) {
+        if (expectedSignature !== razorpay_signature) {
             return res.status(400).json({
                 success: false,
-                messge: 'Invalid payment signature'
+                message: 'Invalid payment signature'
             });
         }
 
         const razorpayOrder = await instance.orders.fetch(razorpay_order_id);
-
         const userId = razorpayOrder.notes.userId;
         const addressId = razorpayOrder.notes.addressId;
         const couponCode = razorpayOrder.notes.couponCode;
 
         const user = await User.findById(userId);
-        const cart = await Cart.findOne({ user: userId }).populate({
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        const address = await Address.findById(addressId);
+        if (!address || address.userId.toString() !== user._id.toString()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid address selected'
+            });
+        }
+
+        const cart = await Cart.findOne({ user: user._id }).populate({
             path: 'items.product',
-            select: 'name price images stock'
+            select: 'name price offerPercentage images stock'
         });
 
-        let totalAmount = 0;
-        const orderItems = cart.items
-            .filter(item => item.product)
-            .map(item => {
-                const product = item.product;
-                const price = Number(product.price);
-                const quantity = Number(item.quantity);
-
-                const itemTotal = price * quantity;
-                totalAmount += itemTotal;
-                return {
-                    productId: product._id,
-                    name: product.name,
-                    price: price,
-                    quantity: quantity,
-                    image: product.images && product.images.length > 0 ? product.images[0] : null,
-                    status: 'processing' // Since payment is completed
-                };
+        if (!cart || !cart.items || cart.items.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Your cart is empty'
             });
+        }
 
-        // Apply coupon discount if any
+        let subtotal = 0;
+        let originalSubtotal = 0;
+        const orderItems = cart.items.map(item => {
+            const originalPrice = Number(item.product.price);
+            const discountedPrice = item.product.offerPercentage > 0
+                ? originalPrice * (1 - item.product.offerPercentage / 100)
+                : originalPrice;
+            const quantity = Number(item.quantity);
+
+            originalSubtotal += originalPrice * quantity;
+            subtotal += discountedPrice * quantity;
+
+            return {
+                productId: item.product._id,
+                name: item.product.name,
+                price: discountedPrice,
+                originalPrice: originalPrice,
+                offerPercentage: item.product.offerPercentage || 0,
+                quantity: quantity,
+                discountApplied: item.product.offerPercentage > 0 ? 'offer' : 'none',
+                // image: item.product.images && item.images.length > 0 ? item.product.images[0] : null,
+                status: 'processing'
+            };
+        });
+
+        let shipping = subtotal > 0 ? 10 : 0;
+        let tax = 0;
         let discount = 0;
         let coupon = null;
-        if (couponCode) {
+
+        if (couponCode && discountType === 'coupon') {
             coupon = await Coupon.findOne({
                 code: couponCode,
                 isActive: true,
@@ -625,84 +707,87 @@ const verifyRazorpay = async (req, res) => {
                 endDate: { $gte: new Date() }
             });
 
-            if (coupon) {
-                if (totalAmount >= coupon.minimumPurchase && (coupon.maxUses === 0 || coupon.usedCount < coupon.maxUses)) {
-                    if (coupon.discountType === 'percentage') {
-                        discount = (totalAmount * coupon.discountAmount) / 100;
-                        if (coupon.maxDiscount && discount > coupon.maxDiscount) {
-                            discount = coupon.maxDiscount;
-                        }
-                    } else {
-                        discount = coupon.discountAmount;
+            if (coupon && subtotal >= coupon.minimumPurchase) {
+                if (coupon.discountType === 'percentage') {
+                    discount = (originalSubtotal * coupon.discountAmount) / 100;
+                    if (coupon.maxDiscount && discount > coupon.maxDiscount) {
+                        discount = coupon.maxDiscount;
                     }
-                    await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usedCount: 1 } });
+                } else {
+                    discount = coupon.discountAmount;
                 }
+                await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usedCount: 1 } });
             }
+        } else {
+            discount = originalSubtotal - subtotal;
         }
 
-        // Calculate final amount
-        totalAmount += 10 + (totalAmount * 0.00) - (discount || 0);
+        const total = subtotal + shipping + tax - (discountType === 'coupon' ? discount : 0);
 
-        // Create order in database
+        // Decrement stock
+        for (const item of cart.items) {
+            const product = await Product.findById(item.product._id);
+            if (product.stock < item.quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Insufficient stock for ${item.product.name}`
+                });
+            }
+            await Product.findByIdAndUpdate(item.product._id, {
+                $inc: { stock: -item.quantity }
+            });
+        }
+
         const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-        const newOrder = new Order({
+        const order = new Order({
             orderId,
-            userId: user._id,
-            addressId: addressId,
+            userId,
+            totalAmount: total,
+            addressId,
             items: orderItems,
-            status: 'processing', // Payment has been completed
-            totalAmount,
             paymentMethod: 'Razorpay',
-            paymentDetails: {
-                transactionId: razorpay_payment_id,
-                orderId: razorpay_order_id
-            },
-            date: new Date(),
+            subtotal,
+            shipping,
+            tax,
+            discount,
+            status: 'processing',
             coupon: coupon ? {
                 code: coupon.code,
                 discountType: coupon.discountType,
                 discountAmount: coupon.discountAmount,
-                maxDiscount: coupon.maxDiscount
+                maxDiscount: coupon.maxDiscount || 0
             } : null,
-            discount: discount || 0
+            discountType: discountType || 'offer',
+            date: new Date()
         });
 
-        const savedOrder = await newOrder.save();
-        // console.log('order saved', savedOrder._id);
+        await order.save();
+        await Cart.findOneAndDelete({ user: userId });
 
-        // Clear cart
-        await Cart.findOneAndDelete({ user: user._id });
-
-        // Fetch complete order with populated fields
-        const completeOrder = await Order.findById(savedOrder._id)
+        const completeOrder = await Order.findById(order._id)
             .populate('addressId')
             .populate({
                 path: 'items.productId',
                 select: 'name price images'
             });
 
-        const address = await Address.findById(addressId);
-        // console.log('Rendering orderConfirm.....');
-
         res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-
         return res.render('user/orderConfirm', {
             order: completeOrder,
             user,
-            address,
-            redirectUrl: '/user/placeOrder'
+            address: completeOrder.addressId
         });
 
     } catch (error) {
-        // console.error('Error verifying Razorpay payment:', error);
-        res.status(500).json({
+        console.error('Error verifying Razorpay payment:', error);
+        return res.status(500).json({
             success: false,
             message: 'Error verifying payment',
             error: error.message
         });
     }
-}
+};
 
 //Load the orders
 const loadMyOrders = async (req, res) => {
@@ -809,15 +894,19 @@ const loadOrderDetails = async (req, res) => {
             .populate('addressId')
             .populate({
                 path: 'items.productId',
-                select: 'name price images'
+                select: 'name price images discount'
             });
 
         if (!order) {
-            return res.redirect('/user/orders');
+            return res.redirect('/user/myOrders');
         }
 
         // For the cancel order functionality
-        const canCancel = order.status === 'pending';
+        const canCancel = order.status !== 'delivered' && order.status !== 'cancelled' && order.status !== 'returned' &&
+        order.items.some(item => item.status !== 'delivered' && item.status !== 'cancelled' && item.status !== 'returned');
+
+        //log order for check
+        // console.log(order);
 
         res.render('user/orderDetails', {
             order,
@@ -930,7 +1019,6 @@ const cancelOrderItem = async (req, res) => {
             });
         }
 
-        // Try finding item by item._id or productId
         const item = order.items.find(
             item => item._id.toString() === itemId || item.productId.toString() === itemId
         );
@@ -942,7 +1030,13 @@ const cancelOrderItem = async (req, res) => {
             });
         }
 
-        console.log('Canceling item:', JSON.stringify(item, null, 2));
+        // console.log('Canceling item:', JSON.stringify(item, null, 2));
+        // console.log('Order discount:', order.discount);
+
+        // Validate price and quantity
+        if (!item.price || item.price <= 0 || !item.quantity || item.quantity <= 0) {
+            throw new Error(`Invalid price or quantity for item ${item._id}`);
+        }
 
         // Restore product stock
         await Product.findByIdAndUpdate(
@@ -967,12 +1061,14 @@ const cancelOrderItem = async (req, res) => {
             }
             const discountRatio = Number(order.discount) / totalSubtotal;
             refundAmount = itemSubtotal * (1 - discountRatio);
+            // console.log('Discount calculation:', { totalSubtotal, discount: order.discount, discountRatio, refundAmount });
         } else {
             refundAmount = itemSubtotal;
+            // console.log('No discount applied, refundAmount equals itemSubtotal:', refundAmount);
         }
 
         refundAmount = Math.max(0, Number(refundAmount.toFixed(2)));
-        console.log('Refund amount:', refundAmount, 'for item subtotal:', itemSubtotal);
+        // console.log('Final refund amount:', refundAmount, 'for item subtotal:', itemSubtotal);
 
         // Update item status and refund details
         item.status = 'cancelled';
@@ -988,9 +1084,9 @@ const cancelOrderItem = async (req, res) => {
                     order._id,
                     `Refund for cancelled item in order #${order.orderId}`
                 );
-                console.log('Refund processed to wallet:', refundAmount);
+                // console.log('Refund processed to wallet:', refundAmount);
             } catch (walletError) {
-                console.error('Wallet refund failed:', walletError);
+                // console.error('Wallet refund failed:', walletError);
                 throw new Error('Failed to process refund to wallet');
             }
         }
@@ -1012,7 +1108,7 @@ const cancelOrderItem = async (req, res) => {
             order.refundStatus = order.paymentMethod !== 'COD' ? 'partial' : 'none';
         }
 
-        console.log('Updated order totalAmount:', order.totalAmount, 'refundStatus:', order.refundStatus);
+        // console.log('Updated order totalAmount:', order.totalAmount, 'refundStatus:', order.refundStatus);
 
         await order.save();
 

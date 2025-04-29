@@ -1,17 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+
 <head>
     <title>My Cart | WaveTunes</title>
     <%- include('./partials/user/header') %>
-    <style>
-        /* Reuse styles from wishlist page */
-        .cart-item {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
+        <style>
+            /* Reuse styles from wishlist page */
+            .cart-item {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
 
-        .cart-item:hover {
-            transform: scale(1.02);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-    </style>
+            .cart-item:hover {
+                transform: scale(1.02);
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+        </style>
 </head>
 
 <body>
@@ -26,7 +29,7 @@
 
         <h1 class="text-3xl font-bold mb-8 text-white">My Cart</h1>
 
-        <% if (cart && cart.items && cart.items.length > 0) { %>
+        <% if (cart && cart.items && cart.items.length> 0) { %>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Cart Items Column -->
                 <div class="lg:col-span-2 space-y-6">
@@ -34,15 +37,14 @@
                         <div class="bg-white rounded-lg shadow-md overflow-hidden cart-item">
                             <div class="flex flex-col sm:flex-row">
                                 <div class="w-full sm:w-1/3 p-4">
-                                    <% if (item.product.images && item.product.images.length > 0) { %>
-                                        <img src="<%= item.product.images[0].url %>" 
-                                             alt="<%= item.product.name %>" 
-                                             class="w-full h-48 object-contain">
-                                    <% } else { %>
-                                        <div class="bg-gray-100 h-48 flex items-center justify-center">
-                                            <p class="text-gray-500">No image available</p>
-                                        </div>
-                                    <% } %>
+                                    <% if (item.product.images && item.product.images.length> 0) { %>
+                                        <img src="<%= item.product.images[0].url %>" alt="<%= item.product.name %>"
+                                            class="w-full h-48 object-contain">
+                                        <% } else { %>
+                                            <div class="bg-gray-100 h-48 flex items-center justify-center">
+                                                <p class="text-gray-500">No image available</p>
+                                            </div>
+                                            <% } %>
                                 </div>
 
                                 <div class="w-full sm:w-2/3 p-4">
@@ -50,53 +52,60 @@
                                         <h2 class="text-xl font-semibold text-gray-800">
                                             <%= item.product.name %>
                                         </h2>
-                                        <button onclick="removeFromCart('<%= item.product._id %>')" 
-                                                class="text-red-500 hover:text-red-600 transition">
-                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        <button onclick="removeFromCart('<%= item.product._id %>')"
+                                            class="text-red-500 hover:text-red-600 transition">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"></path>
                                             </svg>
                                         </button>
                                     </div>
 
                                     <div class="flex items-center mb-4">
                                         <div class="mr-4">
-                                            <label for="quantity-<%= item.product._id %>" class="block text-sm font-medium text-gray-700">Quantity</label>
-                                            <div class="flex items-center">
-                                                <button onclick="updateQuantity('<%= item.product._id %>', -1)" 
-                                                        class="bg-gray-200 text-gray-700 px-2 py-1 rounded-l">-</button>
-                                                <input type="number" 
-                                                       id="quantity-<%= item.product._id %>" 
-                                                       value="<%= item.quantity %>" 
-                                                       min="1" 
-                                                       max="<%= item.product.stock %>"
-                                                       onchange="updateQuantity('<%= item.product._id %>', this.value - `<%= item.quantity %>`)"
-                                                       class="w-16 text-center border border-gray-300 py-1">
-                                                <button onclick="updateQuantity('<%= item.product._id %>', 1)" 
-                                                        class="bg-gray-200 text-gray-700 px-2 py-1 rounded-r">+</button>
+                                            <label for="quantity-<%= item.product._id %>"
+                                                class="block text-sm font-medium text-gray-700">Quantity</label>
+                                            <div class="flex items-center border border-gray-300 rounded-md">
+                                                <button type="button"
+                                                    onclick="decrementQuantity('<%= item.product._id %>', '<%= Math.min(item.product.stock, 5) %>')"
+                                                    class="bg-gray-200 text-gray-700 px-2 py-1 rounded-l">-</button>
+                                                <input type="number" id="quantity-<%= item.product._id %>"
+                                                    name="quantity" value="<%= item.quantity %>" min="1"
+                                                    max="<%= Math.min(item.product.stock, 5) %>"
+                                                    class="w-16 text-center border-0 py-1 focus:ring-0" readonly>
+                                                <button type="button"
+                                                    onclick="incrementQuantity('<%= item.product._id %>', '<%= Math.min(item.product.stock, 5) %>')"
+                                                    class="bg-gray-200 text-gray-700 px-2 py-1 rounded-r">+</button>
                                             </div>
                                         </div>
 
                                         <div>
-                                            <span class="text-2xl font-bold text-gray-900">
-                                                ₹<%= item.product.price %>
-                                            </span>
-                                            <% if (item.product.originalPrice && item.product.originalPrice > item.product.price) { %>
-                                                <span class="text-sm text-gray-500 line-through ml-2">
-                                                    ₹<%= (item.product.originalPrice * item.quantity).toFixed(2) %>
+                                            <% if (item.product.offerPercentage> 0) { %>
+                                                <span class="text-2xl font-bold text-gray-900">
+                                                    ₹<%= (item.product.price * (1 - item.product.offerPercentage /
+                                                        100)).toFixed(2) %>
                                                 </span>
-                                            <% } %>
+                                                <span class="text-sm text-gray-500 line-through ml-2">
+                                                    ₹<%= item.product.price.toFixed(2) %>
+                                                </span>
+                                                <% } else { %>
+                                                    <span class="text-2xl font-bold text-gray-900">
+                                                        ₹<%= item.product.price.toFixed(2) %>
+                                                    </span>
+                                                    <% } %>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    <% }); %>
+                        <% }); %>
                 </div>
 
                 <!-- Order Summary Column -->
                 <div class="bg-white rounded-lg shadow-md p-6">
                     <h2 class="text-2xl font-semibold mb-6 text-gray-800">Order Summary</h2>
-                    
+
                     <div class="space-y-4 mb-6">
                         <div class="flex justify-between">
                             <span class="text-gray-700">Subtotal</span>
@@ -117,24 +126,28 @@
                         </div>
                     </div>
 
-                    <button onclick="proceedToCheckout()" 
-                            class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-md transition">
+                    <button onclick="proceedToCheckout()"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-md transition">
                         Proceed to Checkout
                     </button>
                 </div>
             </div>
-        <% } else { %>
-            <div class="bg-white rounded-lg p-8 text-center">
-                <svg class="mx-auto mb-4 w-20 h-20 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                </svg>
-                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Your Cart is Empty</h2>
-                <p class="text-gray-600 mb-6">Looks like you haven't added any items to your cart yet.</p>
-                <a href="/user/products" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition">
-                    Continue Shopping
-                </a>
-            </div>
-        <% } %>
+            <% } else { %>
+                <div class="bg-white rounded-lg p-8 text-center">
+                    <svg class="mx-auto mb-4 w-20 h-20 text-gray-400" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z">
+                        </path>
+                    </svg>
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Your Cart is Empty</h2>
+                    <p class="text-gray-600 mb-6">Looks like you haven't added any items to your cart yet.</p>
+                    <a href="/user/products"
+                        class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition">
+                        Continue Shopping
+                    </a>
+                </div>
+                <% } %>
     </div>
 
     <script>
@@ -148,38 +161,59 @@
                     productId: productId
                 }),
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire({
-                        title: 'Success!',
-                        text: 'Product removed from cart!',
-                        icon: 'success',
-                        confirmButtonColor: '#3B82F6'
-                    }).then(() => {
-                        location.reload(); // Reload to update cart
-                    });
-                } else {
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: 'Product removed from cart!',
+                            icon: 'success',
+                            confirmButtonColor: '#3B82F6'
+                        }).then(() => {
+                            location.reload(); // Reload to update cart
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.message || 'Failed to remove from cart',
+                            icon: 'error',
+                            confirmButtonColor: '#EF4444'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
                     Swal.fire({
                         title: 'Error',
-                        text: data.message || 'Failed to remove from cart',
+                        text: 'An error occurred. Please try again.',
                         icon: 'error',
                         confirmButtonColor: '#EF4444'
                     });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({
-                    title: 'Error',
-                    text: 'An error occurred. Please try again.',
-                    icon: 'error',
-                    confirmButtonColor: '#EF4444'
                 });
-            });
         }
 
-        function updateQuantity(productId, quantityChange) {
+        function incrementQuantity(productId, max) {
+            const quantityInput = document.getElementById(`quantity-${productId}`);
+            const currentValue = parseInt(quantityInput.value) || 1;
+            const maxQuantity = parseInt(max) || 5;
+            if (currentValue < maxQuantity) {
+                const newQuantity = currentValue + 1;
+                quantityInput.value = newQuantity;
+                updateCartQuantity(productId, newQuantity);
+            }
+        }
+
+        function decrementQuantity(productId, max) {
+            const quantityInput = document.getElementById(`quantity-${productId}`);
+            const currentValue = parseInt(quantityInput.value) || 1;
+            if (currentValue > 1) {
+                const newQuantity = currentValue - 1;
+                quantityInput.value = newQuantity;
+                updateCartQuantity(productId, newQuantity);
+            }
+        }
+
+        function updateCartQuantity(productId, quantity) {
             fetch('/user/cart/updateQuantity', {
                 method: 'PUT',
                 headers: {
@@ -187,37 +221,48 @@
                 },
                 body: JSON.stringify({
                     productId: productId,
-                    quantityChange: quantityChange
+                    quantity: quantity
                 }),
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload(); // Reload to update cart
-                } else {
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload(); // Reload to update cart
+                    } else {
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.message || 'Failed to update quantity',
+                            icon: 'error',
+                            confirmButtonColor: '#EF4444'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
                     Swal.fire({
                         title: 'Error',
-                        text: data.message || 'Failed to update quantity',
+                        text: 'An error occurred. Please try again.',
                         icon: 'error',
                         confirmButtonColor: '#EF4444'
                     });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({
-                    title: 'Error',
-                    text: 'An error occurred. Please try again.',
-                    icon: 'error',
-                    confirmButtonColor: '#EF4444'
                 });
-            });
         }
 
         function proceedToCheckout() {
             window.location.href = '/user/checkout';
         }
+
+        // Prevent manual input changes
+        document.querySelectorAll('input[name="quantity"]').forEach(input => {
+            input.addEventListener('input', function (e) {
+                e.preventDefault();
+                const max = parseInt(this.max) || 5;
+                this.value = Math.max(1, Math.min(max, parseInt(this.value) || 1));
+            });
+        });
     </script>
 
     <%- include('./partials/user/footer') %>
 </body>
+
+</html>
