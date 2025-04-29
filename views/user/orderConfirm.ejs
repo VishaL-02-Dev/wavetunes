@@ -88,13 +88,6 @@
                 font-size: 0.875rem;
                 display: block;
             }
-
-            .debug-info {
-                color: #6b7280;
-                font-size: 0.75rem;
-                font-style: italic;
-            }
-
             @media print {
                 .no-print {
                     display: none;
@@ -198,11 +191,6 @@
                                         <%= item.productId ? item.productId.name : 'Unknown Product' %>
                                     </h3>
                                     <p class="text-gray-600">Qty: <%= item.quantity %>
-                                    </p>
-                                    <p class="debug-info">
-                                        Debug: discount = <%= item.discount !==undefined ? item.discount.toFixed(2)
-                                            : 'undefined' %>,
-                                            price = <%= item.price !==undefined ? item.price.toFixed(2) : 'undefined' %>
                                     </p>
                                 </div>
                                 <div class="text-right">
