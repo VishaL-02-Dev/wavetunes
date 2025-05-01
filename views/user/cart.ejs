@@ -196,11 +196,20 @@
             const quantityInput = document.getElementById(`quantity-${productId}`);
             const currentValue = parseInt(quantityInput.value) || 1;
             const maxQuantity = parseInt(max) || 5;
-            if (currentValue < maxQuantity) {
-                const newQuantity = currentValue + 1;
-                quantityInput.value = newQuantity;
-                updateCartQuantity(productId, newQuantity);
+
+            if (currentValue >= maxQuantity) {
+                Swal.fire({
+                    title: 'Maximum Quantity Reached',
+                    text: `You cannot add more than ${maxQuantity} of this item.`,
+                    icon: 'warning',
+                    confirmButtonColor: '#EF4444'
+                });
+                return;
             }
+
+            const newQuantity = currentValue + 1;
+            quantityInput.value = newQuantity;
+            updateCartQuantity(productId, newQuantity);
         }
 
         function decrementQuantity(productId, max) {
@@ -214,6 +223,7 @@
         }
 
         function updateCartQuantity(productId, quantity) {
+            // console.log('Sending update request:', { productId, quantity });
             fetch('/user/cart/updateQuantity', {
                 method: 'PUT',
                 headers: {
@@ -227,8 +237,9 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        location.reload(); // Reload to update cart
+                        location.reload();
                     } else {
+                        // console.log('Update failed:', data.message);
                         Swal.fire({
                             title: 'Error',
                             text: data.message || 'Failed to update quantity',
@@ -238,7 +249,7 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    console.error('Fetch error:', error);
                     Swal.fire({
                         title: 'Error',
                         text: 'An error occurred. Please try again.',

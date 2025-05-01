@@ -231,60 +231,78 @@ const updateQuantity = async (req, res) => {
         const userId = decoded.id;
         const { productId, quantity } = req.body;
 
-        if (!productId || !Number.isInteger(quantity)) {
+        // Validate productId and quantity
+        if (!productId || typeof productId !== 'string' || !Number.isInteger(quantity)) {
+            console.log('Invalid input:', { productId, quantity });
             return res.status(400).json({
                 success: false,
                 message: 'Invalid product ID or quantity'
             });
         }
 
+        // Find and populate cart
         const cart = await Cart.findOne({ user: userId }).populate({
             path: 'items.product',
             select: 'name price offerPercentage images stock'
         });
         if (!cart) {
+            console.log('Cart not found for user:', userId);
             return res.status(404).json({
                 success: false,
                 message: 'Cart not found'
             });
         }
 
+        // Log cart items and productId for debugging
+        // console.log('Cart items:', cart.items.map(item => ({
+        //     productId: item.product?._id?.toString(),
+        //     productName: item.product?.name
+        // })));
+        // console.log('Received productId:', productId);
+
+        // Find item in cart
         const itemIndex = cart.items.findIndex(item =>
-            item.product.toString() === productId
+            item.product && item.product._id && item.product._id.toString() === productId
         );
 
         if (itemIndex === -1) {
+            console.log('Item not found in cart for productId:', productId);
             return res.status(404).json({
                 success: false,
                 message: 'Item not in cart'
             });
         }
 
+        // Verify product exists
         const product = await Product.findById(productId);
         if (!product) {
+            console.log('Product not found for productId:', productId);
             return res.status(404).json({
                 success: false,
                 message: 'Product not found'
             });
         }
 
-        // Validate new quantity
+        // Handle quantity update
         if (quantity < 1) {
-            // Optionally remove item if quantity is 0 or negative
             cart.items.splice(itemIndex, 1);
+            // console.log('Removed item with productId:', productId);
         } else {
             const maxQuantity = Math.min(product.stock, 5);
             if (quantity > maxQuantity) {
+                // console.log('Quantity exceeds max:', { quantity, maxQuantity });
                 return res.status(400).json({
                     success: false,
                     message: `Quantity cannot exceed ${maxQuantity}`
                 });
             }
             cart.items[itemIndex].quantity = quantity;
+            // console.log('Updated quantity for productId:', productId, 'to:', quantity);
         }
 
-        // Recalculate cart totals using offerPercentage
+        // Recalculate cart totals
         cart.subtotal = cart.items.reduce((sum, item) => {
+            if (!item.product) return sum; // Skip invalid items
             const price = item.product.offerPercentage > 0
                 ? item.product.price * (1 - item.product.offerPercentage / 100)
                 : item.product.price;
@@ -294,15 +312,15 @@ const updateQuantity = async (req, res) => {
         cart.tax = cart.subtotal * 0.00;
         cart.total = cart.subtotal + cart.shipping + cart.tax;
 
-        // Log cart totals for debugging
-        // console.log('Cart totals:', {
+        // Save cart
+        await cart.save();
+
+        // console.log('Cart updated successfully:', {
         //     subtotal: cart.subtotal,
         //     shipping: cart.shipping,
         //     tax: cart.tax,
         //     total: cart.total
         // });
-
-        await cart.save();
 
         return res.status(200).json({
             success: true,

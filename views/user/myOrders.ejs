@@ -1,75 +1,6 @@
 <head>
     <title>My Orders | WaveTunes</title>
     <%- include('./partials/user/header') %>
-        <style>
-            .order-card {
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
-            }
-
-            .order-card:hover {
-                transform: scale(1.01);
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-            }
-
-            .status-badge {
-                font-size: 0.75rem;
-                padding: 0.25rem 0.5rem;
-                border-radius: 9999px;
-                font-weight: 500;
-            }
-
-            .status-pending {
-                background-color: #F59E0B;
-                color: white;
-            }
-
-            .status-processing {
-                background-color: #3B82F6;
-                color: white;
-            }
-
-            .status-shipped {
-                background-color: #8B5CF6;
-                color: white;
-            }
-
-            .status-delivered {
-                background-color: #10B981;
-                color: white;
-            }
-
-            .status-cancelled {
-                background-color: #EF4444;
-                color: white;
-            }
-
-            .order-preview-item {
-                position: relative;
-            }
-
-            .item-count-badge {
-                position: absolute;
-                top: -5px;
-                right: -5px;
-                background-color: #3B82F6;
-                color: white;
-                font-size: 0.7rem;
-                width: 20px;
-                height: 20px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .empty-orders {
-                min-height: 300px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-            }
-        </style>
 </head>
 
 <body>
@@ -82,410 +13,234 @@
             </ol>
         </nav>
 
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold text-white">My Orders</h1>
-            <a href="/" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition">
-                Continue Shopping
-            </a>
-        </div>
+        <h1 class="text-3xl font-bold mb-8 text-white">My Orders</h1>
 
-        <!-- Filters and Search -->
-        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-            <form action="/user/myOrders" method="GET" id="filterForm">
-                <input type="hidden" name="limit" value="<%= limit %>" id="limitInput">
-                <div class="flex flex-col md:flex-row gap-4">
-                    <div class="flex-grow">
-                        <input type="text" name="search" placeholder="Search orders..." value="<%= search %>"
-                            class="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            oninput="debounceSearch()">
-                    </div>
-                    <div class="flex gap-2">
-                        <select name="status"
-                            class="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            onchange="document.getElementById('filterForm').submit();">
-                            <option value="" <%=status==='' ? 'selected' : '' %>>All Statuses</option>
-                            <option value="pending" <%=status==='pending' ? 'selected' : '' %>>Pending</option>
-                            <option value="processing" <%=status==='processing' ? 'selected' : '' %>>Processing</option>
-                            <option value="shipped" <%=status==='shipped' ? 'selected' : '' %>>Shipped</option>
-                            <option value="delivered" <%=status==='delivered' ? 'selected' : '' %>>Delivered</option>
-                            <option value="cancelled" <%=status==='cancelled' ? 'selected' : '' %>>Cancelled</option>
-                            <option value="returned" <%=status==='returned' ? 'selected' : '' %>>Returned</option>
-                        </select>
-                        <select name="sort"
-                            class="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            onchange="document.getElementById('filterForm').submit();">
-                            <option value="desc" <%=sortOrder==='desc' ? 'selected' : '' %>>Newest First</option>
-                            <option value="asc" <%=sortOrder==='asc' ? 'selected' : '' %>>Oldest First</option>
-                        </select>
-                    </div>
+        <!-- Filters -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <form id="filter-form" class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search by Order ID</label>
+                    <input type="text" id="search" name="search" value="<%= search %>"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter order ID">
+                </div>
+                <div class="flex-1">
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
+                    <select id="status" name="status"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Statuses</option>
+                        <option value="pending" <%=status==='pending' ? 'selected' : '' %>>Pending</option>
+                        <option value="processing" <%=status==='processing' ? 'selected' : '' %>>Processing</option>
+                        <option value="shipped" <%=status==='shipped' ? 'selected' : '' %>>Shipped</option>
+                        <option value="delivered" <%=status==='delivered' ? 'selected' : '' %>>Delivered</option>
+                        <option value="cancelled" <%=status==='cancelled' ? 'selected' : '' %>>Cancelled</option>
+                        <option value="returned" <%=status==='returned' ? 'selected' : '' %>>Returned</option>
+                    </select>
+                </div>
+                <div class="flex-1">
+                    <label for="sort" class="block text-sm font-medium text-gray-700 mb-1">Sort by Date</label>
+                    <select id="sort" name="sort"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="desc" <%=sortOrder==='desc' ? 'selected' : '' %>>Newest First</option>
+                        <option value="asc" <%=sortOrder==='asc' ? 'selected' : '' %>>Oldest First</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition">
+                        Apply Filters
+                    </button>
                 </div>
             </form>
         </div>
 
-        <% if (orders && orders.length> 0) { %>
-            <div class="space-y-6">
+        <!-- Orders List -->
+        <div class="space-y-6">
+            <% if (orders && orders.length> 0) { %>
                 <% orders.forEach(function(order) { %>
-                    <div class="bg-white rounded-lg shadow-md overflow-hidden order-card">
-                        <!-- Order Header -->
-                        <div class="bg-gray-50 p-4 border-b border-gray-200">
-                            <div class="flex flex-wrap justify-between items-center">
-                                <div>
-                                    <p class="text-sm text-gray-600">Order Placed</p>
-                                    <p class="font-medium">
-                                        <%= new Date(order.date).toLocaleDateString('en-US', { year: 'numeric' ,
-                                            month: 'long' , day: 'numeric' }) %>
-                                    </p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-600">Order Number</p>
-                                    <p class="font-medium">
-                                        <%= order.orderId %>
-                                    </p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-600">Total</p>
-                                    <p class="font-medium">₹<%= order.totalAmount.toFixed(2) %>
-                                    </p>
-                                </div>
-                                <div>
-                                    <span class="status-badge status-<%= order.status.toLowerCase() %>">
-                                        <%= order.status.charAt(0).toUpperCase() + order.status.slice(1) %>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Order Content -->
-                        <div class="p-6">
-                            <!-- Order Items Preview -->
-                            <div class="flex items-center mb-4">
-                                <div class="flex -space-x-2 mr-4">
-                                    <% let displayLimit=Math.min(3, order.items.length); %>
-                                        <% for (let i=0; i < displayLimit; i++) { %>
-                                            <div
-                                                class="order-preview-item h-16 w-16 bg-gray-100 border border-gray-200 rounded-md overflow-hidden">
-                                                <img src="<%= order.items[i].productId && order.items[i].productId.images && order.items[i].productId.images.length > 0 ? order.items[i].productId.images[0].url : '/images/product-placeholder.jpg' %>"
-                                                    alt="<%= order.items[i].productId && order.items[i].productId.name ? order.items[i].productId.name : 'Product' %>"
-                                                    class="h-full w-full object-cover">
-                                                <% if (i===displayLimit - 1 && order.items.length> displayLimit) { %>
-                                                    <div class="item-count-badge">+<%= order.items.length - displayLimit
-                                                            %>
-                                                    </div>
-                                                    <% } %>
-                                            </div>
-                                            <% } %>
-                                </div>
-                                <div class="flex-grow">
-                                    <p class="text-gray-800">
-                                        <% if (order.items.length===1) { %>
-                                            <%= order.items[0].productId && order.items[0].productId.name ?
-                                                order.items[0].productId.name : 'Unknown Product' %>
-                                                <% } else { %>
-                                                    <%= order.items[0].productId && order.items[0].productId.name ?
-                                                        order.items[0].productId.name : 'Unknown Product' %>
-                                                        and <%= order.items.length - 1 %> other item<%=
-                                                                order.items.length - 1 !==1 ? 's' : '' %>
-                                                                <% } %>
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Shipping Address Summary -->
-                            <div class="mb-4 text-sm text-gray-600">
-                                <p>Shipping to: <%= order.shippingAddress && order.shippingAddress.addressType ?
-                                        order.shippingAddress.addressType : 'Unknown' %> Address</p>
-                                <p>
-                                    <%= order.shippingAddress && order.shippingAddress.city ? order.shippingAddress.city
-                                        : 'Unknown' %>,
-                                        <%= order.shippingAddress && order.shippingAddress.state ?
-                                            order.shippingAddress.state : 'Unknown' %> -
-                                            <%= order.shippingAddress && order.shippingAddress.pinCode ?
-                                                order.shippingAddress.pinCode : 'Unknown' %>
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h2 class="text-lg font-semibold text-gray-800">Order #<%= order.orderId %>
+                                </h2>
+                                <p class="text-sm text-gray-600">
+                                    Placed on <%= order.date.toLocaleDateString('en-US', { year: 'numeric' ,
+                                        month: 'long' , day: 'numeric' }) %>
                                 </p>
                             </div>
-
-                            <!-- Delivery Timeline Preview -->
-                            <div class="flex items-center mb-4">
-                                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                    <% let progressWidth=0; %>
-                                        <% if (order.status==='pending' ) { progressWidth=25; } %>
-                                            <% if (order.status==='processing' ) { progressWidth=50; } %>
-                                                <% if (order.status==='shipped' ) { progressWidth=75; } %>
-                                                    <% if (order.status==='delivered' ) { progressWidth=100; } %>
-                                                        <div class="bg-blue-600 h-2.5 rounded-full"
-                                                            style="width: '<%= progressWidth %>%' "></div>
-                                </div>
-                            </div>
-
-                            <!-- Actions -->
-                            <div class="flex flex-wrap gap-3 justify-end">
-                                <a href="/user/orders/<%= order._id %>"
-                                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-sm transition">
-                                    View Order Details
-                                </a>
-                                <% if (order.status !=='delivered' && order.status !=='cancelled' && order.status
-                                    !=='returned' ) { %>
-                                    <button
-                                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium text-sm transition"
-                                        onclick="cancelOrder('<%= order._id %>')">
-                                        Cancel Order
-                                    </button>
-                                    <% } %>
-                                        <% if (order.status==='delivered' && order.status !=='returned' ) { %>
-                                            <button
-                                                class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium text-sm transition"
-                                                onclick="returnOrder('<%= order._id %>')">
-                                                Return Order
-                                            </button>
-                                            <% } %>
-                                                <% if (order.status==='delivered' ) { %>
-                                                    <a href="/user/reviews/create?orderId=<%= order._id %>"
-                                                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium text-sm transition">
-                                                        Write a Review
-                                                    </a>
-                                                    <% } %>
-                            </div>
+                            <span
+                                class="text-sm font-medium px-2 py-1 rounded-full <%= order.status === 'pending' ? 'bg-yellow-500 text-white' : order.status === 'processing' ? 'bg-blue-500 text-white' : order.status === 'shipped' ? 'bg-green-500 text-white' : order.status === 'delivered' ? 'bg-green-600 text-white' : order.status === 'cancelled' ? 'bg-red-500 text-white' : 'bg-gray-500 text-white' %>">
+                                <%= order.status.charAt(0).toUpperCase() + order.status.slice(1) %>
+                            </span>
+                        </div>
+                        <div class="mb-4">
+                            <p class="text-sm text-gray-700">
+                                <span class="font-medium">Total Amount:</span> ₹<%= order.totalAmount.toFixed(2) %>
+                            </p>
+                            <p class="text-sm text-gray-700">
+                                <span class="font-medium">Payment Method:</span>
+                                <%= order.paymentMethod %>
+                            </p>
+                            <p class="text-sm text-gray-700">
+                                <span class="font-medium">Shipping Address:</span>
+                                <%= order.shippingAddress.address %>, <%= order.shippingAddress.city %>, <%=
+                                            order.shippingAddress.state %> - <%= order.shippingAddress.pinCode %>
+                            </p>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <a href="/user/orders/<%= order._id %>"
+                                class="text-blue-600 hover:text-blue-800 font-medium">
+                                View Details
+                            </a>
+                            <% if (order.status==='pending' && order.paymentMethod==='Razorpay' ) { %>
+                                <button type="button"
+                                    class="retry-payment-btn bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition"
+                                    data-order-id="<%= order._id %>">
+                                    Retry Payment
+                                </button>
+                                <% } %>
                         </div>
                     </div>
                     <% }); %>
+                        <% } else { %>
+                            <div class="text-center text-gray-600">
+                                <p>No orders found.</p>
+                            </div>
+                            <% } %>
+        </div>
+
+        <!-- Pagination -->
+        <% if (totalPages> 1) { %>
+            <div class="mt-8 flex justify-center space-x-2">
+                <% for(let i=1; i <=totalPages; i++) { %>
+                    <a href="/user/myOrders?page=<%= i %>&limit=<%= limit %>&status=<%= status %>&search=<%= search %>&sort=<%= sortOrder %>"
+                        class="px-4 py-2 border border-gray-300 rounded-md <%= i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100' %>">
+                        <%= i %>
+                    </a>
+                    <% } %>
             </div>
-
-            <!-- Pagination -->
-            <% if (totalPages> 1) { %>
-                <div class="mt-8 flex justify-center">
-                    <nav class="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                        <!-- Previous Page Button -->
-                        <% if (currentPage> 1) { %>
-                            <a href="/user/myOrders?page=<%= currentPage - 1 %>&limit=<%= limit %>&status=<%= encodeURIComponent(status) %>&search=<%= encodeURIComponent(search) %>&sort=<%= sortOrder %>"
-                                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                                <span class="sr-only">Previous</span>
-                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
-                                    fill="currentColor" aria-hidden="true">
-                                    <path fill-rule="evenodd"
-                                        d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                            </a>
-                            <% } else { %>
-                                <span
-                                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
-                                    <span class="sr-only">Previous</span>
-                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
-                                        fill="currentColor" aria-hidden="true">
-                                        <path fill-rule="evenodd"
-                                            d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                                            clip-rule="evenodd" />
-                                    </svg>
-                                </span>
-                                <% } %>
-
-                                    <!-- Page Numbers -->
-                                    <% let startPage=Math.max(1, currentPage - 2); %>
-                                        <% let endPage=Math.min(totalPages, startPage + 4); %>
-                                            <% if (endPage - startPage < 4) { startPage=Math.max(1, endPage - 4); } %>
-
-                                                <% if (startPage> 1) { %>
-                                                    <a href="/user/myOrders?page=1&limit=<%= limit %>&status=<%= encodeURIComponent(status) %>&search=<%= encodeURIComponent(search) %>&sort=<%= sortOrder %>"
-                                                        class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">1</a>
-                                                    <% if (startPage> 2) { %>
-                                                        <span
-                                                            class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>
-                                                        <% } %>
-                                                            <% } %>
-
-                                                                <% for (let i=startPage; i <=endPage; i++) { %>
-                                                                    <% if (i===currentPage) { %>
-                                                                        <a href="#" aria-current="page"
-                                                                            class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-medium text-blue-600">
-                                                                            <%= i %>
-                                                                        </a>
-                                                                        <% } else { %>
-                                                                            <a href="/user/myOrders?page=<%= i %>&limit=<%= limit %>&status=<%= encodeURIComponent(status) %>&search=<%= encodeURIComponent(search) %>&sort=<%= sortOrder %>"
-                                                                                class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                                                                <%= i %>
-                                                                            </a>
-                                                                            <% } %>
-                                                                                <% } %>
-
-                                                                                    <% if (endPage < totalPages) { %>
-                                                                                        <% if (endPage < totalPages - 1)
-                                                                                            { %>
-                                                                                            <span
-                                                                                                class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>
-                                                                                            <% } %>
-                                                                                                <a href="/user/myOrders?page=<%= totalPages %>&limit=<%= limit %>&status=<%= encodeURIComponent(status) %>&search=<%= encodeURIComponent(search) %>&sort=<%= sortOrder %>"
-                                                                                                    class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                                                                                    <%= totalPages %>
-                                                                                                </a>
-                                                                                                <% } %>
-
-                                                                                                    <!-- Next Page Button -->
-                                                                                                    <% if (currentPage <
-                                                                                                        totalPages) { %>
-                                                                                                        <a href="/user/myOrders?page=<%= currentPage + 1 %>&limit=<%= limit %>&status=<%= encodeURIComponent(status) %>&search=<%= encodeURIComponent(search) %>&sort=<%= sortOrder %>"
-                                                                                                            class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                                                                                                            <span
-                                                                                                                class="sr-only">Next</span>
-                                                                                                            <svg class="h-5 w-5"
-                                                                                                                xmlns="http://www.w3.org/2000/svg"
-                                                                                                                viewBox="0 0 20 20"
-                                                                                                                fill="currentColor"
-                                                                                                                aria-hidden="true">
-                                                                                                                <path
-                                                                                                                    fill-rule="evenodd"
-                                                                                                                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                                                                                                                    clip-rule="evenodd" />
-                                                                                                            </svg>
-                                                                                                        </a>
-                                                                                                        <% } else { %>
-                                                                                                            <span
-                                                                                                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
-                                                                                                                <span
-                                                                                                                    class="sr-only">Next</span>
-                                                                                                                <svg class="h-5 w-5"
-                                                                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                                                                    viewBox="0 0 20 20"
-                                                                                                                    fill="currentColor"
-                                                                                                                    aria-hidden="true">
-                                                                                                                    <path
-                                                                                                                        fill-rule="evenodd"
-                                                                                                                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                                                                                                                        clip-rule="evenodd" />
-                                                                                                                </svg>
-                                                                                                            </span>
-                                                                                                            <% } %>
-                    </nav>
-                </div>
-                <% } %>
-                    <% } else { %>
-                        <!-- Empty Orders State -->
-                        <div class="bg-white rounded-lg shadow-md p-8 empty-orders">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-gray-400 mb-4" fill="none"
-                                viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                            </svg>
-                            <h2 class="text-2xl font-semibold text-gray-700 mb-2">No Orders Found</h2>
-                            <p class="text-gray-600 mb-6 text-center">You haven't placed any orders yet. Start shopping
-                                to see your orders here.</p>
-                            <a href="/"
-                                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition">
-                                Browse Products
-                            </a>
-                        </div>
-                        <% } %>
+            <% } %>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        let debounceTimeout;
-        function debounceSearch() {
-            clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(() => {
-                document.getElementById('filterForm').submit();
-            }, 500);
-        }
+        document.addEventListener('DOMContentLoaded', function () {
+            const filterForm = document.getElementById('filter-form');
+            const retryPaymentButtons = document.querySelectorAll('.retry-payment-btn');
 
-        function cancelOrder(orderId) {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: 'Do you want to cancel this order?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3B82F6',
-                cancelButtonColor: '#EF4444',
-                confirmButtonText: 'Yes, cancel it!',
-                cancelButtonText: 'No, keep it'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch(`/user/orders/${orderId}/cancel`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                Swal.fire({
-                                    title: 'Order Cancelled',
-                                    text: 'Your order has been cancelled successfully.',
-                                    icon: 'success',
-                                    confirmButtonColor: '#3B82F6'
-                                }).then(() => {
-                                    location.reload();
-                                });
-                            } else {
-                                Swal.fire({
-                                    title: 'Error',
-                                    text: data.message || 'There was an error cancelling your order.',
-                                    icon: 'error',
-                                    confirmButtonColor: '#EF4444'
-                                });
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            Swal.fire({
-                                title: 'Error',
-                                text: 'There was an error processing your request.',
-                                icon: 'error',
-                                confirmButtonColor: '#EF4444'
-                            });
-                        });
-                }
+            // Handle filter form submission
+            filterForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const search = document.getElementById('search').value;
+                const status = document.getElementById('status').value;
+                const sort = document.getElementById('sort').value;
+                window.location.href = `/user/myOrders?search=${encodeURIComponent(search)}&status=${status}&sort=${sort}&limit=<%= limit %>`;
             });
-        }
 
-        function returnOrder(orderId) {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: 'Do you want to return this order?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3B82F6',
-                cancelButtonColor: '#EF4444',
-                confirmButtonText: 'Yes, return it!',
-                cancelButtonText: 'No, keep it'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch(`/user/orders/${orderId}/return`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                Swal.fire({
-                                    title: 'Order Returned',
-                                    text: 'Your order has been returned successfully.',
-                                    icon: 'success',
-                                    confirmButtonColor: '#3B82F6'
-                                }).then(() => {
-                                    location.reload();
-                                });
-                            } else {
-                                Swal.fire({
-                                    title: 'Error',
-                                    text: data.message || 'There was an error returning your order.',
-                                    icon: 'error',
-                                    confirmButtonColor: '#EF4444'
-                                });
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            Swal.fire({
-                                title: 'Error',
-                                text: 'There was an error processing your request.',
-                                icon: 'error',
-                                confirmButtonColor: '#EF4444'
-                            });
+            // Handle retry payment
+            retryPaymentButtons.forEach(button => {
+                button.addEventListener('click', async function () {
+                    const orderId = this.getAttribute('data-order-id');
+                    this.disabled = true;
+                    this.textContent = 'Processing...';
+
+                    try {
+                        const response = await fetch('/user/checkout/retryRazorpayPayment', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ orderId })
                         });
-                }
+                        const data = await response.json();
+
+                        if (!data.success) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: data.message
+                            });
+                            this.disabled = false;
+                            this.textContent = 'Retry Payment';
+                            return;
+                        }
+
+                        const { order, key, amount, userInfo, pendingOrderId } = data;
+
+                        const options = {
+                            key: key,
+                            amount: order.amount,
+                            currency: 'INR',
+                            name: 'WaveTunes',
+                            description: 'Order Payment Retry',
+                            image: '/images/logo.png',
+                            order_id: order.id,
+                            handler: function (response) {
+                                // Create a form to submit the verification data to the server
+                                const form = document.createElement('form');
+                                form.method = 'POST';
+                                form.action = '/user/checkout/verify-razorpay';
+
+                                const fields = {
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                    discountType: order.notes.discountType
+                                };
+
+                                for (const [key, value] of Object.entries(fields)) {
+                                    const input = document.createElement('input');
+                                    input.type = 'hidden';
+                                    input.name = key;
+                                    input.value = value;
+                                    form.appendChild(input);
+                                }
+
+                                document.body.appendChild(form);
+                                form.submit();
+                            },
+                            prefill: {
+                                name: userInfo.name,
+                                email: userInfo.email,
+                                contact: userInfo.contact
+                            },
+                            notes: {
+                                address: 'WaveTunes Customer'
+                            },
+                            theme: {
+                                color: '#3B82F6'
+                            },
+                            modal: {
+                                ondismiss: function () {
+                                    Swal.fire({
+                                        icon: 'info',
+                                        title: 'Payment Cancelled',
+                                        text: 'Your order remains pending. You can retry the payment from My Orders.',
+                                        confirmButtonText: 'OK'
+                                    }).then(() => {
+                                        window.location.reload();
+                                    });
+                                }
+                            }
+                        };
+
+                        const rzp = new Razorpay(options);
+                        rzp.open();
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Error initiating payment retry'
+                        });
+                        console.error(error);
+                        this.disabled = false;
+                        this.textContent = 'Retry Payment';
+                    }
+                });
             });
-        }
+        });
     </script>
-
-    <%- include('./partials/user/footer') %>
 </body>
+</html>

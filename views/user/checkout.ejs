@@ -55,10 +55,11 @@
                 background-color: #8B5CF6;
                 color: white;
             }
+
             .strikethrough {
-            text-decoration: line-through;
-            color: #6b7280; 
-            font-size: 0.875rem; 
+                text-decoration: line-through;
+                color: #6b7280;
+                font-size: 0.875rem;
             }
         </style>
 </head>
@@ -77,7 +78,7 @@
 
         <h1 class="text-3xl font-bold mb-8 text-white">Checkout</h1>
 
-        <form id="checkout-form" method="POST" action="/user/placeOrder">
+        <form id="checkout-form" method="POST" action="/user/checkout/placeOrder">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Left Column - Shipping & Payment -->
                 <div class="lg:col-span-2 space-y-6">
@@ -348,7 +349,7 @@
                                                 ₹<%= ((item.product.price * (1 - item.product.offerPercentage / 100)) *
                                                     item.quantity).toFixed(2) %>
                                             </span>
-                                            <span class="strikethrough block ">
+                                            <span class="strikethrough block">
                                                 ₹<%= (item.product.price * item.quantity).toFixed(2) %>
                                             </span>
                                             <span class="offer-percentage block text-green-600">
@@ -411,7 +412,8 @@
                                             <%= coupon.code %> -
                                                 <% if (coupon.discountType==='percentage' ) { %>
                                                     <%= coupon.discountAmount %>% off <% if (coupon.maxDiscount) { %>
-                                                            (up to ₹<%= coupon.maxDiscount %>) <% } %>
+                                                            (up to ₹<%= coupon.maxDiscount %>)
+                                                                <% } %>
                                                                     <% } else { %>
                                                                         ₹<%= coupon.discountAmount %> off
                                                                             <% } %>
@@ -420,17 +422,15 @@
                                             <% } %>
                             </select>
                             <button type="button" id="applyCoupon"
-                                class="bg-blue-500 hover:bg-blue-200 text-gray-800 font-medium py-2 px-4 rounded-r-md transition m-1">
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-r-md transition">
                                 Apply
                             </button>
                         </div>
-                        <p id="coupon-description" class="text-sm text-gray-600 mt-1"></p>
-                        <input type="hidden" name="couponCode" id="hiddenCouponCode">
-                        <!-- Hidden field for form submission -->
-                        <input type="hidden" name="discountType" id="hiddenDiscountType">
+                        <p id="coupon-message" class="text-sm text-red-600 mt-2 hidden"></p>
                     </div>
+
                     <button type="submit" id="place-order-btn"
-                        class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-md transition">
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-md transition">
                         Place Order
                     </button>
                 </div>
@@ -438,186 +438,66 @@
         </form>
     </div>
 
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Initialize variables
-            const subtotal = parseFloat('<%= cart.subtotal %>');
-            const shipping = parseFloat('<%= cart.shipping %>');
-            const tax = parseFloat('<%= cart.tax %>');
-            let discount = 0;
-            let total = subtotal + shipping + tax;
-            let orderTotal = total;
-
-            // Check COD eligibility based on initial total
-            const codRadio = document.getElementById('cod');
-            if (orderTotal > 1000) {
-                codRadio.disabled = true;
-                if (codRadio.checked) {
-                    document.getElementById('credit-card').checked = true;
-                    document.getElementById('credit-card-form').classList.remove('hidden');
-                    document.getElementById('cod-form').classList.add('hidden');
-                }
-            }
-
-            // Toggle payment method forms
-            const creditCardRadio = document.getElementById('credit-card');
-            const razorpayRadio = document.getElementById('razorpay');
-            const walletRadio = document.getElementById('wallet');
-            const creditCardForm = document.getElementById('credit-card-form');
-            const razorpayForm = document.getElementById('razorpay-form');
-            const codForm = document.getElementById('cod-form');
-            const walletForm = document.getElementById('wallet-form');
-
-            // Fetch wallet balance on page load
-            fetchWalletBalance();
-
-            // Payment method change listeners
-            creditCardRadio.addEventListener('change', function () {
-                if (this.checked) {
-                    creditCardForm.classList.remove('hidden');
-                    razorpayForm.classList.add('hidden');
-                    walletForm.classList.add('hidden');
-                    codForm.classList.add('hidden');
-                    enablePlaceOrderButton();
-                }
-            });
-
-            razorpayRadio.addEventListener('change', function () {
-                if (this.checked) {
-                    creditCardForm.classList.add('hidden');
-                    razorpayForm.classList.remove('hidden');
-                    walletForm.classList.add('hidden');
-                    codForm.classList.add('hidden');
-                    enablePlaceOrderButton();
-                }
-            });
-
-            walletRadio.addEventListener('change', function () {
-                if (this.checked) {
-                    creditCardForm.classList.add('hidden');
-                    razorpayForm.classList.add('hidden');
-                    codForm.classList.add('hidden');
-                    walletForm.classList.remove('hidden');
-                    checkWalletBalance();
-                }
-            });
-
-            codRadio.addEventListener('change', function () {
-                if (this.checked) {
-                    creditCardForm.classList.add('hidden');
-                    razorpayForm.classList.add('hidden');
-                    walletForm.classList.add('hidden');
-                    codForm.classList.remove('hidden');
-                    enablePlaceOrderButton();
-                }
-            });
-
-            // Function to fetch wallet balance
-            function fetchWalletBalance() {
-                fetch('/user/wallet/balance')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            document.getElementById('available-balance').textContent = data.balance.toFixed(2);
-                            if (walletRadio.checked) {
-                                checkWalletBalance();
-                            }
-                        } else {
-                            console.error('Error fetching wallet balance:', data.message);
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-            }
-
-            // Function to check wallet balance
-            function checkWalletBalance() {
-                const walletBalance = parseFloat(document.getElementById('available-balance').textContent);
-                const insufficientFunds = document.getElementById('insufficient-funds');
-                const sufficientFunds = document.getElementById('sufficient-funds');
-                const placeOrderBtn = document.getElementById('place-order-btn');
-
-                if (walletBalance < orderTotal) {
-                    insufficientFunds.classList.remove('hidden');
-                    sufficientFunds.classList.add('hidden');
-                    placeOrderBtn.disabled = true;
-                    placeOrderBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                } else {
-                    insufficientFunds.classList.add('hidden');
-                    sufficientFunds.classList.remove('hidden');
-                    placeOrderBtn.disabled = false;
-                    placeOrderBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                }
-            }
-
-            // Function to enable place order button
-            function enablePlaceOrderButton() {
-                const placeOrderBtn = document.getElementById('place-order-btn');
-                placeOrderBtn.disabled = false;
-                placeOrderBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-
-            // Address selection
+            const checkoutForm = document.getElementById('checkout-form');
+            const placeOrderBtn = document.getElementById('place-order-btn');
+            const paymentMethodInputs = document.querySelectorAll('input[name="paymentMethod"]');
             const addressCards = document.querySelectorAll('.address-card');
-            addressCards.forEach(card => {
-                card.addEventListener('click', function () {
-                    const radioInput = this.querySelector('input[type="radio"]');
-                    radioInput.checked = true;
-                    addressCards.forEach(c => c.classList.remove('selected'));
-                    this.classList.add('selected');
-                });
-            });
-
-            // Toggle new address form
             const addNewAddressBtn = document.getElementById('add-new-address');
             const newAddressForm = document.getElementById('new-address-form');
             const cancelAddressBtn = document.getElementById('cancel-address');
+            const saveAddressBtn = document.getElementById('save-address');
+            const applyCouponBtn = document.getElementById('applyCoupon');
+            const couponCodeSelect = document.getElementById('couponCode');
+            const discountRow = document.getElementById('discount-row');
+            const discountAmount = document.getElementById('discount-amount');
+            const couponCodeDisplay = document.getElementById('coupon-code-display');
+            const totalAmount = document.getElementById('total-amount');
+            const removeCouponBtn = document.getElementById('remove-coupon');
+            const couponMessage = document.getElementById('coupon-message');
+            const walletForm = document.getElementById('wallet-form');
+            const availableBalance = document.getElementById('available-balance');
+            const insufficientFunds = document.getElementById('insufficient-funds');
+            const sufficientFunds = document.getElementById('sufficient-funds');
 
+            let selectedCoupon = null;
+            let discountType = 'offer';
+
+            // Toggle address selection
+            addressCards.forEach(card => {
+                card.addEventListener('click', function () {
+                    addressCards.forEach(c => c.classList.remove('selected'));
+                    this.classList.add('selected');
+                    const radio = this.querySelector('input[type="radio"]');
+                    radio.checked = true;
+                });
+            });
+
+            // Show/hide new address form
             if (addNewAddressBtn) {
                 addNewAddressBtn.addEventListener('click', function () {
                     newAddressForm.classList.remove('hidden');
-                    addNewAddressBtn.classList.add('hidden');
+                    document.getElementById('saved-addresses').classList.add('hidden');
+                    this.classList.add('hidden');
                 });
             }
 
             if (cancelAddressBtn) {
                 cancelAddressBtn.addEventListener('click', function () {
                     newAddressForm.classList.add('hidden');
+                    document.getElementById('saved-addresses').classList.remove('hidden');
                     addNewAddressBtn.classList.remove('hidden');
-                    const formFields = newAddressForm.querySelectorAll('input, select');
-                    formFields.forEach(field => {
-                        if (field.type === 'checkbox') field.checked = false;
-                        else field.value = '';
-                    });
                 });
             }
 
             // Save new address
-            const saveAddressBtn = document.getElementById('save-address');
             if (saveAddressBtn) {
-                saveAddressBtn.addEventListener('click', function () {
-                    const requiredFields = ['address', 'city', 'district', 'state', 'pinCode', 'phone'];
-                    let isValid = true;
-
-                    for (const field of requiredFields) {
-                        const input = document.getElementById(field);
-                        if (!input.value.trim()) {
-                            isValid = false;
-                            input.classList.add('border-red-500');
-                        } else {
-                            input.classList.remove('border-red-500');
-                        }
-                    }
-
-                    if (!isValid) {
-                        Swal.fire({
-                            title: 'Error',
-                            text: 'Please fill out all required fields for the address',
-                            icon: 'error',
-                            confirmButtonColor: '#EF4444'
-                        });
-                        return;
-                    }
-
+                saveAddressBtn.addEventListener('click', async function () {
                     const addressData = {
                         address: document.getElementById('address').value,
                         city: document.getElementById('city').value,
@@ -625,416 +505,327 @@
                         state: document.getElementById('state').value,
                         pinCode: document.getElementById('pinCode').value,
                         phone: document.getElementById('phone').value,
-                        type: document.getElementById('addressType').value,
+                        addressType: document.getElementById('addressType').value,
                         isDefault: document.getElementById('setDefault').checked
                     };
 
-                    fetch('/user/checkout/addAddress', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(addressData),
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                Swal.fire({
-                                    title: 'Success!',
-                                    text: 'Address saved successfully',
-                                    icon: 'success',
-                                    confirmButtonColor: '#3B82F6'
-                                }).then(() => location.reload());
-                            } else {
-                                Swal.fire({
-                                    title: 'Error',
-                                    text: data.message || 'Failed to save address',
-                                    icon: 'error',
-                                    confirmButtonColor: '#EF4444'
-                                });
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            Swal.fire({
-                                title: 'Error',
-                                text: 'An error occurred. Please try again.',
-                                icon: 'error',
-                                confirmButtonColor: '#EF4444'
-                            });
+                    try {
+                        const response = await fetch('/user/checkout/addAddress', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(addressData)
                         });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            window.location.reload();
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: data.message || 'Error saving address'
+                            });
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Error saving address'
+                        });
+                        console.error(error);
+                    }
                 });
             }
 
-            // Handle coupon application
-            document.getElementById('applyCoupon').addEventListener('click', function () {
-                const couponSelect = document.getElementById('couponCode');
-                const couponCode = couponSelect.value.trim();
-                const hiddenCouponCode = document.getElementById('hiddenCouponCode');
-                const hiddenDiscountType = document.getElementById('hiddenDiscountType');
+            // Toggle payment method forms
+            paymentMethodInputs.forEach(input => {
+                input.addEventListener('change', function () {
+                    document.getElementById('credit-card-form').classList.add('hidden');
+                    document.getElementById('razorpay-form').classList.add('hidden');
+                    document.getElementById('cod-form').classList.add('hidden');
+                    document.getElementById('wallet-form').classList.add('hidden');
 
-                if (!couponCode) {
-                    Swal.fire({ title: 'Error', text: 'Please select a coupon', icon: 'error', confirmButtonColor: '#EF4444' });
-                    return;
-                }
-
-                fetch('/user/checkout/apply-coupon', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ couponCode })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            const coupon = data.coupon;
-                            discount = data.discount;
-                            orderTotal = data.total;
-
-                            document.getElementById('coupon-code-display').textContent = coupon ? coupon.code : 'Offer';
-                            document.getElementById('discount-amount').textContent = `-₹${discount.toFixed(2)}`;
-                            document.getElementById('discount-row').classList.remove('hidden');
-                            document.getElementById('total-amount').textContent = `₹${orderTotal.toFixed(2)}`;
-                            hiddenCouponCode.value = coupon ? coupon.code : '';
-                            hiddenDiscountType.value = data.discountType;
-
-                            if (orderTotal > 1000) {
-                                codRadio.disabled = true;
-                                if (codRadio.checked) {
-                                    creditCardRadio.checked = true;
-                                    creditCardForm.classList.remove('hidden');
-                                    razorpayForm.classList.add('hidden');
-                                    walletForm.classList.add('hidden');
-                                    codForm.classList.add('hidden');
-                                }
-                            } else {
-                                codRadio.disabled = false;
-                            }
-
-                            if (walletRadio.checked) checkWalletBalance();
-
-                            Swal.fire({ title: 'Success!', text: `${data.discountType === 'coupon' ? 'Coupon' : 'Offer'} applied successfully!`, icon: 'success', confirmButtonColor: '#3B82F6' });
-                        } else {
-                            Swal.fire({ title: 'Error', text: data.message || 'Invalid coupon code', icon: 'error', confirmButtonColor: '#EF4444' });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        Swal.fire({ title: 'Error', text: 'An error occurred. Please try again.', icon: 'error', confirmButtonColor: '#EF4444' });
-                    });
-            });
-
-            // Handle coupon removal
-            document.getElementById('remove-coupon').addEventListener('click', function () {
-                Swal.fire({
-                    title: 'Remove Coupon',
-                    text: 'Are you sure you want to remove the applied coupon?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#EF4444',
-                    cancelButtonColor: '#6B7280',
-                    confirmButtonText: 'Yes, remove it',
-                    cancelButtonText: 'Cancel'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        discount = 0;
-                        orderTotal = subtotal + shipping + tax;
-
-                        document.getElementById('discount-row').classList.add('hidden');
-                        document.getElementById('total-amount').textContent = `₹${orderTotal.toFixed(2)}`;
-                        document.getElementById('coupon-code-display').textContent = '';
-                        document.getElementById('couponCode').selectedIndex = 0;
-                        document.getElementById('hiddenCouponCode').value = '';
-                        document.getElementById('hiddenDiscountType').value = '';
-
-                        if (orderTotal <= 1000) codRadio.disabled = false;
-                        if (walletRadio.checked) checkWalletBalance();
-
-                        Swal.fire({
-                            title: 'Coupon Removed',
-                            text: 'The coupon has been removed successfully.',
-                            icon: 'success',
-                            confirmButtonColor: '#3B82F6'
-                        });
+                    if (this.value === 'creditCard') {
+                        document.getElementById('credit-card-form').classList.remove('hidden');
+                    } else if (this.value === 'razorpay') {
+                        document.getElementById('razorpay-form').classList.remove('hidden');
+                    } else if (this.value === 'cod') {
+                        document.getElementById('cod-form').classList.remove('hidden');
+                    } else if (this.value === 'wallet') {
+                        document.getElementById('wallet-form').classList.remove('hidden');
+                        fetchWalletBalance();
                     }
                 });
             });
 
-            // Form submission handler
-            document.getElementById('checkout-form').addEventListener('submit', function (event) {
-                event.preventDefault();
+            // Fetch wallet balance
+            async function fetchWalletBalance() {
+                try {
+                    const response = await fetch('/user/wallet/balance');
+                    const data = await response.json();
+                    const balance = data.balance || 0;
+                    availableBalance.textContent = balance.toFixed(2);
+                    const total = parseFloat(totalAmount.textContent.replace('₹', '')) || 0;
+                    if (balance >= total) {
+                        sufficientFunds.classList.remove('hidden');
+                        insufficientFunds.classList.add('hidden');
+                    } else {
+                        insufficientFunds.classList.remove('hidden');
+                        sufficientFunds.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error('Error fetching wallet balance:', error);
+                }
+            }
 
-                // Validate address
-                const addressSelected = document.querySelector('input[name="addressId"]:checked');
-                if (!addressSelected && document.getElementById('new-address-form').classList.contains('hidden')) {
-                    Swal.fire({
-                        title: 'Error',
-                        text: 'Please select a shipping address',
-                        icon: 'error',
-                        confirmButtonColor: '#EF4444'
-                    });
+            // Apply coupon
+            applyCouponBtn.addEventListener('click', async function () {
+                const couponCode = couponCodeSelect.value;
+                if (!couponCode) {
+                    couponMessage.textContent = 'Please select a coupon';
+                    couponMessage.classList.remove('hidden');
                     return;
                 }
 
-                if (!addressSelected && !document.getElementById('new-address-form').classList.contains('hidden')) {
-                    const requiredFields = ['address', 'city', 'district', 'state', 'pinCode', 'phone'];
-                    let isValid = true;
-
-                    for (const field of requiredFields) {
-                        const input = document.getElementById(field);
-                        if (!input.value.trim()) {
-                            isValid = false;
-                            input.classList.add('border-red-500');
-                        } else {
-                            input.classList.remove('border-red-500');
-                        }
-                    }
-
-                    if (!isValid) {
-                        Swal.fire({
-                            title: 'Error',
-                            text: 'Please fill out all required fields for the address',
-                            icon: 'error',
-                            confirmButtonColor: '#EF4444'
-                        });
-                        return;
-                    }
-                }
-
-                // Get payment method
-                const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
-
-                // Handle wallet payment
-                if (paymentMethod === 'wallet') {
-                    const walletBalance = parseFloat(document.getElementById('available-balance').textContent);
-
-                    if (walletBalance < orderTotal) {
-                        Swal.fire({
-                            title: 'Error',
-                            text: 'Insufficient wallet balance. Please add money to your wallet or choose a different payment method.',
-                            icon: 'error',
-                            confirmButtonColor: '#EF4444'
-                        });
-                        return;
-                    }
-
-                    Swal.fire({
-                        title: 'Confirm Wallet Payment',
-                        text: `Are you sure you want to pay ₹${orderTotal.toFixed(2)} from your wallet?`,
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonColor: '#10B981',
-                        cancelButtonColor: '#6B7280',
-                        confirmButtonText: 'Yes, pay now',
-                        cancelButtonText: 'Cancel'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            Swal.fire({
-                                title: 'Processing Payment',
-                                text: 'Please wait while we process your payment...',
-                                allowOutsideClick: false,
-                                allowEscapeKey: false,
-                                showConfirmButton: false,
-                                willOpen: () => {
-                                    Swal.showLoading();
-                                }
-                            });
-
-                            const form = document.createElement('form');
-                            form.method = 'POST';
-                            form.action = '/user/checkout/process-wallet-payment';
-
-                            const addressId = document.querySelector('input[name="addressId"]:checked')?.value;
-                            const couponCode = document.getElementById('hiddenCouponCode').value;
-                            const discountType = document.getElementById('hiddenDiscountType').value;
-
-                            const fields = {
-                                addressId: addressId,
-                                couponCode: couponCode,
-                                amount: orderTotal,
-                                discountType: discountType
-                            };
-
-                            for (const [key, value] of Object.entries(fields)) {
-                                const input = document.createElement('input');
-                                input.type = 'hidden';
-                                input.name = key;
-                                input.value = value || '';
-                                form.appendChild(input);
-                            }
-
-                            document.body.appendChild(form);
-                            form.submit();
-                        }
-                    });
-                    return;
-                }
-
-                // Handle Razorpay payment
-                if (paymentMethod === 'razorpay') {
-                    const submitButton = document.getElementById('place-order-btn');
-                    submitButton.disabled = true;
-                    submitButton.innerHTML = 'Processing...';
-
-                    const formData = new FormData(this);
-                    const addressId = formData.get('addressId');
-                    const couponCode = document.getElementById('hiddenCouponCode').value;
-                    const discountType = document.getElementById('hiddenDiscountType').value;
-
-                    fetch('/user/checkout/initiate-razorpay', {
+                try {
+                    const response = await fetch('/user/checkout/apply-coupon', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ addressId, couponCode, discountType }),
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                const options = {
-                                    key: data.key,
-                                    amount: data.amount,
-                                    currency: "INR",
-                                    name: "WaveTunes",
-                                    description: "Purchase from WaveTunes",
-                                    order_id: data.order.id,
-                                    handler: function (response) {
-                                        verifyPayment(response, data.order);
-                                    },
-                                    prefill: {
-                                        name: data.userInfo.name,
-                                        email: data.userInfo.email,
-                                        contact: data.userInfo.contact
-                                    },
-                                    theme: { color: "#3B82F6" },
-                                    modal: {
-                                        ondismiss: function () {
-                                            submitButton.disabled = false;
-                                            submitButton.innerHTML = 'Place Order';
-                                        }
-                                    }
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ couponCode })
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        selectedCoupon = data.coupon;
+                        discountType = data.discountType;
+                        discountRow.classList.remove('hidden');
+                        discountAmount.textContent = `₹${data.discount.toFixed(2)}`;
+                        couponCodeDisplay.textContent = selectedCoupon ? selectedCoupon.code : '';
+                        totalAmount.textContent = `₹${data.total.toFixed(2)}`;
+                        couponMessage.classList.add('hidden');
+                    } else {
+                        couponMessage.textContent = data.message;
+                        couponMessage.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    couponMessage.textContent = 'Error applying coupon';
+                    couponMessage.classList.remove('hidden');
+                    console.error(error);
+                }
+            });
+
+            // Remove coupon
+            removeCouponBtn.addEventListener('click', async function () {
+                try {
+                    const response = await fetch('/user/checkout/apply-coupon', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ couponCode: '' })
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        selectedCoupon = null;
+                        discountType = 'offer';
+                        discountRow.classList.add('hidden');
+                        totalAmount.textContent = `₹${data.total.toFixed(2)}`;
+                        couponCodeSelect.value = '';
+                        couponMessage.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error('Error removing coupon:', error);
+                }
+            });
+
+            // Handle form submission
+            checkoutForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                placeOrderBtn.disabled = true;
+                placeOrderBtn.textContent = 'Processing...';
+
+                const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+                const addressId = document.querySelector('input[name="addressId"]:checked')?.value;
+                const couponCode = selectedCoupon ? selectedCoupon.code : '';
+
+                if (!addressId && !newAddressForm.classList.contains('hidden')) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Address Required',
+                        text: 'Please save the new address before placing the order'
+                    });
+                    placeOrderBtn.disabled = false;
+                    placeOrderBtn.textContent = 'Place Order';
+                    return;
+                }
+
+                if (!addressId) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Address Required',
+                        text: 'Please select an address'
+                    });
+                    placeOrderBtn.disabled = false;
+                    placeOrderBtn.textContent = 'Place Order';
+                    return;
+                }
+
+                try {
+                    if (paymentMethod === 'razorpay') {
+                        const response = await fetch('/user/checkout/initiate-razorpay', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ addressId, couponCode, discountType })
+                        });
+                        const data = await response.json();
+
+                        if (!data.success) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: data.message
+                            });
+                            placeOrderBtn.disabled = false;
+                            placeOrderBtn.textContent = 'Place Order';
+                            return;
+                        }
+
+                        const { order, key, amount, userInfo, pendingOrderId } = data;
+
+                        const options = {
+                            key: key,
+                            amount: order.amount,
+                            currency: 'INR',
+                            name: 'WaveTunes',
+                            description: 'Order Payment',
+                            image: '/images/logo.png',
+                            order_id: order.id,
+                            handler: function (response) {
+                                // Create a form to submit the verification data to the server
+                                const form = document.createElement('form');
+                                form.method = 'POST';
+                                form.action = '/user/checkout/verify-razorpay';
+
+                                const fields = {
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                    discountType: discountType
                                 };
 
-                                const razorpayPayment = new Razorpay(options);
-                                razorpayPayment.open();
-                            } else {
-                                submitButton.disabled = false;
-                                submitButton.innerHTML = 'Place Order';
-                                Swal.fire({
-                                    title: 'Error',
-                                    text: data.message || 'Error initiating payment',
-                                    icon: 'error',
-                                    confirmButtonColor: '#EF4444'
-                                });
+                                for (const [key, value] of Object.entries(fields)) {
+                                    const input = document.createElement('input');
+                                    input.type = 'hidden';
+                                    input.name = key;
+                                    input.value = value;
+                                    form.appendChild(input);
+                                }
+
+                                document.body.appendChild(form);
+                                form.submit();
+                            },
+                            prefill: {
+                                name: userInfo.name,
+                                email: userInfo.email,
+                                contact: userInfo.contact
+                            },
+                            notes: {
+                                address: 'WaveTunes Customer'
+                            },
+                            theme: {
+                                color: '#3B82F6'
+                            },
+                            modal: {
+                                ondismiss: function () {
+                                    Swal.fire({
+                                        icon: 'info',
+                                        title: 'Payment Cancelled',
+                                        text: 'Your order has been saved as pending. You can retry the payment from My Orders.',
+                                        confirmButtonText: 'Go to My Orders'
+                                    }).then(() => {
+                                        window.location.href = '/user/myOrders';
+                                    });
+                                }
                             }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            submitButton.disabled = false;
-                            submitButton.innerHTML = 'Place Order';
-                            Swal.fire({
-                                title: 'Error',
-                                text: 'An error occurred. Please try again.',
-                                icon: 'error',
-                                confirmButtonColor: '#EF4444'
-                            });
+                        };
+
+                        const rzp = new Razorpay(options);
+                        rzp.open();
+                    } else if (paymentMethod === 'wallet') {
+                        const total = parseFloat(totalAmount.textContent.replace('₹', ''));
+                        const response = await fetch('/user/checkout/process-wallet-payment', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ addressId, couponCode, amount: total, discountType })
                         });
-                    return;
-                }
+                        const data = await response.json();
 
-                // Handle credit card payment
-                if (paymentMethod === 'creditCard') {
-                    const cardFields = ['cardNumber', 'cardName', 'expiry', 'cvv'];
-                    let isValid = true;
-
-                    for (const field of cardFields) {
-                        const input = document.getElementById(field);
-                        if (!input.value.trim()) {
-                            isValid = false;
-                            input.classList.add('border-red-500');
+                        if (data.success) {
+                            // No redirect; server renders user/orderConfirm
                         } else {
-                            input.classList.remove('border-red-500');
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: data.message
+                            });
+                        }
+                    } else {
+                        // Handle COD and Credit Card
+                        if (paymentMethod === 'creditCard') {
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Not Available',
+                                text: 'Credit Card payment is not supported yet.'
+                            });
+                            placeOrderBtn.disabled = false;
+                            placeOrderBtn.textContent = 'Place Order';
+                            return;
+                        }
+
+                        const response = await fetch('/user/placeOrder', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ addressId, paymentMethod, couponCode, discountType })
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            // No redirect; server renders user/orderConfirm
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: data.message
+                            });
                         }
                     }
-
-                    if (!isValid) {
-                        Swal.fire({
-                            title: 'Error',
-                            text: 'Please fill out all required payment fields',
-                            icon: 'error',
-                            confirmButtonColor: '#EF4444'
-                        });
-                        return;
-                    }
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: error.message === 'Network Error' ? 'Network error occurred. Please try again.' :
+                            error.response?.status === 429 ? 'Too many requests. Please try again later.' :
+                                'Error processing order'
+                    });
+                    console.error(error);
+                } finally {
+                    placeOrderBtn.disabled = false;
+                    placeOrderBtn.textContent = 'Place Order';
                 }
-
-                // Handle COD or credit card submission
-                const submitButton = document.getElementById('place-order-btn');
-                submitButton.disabled = true;
-                submitButton.innerHTML = 'Processing...';
-
-                Swal.fire({
-                    title: 'Confirm Order',
-                    text: 'Are you sure you want to place this order?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#10B981',
-                    cancelButtonColor: '#EF4444',
-                    confirmButtonText: 'Yes, place order!',
-                    cancelButtonText: 'Cancel'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        Swal.fire({
-                            title: 'Processing Order',
-                            text: 'Please wait while we process your order...',
-                            allowOutsideClick: false,
-                            allowEscapeKey: false,
-                            showConfirmButton: false,
-                            willOpen: () => {
-                                Swal.showLoading();
-                            }
-                        });
-
-                        this.submit();
-                    } else {
-                        submitButton.disabled = false;
-                        submitButton.innerHTML = 'Place Order';
-                    }
-                });
             });
-
-            // Function to verify Razorpay payment
-            function verifyPayment(paymentData, orderData) {
-                Swal.fire({
-                    title: 'Verifying Payment',
-                    text: 'Please wait while we verify your payment...',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    willOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/user/checkout/verify-razorpay';
-
-                const fields = {
-                    razorpay_payment_id: paymentData.razorpay_payment_id,
-                    razorpay_order_id: paymentData.razorpay_order_id,
-                    razorpay_signature: paymentData.razorpay_signature,
-                    discountType: document.getElementById('hiddenDiscountType').value
-                };
-
-                for (const [key, value] of Object.entries(fields)) {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = key;
-                    input.value = value;
-                    form.appendChild(input);
-                }
-
-                document.body.appendChild(form);
-                form.submit();
-            }
         });
     </script>
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <%- include('./partials/user/footer') %>
 </body>
+
+</html>
