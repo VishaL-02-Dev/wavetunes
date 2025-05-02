@@ -1,7 +1,7 @@
 const express=require('express');
 const router=express.Router();
 const adminController=require('../controllers/adminController');
-const { verifyAdmin }=require('../middleware/auth')
+const { protect, authorize, optionalProtect }=require('../middleware/auth')
 const customerController=require('../controllers/customerController');
 const categoryController=require('../controllers/categoriesController');
 const productController=require('../controllers/productController');
@@ -15,46 +15,46 @@ router.use(express.json());
 //Login
 router.get('/login',adminController.loadLogin);
 router.post('/login',adminController.login);
-router.get('/dashboard',verifyAdmin,adminController.getDashboard);
-router.get('/logout',verifyAdmin,adminController.logout);
-router.get('/customers',verifyAdmin,customerController.getCustomers);
-router.post('/customers/:id',customerController.userStatus);
+router.get('/dashboard', protect,authorize('admin'),adminController.getDashboard);
+router.get('/logout',protect,authorize('admin'),adminController.logout);
+router.get('/customers',protect,authorize('admin'),customerController.getCustomers);
+router.post('/customers/:id',protect,authorize('admin'),customerController.userStatus);
 
 //Sales report
-router.get('/sales-report', adminController.getSalesReport);
-router.get('/sales-report-details', adminController.getSalesReportDetails);
-router.get('/top-products', verifyAdmin, adminController.getTopProducts);
+router.get('/sales-report',protect,authorize('admin'), adminController.getSalesReport);
+router.get('/sales-report-details', protect,authorize('admin'),adminController.getSalesReportDetails);
+router.get('/top-products', protect,authorize('admin'),adminController.getTopProducts);
 //Categories
-router.get('/categories',verifyAdmin,categoryController.loadCategory);
-router.post('/categories',categoryController.addCategory);
-router.patch('/categories',categoryController.toggleCategoryStatus);
-router.put('/categories',categoryController.editCategory);
+router.get('/categories',protect,authorize('admin'),categoryController.loadCategory);
+router.post('/categories',protect,authorize('admin'),categoryController.addCategory);
+router.patch('/categories',protect,authorize('admin'),categoryController.toggleCategoryStatus);
+router.put('/categories',protect,authorize('admin'),categoryController.editCategory);
 
 //Products
-router.get('/products',verifyAdmin,productController.adminProduct);
-router.get('/products/:id',verifyAdmin, productController.getProduct);
-router.post('/products',upload.array('images',4),productController.createProduct);
-router.patch('/products/edit/:id',upload.array('images',4),productController.updateProduct);
-router.delete('/products/:id', productController.deleteProduct);
+router.get('/products',protect,authorize('admin'),productController.adminProduct);
+router.get('/products/:id', protect,authorize('admin'),productController.getProduct);
+router.post('/products',protect,authorize('admin'),upload.array('images',4),productController.createProduct);
+router.patch('/products/edit/:id',protect,authorize('admin'),upload.array('images',4),productController.updateProduct);
+router.delete('/products/:id',protect,authorize('admin'), productController.deleteProduct);
 
 //Orders
-router.get('/orders',verifyAdmin,orderController.adminGetOrders);
-router.get('/orders/:id',verifyAdmin,orderController.adminGetOrderDetails);
-router.get('/orders/:id/items',verifyAdmin,orderController.adminGetOrderItems);
-router.patch('/orders/:id/status',verifyAdmin,orderController.adminUpdateOrderStatus);
-router.patch('/orders/:orderId/item/:itemId/status',verifyAdmin,orderController.adminUpdateOrderItemStatus);
+router.get('/orders',protect,authorize('admin'),orderController.adminGetOrders);
+router.get('/orders/:id',protect,authorize('admin'),orderController.adminGetOrderDetails);
+router.get('/orders/:id/items',protect,authorize('admin'),orderController.adminGetOrderItems);
+router.patch('/orders/:id/status',protect,authorize('admin'),orderController.adminUpdateOrderStatus);
+router.patch('/orders/:orderId/item/:itemId/status',protect,authorize('admin'),orderController.adminUpdateOrderItemStatus);
 
 //Coupons
-router.get('/coupons',verifyAdmin,couponController.getCoupon);
-router.post('/coupons',verifyAdmin,couponController.createCoupon);
-router.get('/coupons/:id',verifyAdmin,couponController.getCouponDetails);
-router.put('/coupons/:id',verifyAdmin,couponController.updateCoupon);
-router.patch('/coupons/:id/toggle-status',verifyAdmin,couponController.toggleCouponStatus);
+router.get('/coupons',protect,authorize('admin'),couponController.getCoupon);
+router.post('/coupons',protect,authorize('admin'),couponController.createCoupon);
+router.get('/coupons/:id',protect,authorize('admin'),couponController.getCouponDetails);
+router.put('/coupons/:id',protect,authorize('admin'),couponController.updateCoupon);
+router.patch('/coupons/:id/toggle-status',protect,authorize('admin'),couponController.toggleCouponStatus);
 
 //Return Request
-router.get('/return-requests', verifyAdmin, orderController.getReturnRequests);
-router.post('/return-requests/:orderId/approve', orderController.adminApproveReturn);
-router.post('/return-requests/:orderId/items/:itemId/approve', orderController.adminApproveReturn);
+router.get('/return-requests',protect,authorize('admin'),orderController.getReturnRequests);
+router.post('/return-requests/:orderId/approve',protect,authorize('admin'), orderController.adminApproveReturn);
+router.post('/return-requests/:orderId/items/:itemId/approve',protect,authorize('admin'), orderController.adminApproveReturn);
 
 
 module.exports=router;

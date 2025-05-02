@@ -1,7 +1,7 @@
 const express=require('express');
 const router=express.Router();
 const userController=require('../controllers/userController');
-const verifyToken =require('../middleware/auth');
+const {protect, optionalProtect} =require('../middleware/auth');
 const productController=require('../controllers/productController');
 const profileController=require('../controllers/profileController');
 const passport = require('passport');
@@ -53,56 +53,58 @@ router.post('/otpverify', userController.verifyOtp);
 router.post('/otpverify/resendotp', userController.resendOtp);
 
 //Product Page
-router.get('/products',productController.displayProduct);
-router.get('/products/:categorySlug',productController.getCategoryProducts);
-router.get('/product/:id',productController.getProductById);  
-router.get('/wishlist',wishlistController.getWishlist);
-router.delete('/wishlist/removeItem',wishlistController.removeItem);
-router.post('/product/addToWishlist',wishlistController.addToWishlist);
+router.get('/products',optionalProtect,productController.displayProduct);
+router.get('/products/:categorySlug',optionalProtect,productController.getCategoryProducts);
+router.get('/product/:id',optionalProtect,productController.getProductById);  
+
+//Wishlist
+router.get('/wishlist',protect,wishlistController.getWishlist);
+router.delete('/wishlist/removeItem',protect,wishlistController.removeItem);
+router.post('/product/addToWishlist',protect,wishlistController.addToWishlist);
 
 
 //Cart
-router.get('/cart',cartController.loadCart);
-router.post('/cart/add',cartController.addToCart);
-router.put('/cart/updateQuantity',cartController.updateQuantity);
-router.delete('/cart/removeItem',cartController.removeFromCart)
+router.get('/cart',protect,cartController.loadCart);
+router.post('/cart/add',protect,cartController.addToCart);
+router.put('/cart/updateQuantity',protect,cartController.updateQuantity);
+router.delete('/cart/removeItem',protect,cartController.removeFromCart)
 
 
 //Checkout
-router.get('/checkout',orderController.loadCheckout);
-router.post('/checkout/initiate-razorpay', orderController.initiateRazorpayOrder);
-router.post('/checkout/verify-razorpay', orderController.verifyRazorpay);
-router.post('/checkout/retryRazorpayPayment',orderController.retryRazorpayPayment);
-router.post('/checkout/addAddress',addressController.addAddress);
-router.post('/checkout/apply-coupon',orderController.applyCoupon);
-router.post('/placeOrder',orderController.placeOrder);
-router.post('/checkout/process-wallet-payment',orderController.processWalletPayment);
-router.get('/myOrders',orderController.loadMyOrders);
-router.get('/orders/:id',orderController.loadOrderDetails);
-router.post('/orders/:id/cancel',orderController.cancelOrder);
-router.post('/orders/:orderId/items/:itemId/cancel',orderController.cancelOrderItem);
+router.get('/checkout',protect,orderController.loadCheckout);
+router.post('/checkout/initiate-razorpay',protect, orderController.initiateRazorpayOrder);
+router.post('/checkout/verify-razorpay',protect, orderController.verifyRazorpay);
+router.post('/checkout/retryRazorpayPayment',protect,orderController.retryRazorpayPayment);
+router.post('/checkout/addAddress',protect,addressController.addAddress);
+router.post('/checkout/apply-coupon',protect,orderController.applyCoupon);
+router.post('/placeOrder',protect,orderController.placeOrder);
+router.post('/checkout/process-wallet-payment',protect,orderController.processWalletPayment);
+router.get('/myOrders',protect,orderController.loadMyOrders);
+router.get('/orders/:id',protect,orderController.loadOrderDetails);
+router.post('/orders/:id/cancel',protect,orderController.cancelOrder);
+router.post('/orders/:orderId/items/:itemId/cancel',protect,orderController.cancelOrderItem);
 
 //Wallet
-router.get('/wallet',walletController.getUserWallet);
-router.get('/wallet/balance',walletController.getWalletBalance);
-router.post('/wallet/add-funds', walletController.addFunds);
-router.post('/wallet/deduct-funds',walletController.deductFunds);
-router.get('/wallet/transactions', walletController.getTransactionHistory);
-router.post('/wallet/initiate-razorpay',walletController.initiateRazorpayForWallet);
-router.post('/wallet/verify-razorpay', walletController.verifyRazorpayForWallet);
+router.get('/wallet',protect,walletController.getUserWallet);
+router.get('/wallet/balance',protect,walletController.getWalletBalance);
+router.post('/wallet/add-funds',protect, walletController.addFunds);
+router.post('/wallet/deduct-funds',protect,walletController.deductFunds);
+router.get('/wallet/transactions',protect, walletController.getTransactionHistory);
+router.post('/wallet/initiate-razorpay',protect,walletController.initiateRazorpayForWallet);
+router.post('/wallet/verify-razorpay',protect, walletController.verifyRazorpayForWallet);
 
 //Return
-router.post('/orders/:id/return',orderController.returnOrder);
-router.post('/orders/:orderId/items/:itemId/return',orderController.returnOrderItem);
+router.post('/orders/:id/return',protect,orderController.returnOrder);
+router.post('/orders/:orderId/items/:itemId/return',protect,orderController.returnOrderItem);
 
 //Profile Management
-router.get('/profile',profileController.loadProfile);
-router.patch('/profile/editProfile',profileController.editProfile);
-router.post('/profile/addAddress',addressController.addAddress);
-router.get('/profile/getAddress/:index',addressController.getAddress);
-router.post('/profile/editAddress/:index',addressController.editAddress);
-router.post('/profile/setDefault',addressController.setDefault);
-router.delete('/profile/deleteAddress',addressController.deleteAddress);
+router.get('/profile',protect,profileController.loadProfile);
+router.patch('/profile/editProfile',protect,profileController.editProfile);
+router.post('/profile/addAddress',protect,addressController.addAddress);
+router.get('/profile/getAddress/:index',protect,addressController.getAddress);
+router.post('/profile/editAddress/:index',protect,addressController.editAddress);
+router.post('/profile/setDefault',protect,addressController.setDefault);
+router.delete('/profile/deleteAddress',protect,addressController.deleteAddress);
 
 
 module.exports=router;
