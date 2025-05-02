@@ -61,6 +61,30 @@
                 color: #6b7280;
                 font-size: 0.875rem;
             }
+
+            /* Inline Validation Styles */
+            .error-message {
+                color: #dc2626;
+                font-size: 0.75rem;
+                margin-top: 0.25rem;
+                display: none;
+            }
+
+            .input-error {
+                border-color: #dc2626 !important;
+            }
+
+            /* Disabled COD Styling */
+            .disabled-radio {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            .disabled-message {
+                color: #dc2626;
+                font-size: 0.75rem;
+                margin-top: 0.25rem;
+            }
         </style>
 </head>
 
@@ -153,45 +177,53 @@
                                         Address</label>
                                     <input type="text" id="address" name="address"
                                         class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <p class="error-message" id="address-error"></p>
                                 </div>
                                 <div>
                                     <label for="city" class="block text-sm font-medium text-gray-700 mb-1">City</label>
                                     <input type="text" id="city" name="city"
                                         class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <p class="error-message" id="city-error"></p>
                                 </div>
                                 <div>
                                     <label for="district"
                                         class="block text-sm font-medium text-gray-700 mb-1">District</label>
                                     <input type="text" id="district" name="district"
                                         class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <p class="error-message" id="district-error"></p>
                                 </div>
                                 <div>
                                     <label for="state"
                                         class="block text-sm font-medium text-gray-700 mb-1">State/Province</label>
                                     <input type="text" id="state" name="state"
                                         class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <p class="error-message" id="state-error"></p>
                                 </div>
                                 <div>
                                     <label for="pinCode" class="block text-sm font-medium text-gray-700 mb-1">PIN/Postal
                                         Code</label>
                                     <input type="text" id="pinCode" name="pinCode"
                                         class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <p class="error-message" id="pinCode-error"></p>
                                 </div>
                                 <div>
                                     <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone
                                         Number</label>
                                     <input type="text" id="phone" name="phone"
                                         class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <p class="error-message" id="phone-error"></p>
                                 </div>
                                 <div>
                                     <label for="addressType"
                                         class="block text-sm font-medium text-gray-700 mb-1">Address Type</label>
-                                    <select id="addressType" name="addressType"
+                                    <select id="addressType" name="type"
                                         class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Select Address Type</option>
                                         <option value="Home">Home</option>
                                         <option value="Work">Work</option>
                                         <option value="Other">Other</option>
                                     </select>
+                                    <p class="error-message" id="addressType-error"></p>
                                 </div>
                                 <div class="flex items-center">
                                     <input type="checkbox" id="setDefault" name="isDefault"
@@ -203,7 +235,8 @@
 
                             <div class="flex mt-4 space-x-4">
                                 <button type="button" id="save-address"
-                                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition">
+                                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition"
+                                    disabled>
                                     Save Address
                                 </button>
                                 <% if (addresses && addresses.length> 0) { %>
@@ -242,6 +275,8 @@
                                     <label for="wallet" class="ml-2 text-gray-700">Wallet</label>
                                 </div>
                             </div>
+                            <!-- <p id="cod-disabled-message" class="disabled-message hidden">COD is not available for orders
+                                above ₹1000.</p> -->
 
                             <div id="credit-card-form">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -411,7 +446,8 @@
                                             data-max="<%= coupon.maxDiscount || 0 %>">
                                             <%= coupon.code %> -
                                                 <% if (coupon.discountType==='percentage' ) { %>
-                                                    <%= coupon.discountAmount %>% off <% if (coupon.maxDiscount) { %>
+                                                    <%= coupon.discountAmount %>% off
+                                                        <% if (coupon.maxDiscount) { %>
                                                             (up to ₹<%= coupon.maxDiscount %>)
                                                                 <% } %>
                                                                     <% } else { %>
@@ -430,14 +466,14 @@
                     </div>
 
                     <button type="submit" id="place-order-btn"
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-md transition">
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-md transition"
+                        disabled>
                         Place Order
                     </button>
                 </div>
             </div>
         </form>
     </div>
-
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -464,9 +500,137 @@
             const availableBalance = document.getElementById('available-balance');
             const insufficientFunds = document.getElementById('insufficient-funds');
             const sufficientFunds = document.getElementById('sufficient-funds');
+            const codRadio = document.getElementById('cod');
+            // const codDisabledMessage = document.getElementById('cod-disabled-message');
+
 
             let selectedCoupon = null;
             let discountType = 'offer';
+            let selectedAddressId = null;
+
+            // Inline Validation for Address Form
+            const fields = [
+                {
+                    id: 'address',
+                    validate: value => {
+                        if (!value.trim()) return 'Street Address is required';
+                        if (value.length < 5) return 'Street Address must be at least 5 characters';
+                        return '';
+                    }
+                },
+                {
+                    id: 'city',
+                    validate: value => {
+                        if (!value.trim()) return 'City is required';
+                        if (!/^[a-zA-Z\s]+$/.test(value)) return 'City must contain only letters and spaces';
+                        if (value.length < 2) return 'City must be at least 2 characters';
+                        return '';
+                    }
+                },
+                {
+                    id: 'district',
+                    validate: value => {
+                        if (!value.trim()) return 'District is required';
+                        if (!/^[a-zA-Z\s]+$/.test(value)) return 'District must contain only letters and spaces';
+                        if (value.length < 2) return 'District must be at least 2 characters';
+                        return '';
+                    }
+                },
+                {
+                    id: 'state',
+                    validate: value => {
+                        if (!value.trim()) return 'State is required';
+                        if (!/^[a-zA-Z\s]+$/.test(value)) return 'State must contain only letters and spaces';
+                        if (value.length < 2) return 'State must be at least 2 characters';
+                        return '';
+                    }
+                },
+                {
+                    id: 'pinCode',
+                    validate: value => {
+                        if (!value.trim()) return 'PIN Code is required';
+                        if (!/^\d{6}$/.test(value)) return 'PIN Code must be exactly 6 digits';
+                        return '';
+                    }
+                },
+                {
+                    id: 'phone',
+                    validate: value => {
+                        if (!value.trim()) return 'Phone Number is required';
+                        if (!/^\d{10}$/.test(value)) return 'Phone Number must be exactly 10 digits';
+                        return '';
+                    }
+                },
+                {
+                    id: 'addressType',
+                    validate: value => {
+                        if (!value) return 'Address Type is required';
+                        if (!['Home', 'Work', 'Other'].includes(value)) return 'Invalid Address Type';
+                        return '';
+                    }
+                }
+            ];
+
+            // Validate all fields and update button state
+            function validateForm() {
+                let allValid = true;
+                const errors = [];
+
+                fields.forEach(field => {
+                    const input = document.getElementById(field.id);
+                    const errorElement = document.getElementById(`${field.id}-error`);
+                    const value = input.value.trim();
+                    const error = field.validate(value);
+
+                    if (error) {
+                        errorElement.textContent = error;
+                        errorElement.style.display = 'block';
+                        input.classList.add('input-error');
+                        allValid = false;
+                        errors.push(error);
+                    } else {
+                        errorElement.textContent = '';
+                        errorElement.style.display = 'none';
+                        input.classList.remove('input-error');
+                    }
+                });
+
+                saveAddressBtn.disabled = !allValid;
+                return { isValid: allValid, errors };
+            }
+
+            // Update Place Order button state
+            function updatePlaceOrderButton() {
+                const isNewAddressFormVisible = !newAddressForm.classList.contains('hidden');
+                placeOrderBtn.disabled = isNewAddressFormVisible || !selectedAddressId;
+            }
+
+            // Update COD button state based on order total
+            function updateCodButtonState() {
+                const total = parseFloat(totalAmount.textContent.replace('₹', '')) || 0;
+                if (total > 1000) {
+                    codRadio.disabled = true;
+                    codRadio.classList.add('disabled-radio');
+                    // codDisabledMessage.classList.remove('hidden');
+                    // If COD is currently selected, switch to another payment method
+                    if (codRadio.checked) {
+                        document.getElementById('credit-card').checked = true;
+                        document.getElementById('credit-card-form').classList.remove('hidden');
+                        document.getElementById('cod-form').classList.add('hidden');
+                    }
+                } else {
+                    codRadio.disabled = false;
+                    codRadio.classList.remove('disabled-radio');
+                    // codDisabledMessage.classList.add('hidden');
+                }
+            }
+
+            // Add event listeners for real-time validation
+            fields.forEach(field => {
+                const input = document.getElementById(field.id);
+                input.addEventListener('input', validateForm);
+                input.addEventListener('blur', validateForm);
+            });
 
             // Toggle address selection
             addressCards.forEach(card => {
@@ -475,6 +639,8 @@
                     this.classList.add('selected');
                     const radio = this.querySelector('input[type="radio"]');
                     radio.checked = true;
+                    selectedAddressId = radio.value;
+                    updatePlaceOrderButton();
                 });
             });
 
@@ -484,6 +650,8 @@
                     newAddressForm.classList.remove('hidden');
                     document.getElementById('saved-addresses').classList.add('hidden');
                     this.classList.add('hidden');
+                    selectedAddressId = null;
+                    updatePlaceOrderButton();
                 });
             }
 
@@ -492,12 +660,37 @@
                     newAddressForm.classList.add('hidden');
                     document.getElementById('saved-addresses').classList.remove('hidden');
                     addNewAddressBtn.classList.remove('hidden');
+                    // Clear form and errors
+                    fields.forEach(field => {
+                        const input = document.getElementById(field.id);
+                        input.value = field.id === 'addressType' ? '' : input.value;
+                        const errorElement = document.getElementById(`${field.id}-error`);
+                        errorElement.textContent = '';
+                        errorElement.style.display = 'none';
+                        input.classList.remove('input-error');
+                    });
+                    saveAddressBtn.disabled = true;
+                    // Reset to default address
+                    const defaultAddress = document.querySelector('input[name="addressId"][checked]');
+                    selectedAddressId = defaultAddress ? defaultAddress.value : null;
+                    updatePlaceOrderButton();
                 });
             }
 
             // Save new address
             if (saveAddressBtn) {
                 saveAddressBtn.addEventListener('click', async function () {
+                    const { isValid, errors } = validateForm();
+
+                    if (!isValid) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Invalid Input',
+                            html: errors.map(error => `<p>${error}</p>`).join('')
+                        });
+                        return;
+                    }
+
                     const addressData = {
                         address: document.getElementById('address').value,
                         city: document.getElementById('city').value,
@@ -520,7 +713,67 @@
                         const data = await response.json();
 
                         if (data.success) {
-                            window.location.reload();
+                            // Show success SweetAlert
+                            await Swal.fire({
+                                icon: 'success',
+                                title: 'Address Saved',
+                                text: 'Your new address has been saved successfully.'
+                            });
+                                window.location.reload();
+                            // Add the new address to the saved addresses list
+                            const newAddress = data.address;
+                            const savedAddresses = document.getElementById('saved-addresses');
+                            const addressCard = document.createElement('div');
+                            addressCard.classList.add('address-card');
+                            addressCard.setAttribute('data-address-id', newAddress._id);
+                            addressCard.innerHTML = `
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="flex space-x-2">
+                                        <input type="radio" name="addressId" value="${newAddress._id}" class="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                        <div>
+                                            <div class="flex items-center">
+                                                <span class="font-medium">${newAddress.addressType}</span>
+                                                ${newAddress.isDefault ? '<span class="ml-2 address-badge badge-default">Default</span>' : ''}
+                                                <span class="ml-2 address-badge badge-${newAddress.addressType.toLowerCase()}">${newAddress.addressType}</span>
+                                            </div>
+                                            <p class="text-sm text-gray-600">${newAddress.address}</p>
+                                            <p class="text-sm text-gray-600">${newAddress.city}, ${newAddress.district}, ${newAddress.state} - ${newAddress.pinCode}</p>
+                                            <p class="text-sm text-gray-600">Phone: ${newAddress.phone}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            if (savedAddresses) {
+                                savedAddresses.appendChild(addressCard);
+                                // Re-attach click event to new address card
+                                addressCard.addEventListener('click', function () {
+                                    addressCards.forEach(c => c.classList.remove('selected'));
+                                    this.classList.add('selected');
+                                    const radio = this.querySelector('input[type="radio"]');
+                                    radio.checked = true;
+                                    selectedAddressId = radio.value;
+                                    updatePlaceOrderButton();
+                                });
+                            }
+                            // Hide new address form and show saved addresses
+                            newAddressForm.classList.add('hidden');
+                            if (savedAddresses) {
+                                savedAddresses.classList.remove('hidden');
+                                addNewAddressBtn.classList.remove('hidden');
+                            }
+                            // Clear form
+                            fields.forEach(field => {
+                                const input = document.getElementById(field.id);
+                                input.value = field.id === 'addressType' ? '' : input.value;
+                                const errorElement = document.getElementById(`${field.id}-error`);
+                                errorElement.textContent = '';
+                                errorElement.style.display = 'none';
+                                input.classList.remove('input-error');
+                            });
+                            saveAddressBtn.disabled = true;
+                            // Select the new address
+                            selectedAddressId = newAddress._id;
+                            updatePlaceOrderButton();
                         } else {
                             Swal.fire({
                                 icon: 'error',
@@ -558,6 +811,18 @@
                         fetchWalletBalance();
                     }
                 });
+            });
+
+            // Prevent clicking disabled COD radio
+            codRadio.addEventListener('click', function (e) {
+                if (codRadio.disabled) {
+                    e.preventDefault();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'COD Unavailable',
+                        text: 'Cash on Delivery is not available for orders above ₹1000. Please choose another payment method.'
+                    });
+                }
             });
 
             // Fetch wallet balance
@@ -607,6 +872,7 @@
                         couponCodeDisplay.textContent = selectedCoupon ? selectedCoupon.code : '';
                         totalAmount.textContent = `₹${data.total.toFixed(2)}`;
                         couponMessage.classList.add('hidden');
+                        updateCodButtonState(); // Re-evaluate COD button state
                     } else {
                         couponMessage.textContent = data.message;
                         couponMessage.classList.remove('hidden');
@@ -637,6 +903,7 @@
                         totalAmount.textContent = `₹${data.total.toFixed(2)}`;
                         couponCodeSelect.value = '';
                         couponMessage.classList.add('hidden');
+                        updateCodButtonState(); // Re-evaluate COD button state
                     }
                 } catch (error) {
                     console.error('Error removing coupon:', error);
@@ -650,14 +917,14 @@
                 placeOrderBtn.textContent = 'Processing...';
 
                 const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
-                const addressId = document.querySelector('input[name="addressId"]:checked')?.value;
+                const addressId = selectedAddressId;
                 const couponCode = selectedCoupon ? selectedCoupon.code : '';
 
-                if (!addressId && !newAddressForm.classList.contains('hidden')) {
+                if (!newAddressForm.classList.contains('hidden')) {
                     Swal.fire({
-                        icon: 'warning',
-                        title: 'Address Required',
-                        text: 'Please save the new address before placing the order'
+                        icon: 'error',
+                        title: 'Address Not Saved',
+                        text: 'Please save the new address before placing the order.'
                     });
                     placeOrderBtn.disabled = false;
                     placeOrderBtn.textContent = 'Place Order';
@@ -666,9 +933,9 @@
 
                 if (!addressId) {
                     Swal.fire({
-                        icon: 'warning',
+                        icon: 'error',
                         title: 'Address Required',
-                        text: 'Please select an address'
+                        text: 'Please select an address.'
                     });
                     placeOrderBtn.disabled = false;
                     placeOrderBtn.textContent = 'Place Order';
@@ -760,24 +1027,28 @@
                         rzp.open();
                     } else if (paymentMethod === 'wallet') {
                         const total = parseFloat(totalAmount.textContent.replace('₹', ''));
-                        const response = await fetch('/user/checkout/process-wallet-payment', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ addressId, couponCode, amount: total, discountType })
-                        });
-                        const data = await response.json();
+                        // Create a form to submit the wallet payment data to the server
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = '/user/checkout/process-wallet-payment';
 
-                        if (data.success) {
-                            // No redirect; server renders user/orderConfirm
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: data.message
-                            });
+                        const fields = {
+                            addressId: addressId,
+                            couponCode: couponCode,
+                            amount: total,
+                            discountType: discountType
+                        };
+
+                        for (const [key, value] of Object.entries(fields)) {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = key;
+                            input.value = value;
+                            form.appendChild(input);
                         }
+
+                        document.body.appendChild(form);
+                        form.submit();
                     } else {
                         // Handle COD and Credit Card
                         if (paymentMethod === 'creditCard') {
@@ -824,6 +1095,12 @@
                     placeOrderBtn.textContent = 'Place Order';
                 }
             });
+
+            // Initialize Place Order button state and COD button state
+            const defaultAddress = document.querySelector('input[name="addressId"][checked]');
+            selectedAddressId = defaultAddress ? defaultAddress.value : null;
+            updatePlaceOrderButton();
+            updateCodButtonState();
         });
     </script>
 </body>

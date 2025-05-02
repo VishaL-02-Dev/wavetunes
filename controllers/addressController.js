@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 //Add address
 const addAddress = async (req, res) => {
     const token = req.cookies.jwt;
-    const { type, address, city, state, district, pinCode, phone, isDefault} = req.body;
+    const { addressType, address, city, state, district, pinCode, phone, isDefault} = req.body;
     
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -18,13 +18,6 @@ const addAddress = async (req, res) => {
                 message: 'User not found'
             });
         }
-
-        let addressType = type;
-        if (addressType === 'Home') addressType = 'Home';
-        if (addressType === 'Work') addressType = 'Work';
-        if (addressType === 'Other') addressType = 'Other';
-        
-        
 
         const newAddress = new Address({
             userId: user._id,
