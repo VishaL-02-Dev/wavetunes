@@ -58,6 +58,20 @@
                     </button> -->
                     </div>
 
+                    <div class="bg-gray-900 text-white rounded-lg shadow-lg p-6 mt-6">
+                        <h3 class="text-lg font-medium mb-3">Referral Code</h3>
+                        <p class="text-gray-400 mb-4">Share this code with friends to earn ₹50 for both of you!</p>
+                        <div class="flex items-center space-x-3">
+                            <input type="text"
+                                class="w-full p-2 bg-gray-800 rounded border border-gray-600 text-green-400 focus:outline-none focus:border-blue-400"
+                                value= '<%= user.referralCode %>' id="referralCode" readonly>
+                            <button class="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded text-white font-semibold"
+                                onclick="copyReferralCode()">
+                                <i class="fas fa-copy mr-2"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Personal Info Tab -->
                     <div class="tab-content p-6 active" id="personal-info">
                         <div class="grid md:grid-cols-2 gap-6">
@@ -220,6 +234,7 @@
                     </div>
                 </div>
             </div>
+        </div>
 
             <!-- Edit Profile Modal -->
             <div id="edit-profile-modal"
@@ -1068,6 +1083,20 @@
                         });
                     });
                 });
+                function copyReferralCode() {
+                    var codeInput = document.getElementById('referralCode');
+                    codeInput.select();
+                    document.execCommand('copy');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Copied!',
+                        text: 'Referral code copied to clipboard.',
+                        timer: 1500,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+                }
             </script>
 
             <%- include("partials/user/footer") %>

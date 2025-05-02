@@ -20,6 +20,7 @@ const loadProfile = async (req, res) => {
         
         const addresses= await Address.find({userId: user._id});
         // console.log('found ', addresses)
+        // console.log('user',user);
         return res.render('user/profile', {
             user,
             addresses

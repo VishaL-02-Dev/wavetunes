@@ -38,7 +38,11 @@ const userSchema= new mongoose.Schema({
     wallet:{
         type:mongoose.Schema.Types.ObjectId,
         ref:'Wallet'
-    }
+    },
+    referralCode:{
+        type:String,
+        required:true
+    },
 }, 
 {timestamps:true});
 

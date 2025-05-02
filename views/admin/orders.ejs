@@ -120,10 +120,10 @@
                                             onclick="viewOrderDetails('<%= order._id %>')">
                                             <i class="bi bi-info-circle"></i>
                                         </button>
-                                        <!-- <button class="btn btn-warning btn-sm"
+                                        <button class="btn btn-warning btn-sm"
                                             onclick="updateOrderStatus('<%= order._id %>')">
                                             <i class="bi bi-pencil-square"></i>
-                                        </button> -->
+                                        </button>
                                     </td>
                                 </tr>
                                 <% }) %>
@@ -146,7 +146,6 @@
                                         </a>
                                     </li>
                                     <% } %>
-
 
                                         <li class="page-item <%= page === totalPages ? 'disabled' : '' %>">
                                             <a class="page-link"
@@ -212,13 +211,7 @@
                             <div class="mb-3">
                                 <label for="orderStatus" class="form-label text-black">Status</label>
                                 <select class="form-select" id="orderStatus" name="status" required>
-                                    <option value="pending">Pending</option>
-                                    <option value="processing">Processing</option>
-                                    <option value="shipped">Shipped</option>
-                                    <option value="delivered">Delivered</option>
-                                    <option value="cancelled">Cancelled</option>
-                                    <option value="return_requested">Return Requested</option>
-                                    <option value="returned">Returned</option>
+                                    <!-- Options will be populated dynamically -->
                                 </select>
                             </div>
                         </form>
@@ -247,13 +240,7 @@
                             <div class="mb-3">
                                 <label for="itemStatus" class="form-label text-black">Status</label>
                                 <select class="form-select" id="itemStatus" name="status" required>
-                                    <option value="pending">Pending</option>
-                                    <option value="processing">Processing</option>
-                                    <option value="shipped">Shipped</option>
-                                    <option value="delivered">Delivered</option>
-                                    <option value="cancelled">Cancelled</option>
-                                    <option value="return_requested">Return Requested</option>
-                                    <option value="returned">Returned</option>
+                                    <!-- Options will be populated dynamically -->
                                 </select>
                             </div>
                         </form>
@@ -285,25 +272,54 @@
             const dateFilter = document.getElementById('dateFilter').value;
             const searchParams = new URLSearchParams(window.location.search);
 
-            // Update or set the status parameter
             if (status) {
                 searchParams.set('status', status);
             } else {
                 searchParams.delete('status');
             }
 
-            // Update or set the dateFilter parameter
             if (dateFilter) {
                 searchParams.set('dateFilter', dateFilter);
             } else {
                 searchParams.delete('dateFilter');
             }
 
-            // Reset to first page when filters change
             searchParams.set('page', 1);
-
-            // Redirect with the new query parameters
             window.location.href = window.location.pathname + '?' + searchParams.toString();
+        }
+
+        // Status progression logic
+        const statusOrder = ['pending', 'processing', 'shipped', 'delivered'];
+        const terminalStatuses = {
+            cancelled: ['pending', 'processing', 'shipped'], // Can cancel from these statuses
+            return_requested: ['delivered'], // Can request return from delivered
+            returned: ['return_requested'] // Can mark as returned from return_requested
+        };
+
+        // Function to get allowed statuses based on current status
+        function getAllowedStatuses(currentStatus) {
+            if (!currentStatus) return [];
+
+            // If current status is terminal (e.g., cancelled, returned, payment_failed), no further changes allowed
+            if (['cancelled', 'returned', 'payment_failed'].includes(currentStatus)) {
+                return [currentStatus];
+            }
+
+            // Find the index of the current status in the statusOrder
+            const currentIndex = statusOrder.indexOf(currentStatus);
+            if (currentIndex === -1) return [currentStatus]; // Handle unexpected statuses
+
+            // Include current status and all subsequent statuses in the lifecycle
+            let allowedStatuses = statusOrder.slice(currentIndex);
+
+            // Add terminal statuses if applicable
+            Object.keys(terminalStatuses).forEach(terminalStatus => {
+                if (terminalStatuses[terminalStatus].includes(currentStatus)) {
+                    allowedStatuses.push(terminalStatus);
+                }
+            });
+
+            return allowedStatuses;
         }
 
         // Function to view order details
@@ -325,10 +341,8 @@
                         console.log("Address data:", order.addressId);
                         console.log("Items data:", order.items);
 
-                        // Create the content for the modal
                         let content = buildOrderDetailsContent(order);
 
-                        // Update the modal content and show it
                         document.getElementById('orderDetailsContent').innerHTML = content;
                         const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
                         modal.show();
@@ -345,31 +359,29 @@
 
         // Helper function to build the order details content
         function buildOrderDetailsContent(order) {
-            // Make sure address and user objects exist
             const address = order.addressId || {};
             const user = order.userId || {};
             let content = `
-    <div class="row">
-        <div class="col-md-6">
-            <h5 class="text-black fw-bold">Order Information</h6>
-            <p class= "text-black"><strong>Order ID:</strong> ${order.orderId || 'N/A'}</p>
-            <p class="text-black"><strong>Date:</strong> ${order.date ? new Date(order.date).toLocaleString('en-IN') : 'N/A'}</p>
-            <p class="text-black"><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(order.status)}">${order.status || 'N/A'}</span></p>
-            <p class="text-black"><strong>Payment Method:</strong> ${order.paymentMethod || 'N/A'}</p>
-            <p class="text-black"><strong>Total Amount:</strong> ₹${order.totalAmount ? order.totalAmount.toFixed(2) : '0.00'}</p>
-            ${order.coupon ? `<p><strong>Coupon Applied:</strong> ${order.coupon.code || 'N/A'}</p>
-            <p class="text-black"><strong>Discount:</strong> ₹${order.discount ? order.discount.toFixed(2) : '0.00'}</p>` : ''}
-        </div>
-        <div class="col-md-6">
-            <h5 class="text-black fw-bold">Customer Information</h6>`;
+        <div class="row">
+            <div class="col-md-6">
+                <h5 class="text-black fw-bold">Order Information</h6>
+                <p class="text-black"><strong>Order ID:</strong> ${order.orderId || 'N/A'}</p>
+                <p class="text-black"><strong>Date:</strong> ${order.date ? new Date(order.date).toLocaleString('en-IN') : 'N/A'}</p>
+                <p class="text-black"><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(order.status)}">${order.status || 'N/A'}</span></p>
+                <p class="text-black"><strong>Payment Method:</strong> ${order.paymentMethod || 'N/A'}</p>
+                <p class="text-black"><strong>Total Amount:</strong> ₹${order.totalAmount ? order.totalAmount.toFixed(2) : '0.00'}</p>
+                ${order.coupon ? `<p><strong>Coupon Applied:</strong> ${order.coupon.code || 'N/A'}</p>
+                <p class="text-black"><strong>Discount:</strong> ₹${order.discount ? order.discount.toFixed(2) : '0.00'}</p>` : ''}
+            </div>
+            <div class="col-md-6">
+                <h5 class="text-black fw-bold">Customer Information</h6>`;
 
-            // Handle user information based on its structure
             if (user) {
                 if (typeof user === 'object') {
                     content += `
-            <p class="text-black"><strong>Name:</strong> ${user.fname} ${user.lname || 'N/A'}</p>
-            <p class="text-black"><strong>Email:</strong> ${user.email || 'N/A'}</p>
-            <p class="text-black"><strong>Phone:</strong> ${address.phone || 'N/A'}</p>`;
+                <p class="text-black"><strong>Name:</strong> ${user.fname} ${user.lname || 'N/A'}</p>
+                <p class="text-black"><strong>Email:</strong> ${user.email || 'N/A'}</p>
+                <p class="text-black"><strong>Phone:</strong> ${address.phone || 'N/A'}</p>`;
                 } else {
                     content += `<p class="text-black"><strong>User ID:</strong> ${user}</p>`;
                 }
@@ -379,21 +391,20 @@
 
             content += `</div></div>`;
 
-            // Address section with safe property access
             content += `
-    <div class="row mt-3">
-        <div class="col-12">
-            <h5 class="text-black fw-bold">Shipping Address</h6>`;
+        <div class="row mt-3">
+            <div class="col-12">
+                <h5 class="text-black fw-bold">Shipping Address</h6>`;
 
             if (address) {
                 if (typeof address === 'object') {
                     content += `
-            <p class="text-black">
-                ${address.street || address.address || 'N/A'}<br>
-                ${address.city || 'N/A'}, ${address.state || 'N/A'} - ${address.zipCode || address.pinCode || 'N/A'}<br>
-                ${address.country || 'India'}<br>
-                Phone: ${address.phone || 'N/A'}
-            </p>`;
+                <p class="text-black">
+                    ${address.street || address.address || 'N/A'}<br>
+                    ${address.city || 'N/A'}, ${address.state || 'N/A'} - ${address.zipCode || address.pinCode || 'N/A'}<br>
+                    ${address.country || 'India'}<br>
+                    Phone: ${address.phone || 'N/A'}
+                </p>`;
                 } else {
                     content += `<p class="text-black">Address ID: ${address}</p>`;
                 }
@@ -403,24 +414,23 @@
 
             content += `</div></div>`;
 
-            // Items table with individual item status management
             content += `
-    <div class="row mt-3">
-        <div class="col-12">
-            <h5 class="text-black fw-bold">Order Items</h6>
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
+        <div class="row mt-3">
+            <div class="col-12">
+                <h5 class="text-black fw-bold">Order Items</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
 
             if (order.items && order.items.length > 0) {
                 order.items.forEach((item, index) => {
@@ -432,18 +442,18 @@
                     const itemStatus = item.status || order.status || 'N/A';
 
                     content += `
-            <tr>
-                <td>${productName}</td>
-                <td>₹${price.toFixed(2)}</td>
-                <td>${quantity}</td>
-                <td>₹${total.toFixed(2)}</td>
-                <td><span class="badge ${getStatusBadgeClass(itemStatus)}">${itemStatus}</span></td>
-                <td>
-                    <button class="btn btn-sm btn-warning" onclick="updateItemStatus('${order._id}', '${item._id || index}', '${itemStatus}')">
-                        <i class="bi bi-pencil-square"></i> Update
-                    </button>
-                </td>
-            </tr>`;
+                <tr>
+                    <td>${productName}</td>
+                    <td>₹${price.toFixed(2)}</td>
+                    <td>${quantity}</td>
+                    <td>₹${total.toFixed(2)}</td>
+                    <td><span class="badge ${getStatusBadgeClass(itemStatus)}">${itemStatus}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="updateItemStatus('${order._id}', '${item._id || index}', '${itemStatus}')">
+                            <i class="bi bi-pencil-square"></i> Update
+                        </button>
+                    </td>
+                </tr>`;
                 });
             } else {
                 content += `<tr><td colspan="6" class="text-center">No items found</td></tr>`;
@@ -469,10 +479,8 @@
                         const order = data.order;
                         console.log("Order items:", order.items);
 
-                        // Build content for items only
                         let content = buildOrderItemsContent(order);
 
-                        // Update the modal content and show it
                         document.getElementById('orderItemsContent').innerHTML = content;
                         const modal = new bootstrap.Modal(document.getElementById('orderItemsModal'));
                         modal.show();
@@ -490,18 +498,18 @@
         // Helper function to build the order items content
         function buildOrderItemsContent(order) {
             let content = `
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>`;
 
             if (order.items && order.items.length > 0) {
                 order.items.forEach(item => {
@@ -513,13 +521,13 @@
                     const itemStatus = item.status || order.status || 'N/A';
 
                     content += `
-                    <tr>
-                        <td>${productName}</td>
-                        <td>₹${price.toFixed(2)}</td>
-                        <td>${quantity}</td>
-                        <td>₹${total.toFixed(2)}</td>
-                        <td><span class="badge ${getStatusBadgeClass(itemStatus)}">${itemStatus}</span></td>
-                    </tr>`;
+                <tr>
+                    <td>${productName}</td>
+                    <td>₹${price.toFixed(2)}</td>
+                    <td>${quantity}</td>
+                    <td>₹${total.toFixed(2)}</td>
+                    <td><span class="badge ${getStatusBadgeClass(itemStatus)}">${itemStatus}</span></td>
+                </tr>`;
                 });
             } else {
                 content += `<tr><td colspan="5" class="text-center">No items found</td></tr>`;
@@ -529,17 +537,30 @@
             return content;
         }
 
-
         // Function to update order status
         function updateOrderStatus(orderId) {
             document.getElementById('updateOrderId').value = orderId;
 
-            // Fetch current status to pre-select in the dropdown
             fetch(`/admin/orders/${orderId}`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
-                        document.getElementById('orderStatus').value = data.order.status;
+                    if (data.success && data.order) {
+                        const currentStatus = data.order.status;
+                        const allowedStatuses = getAllowedStatuses(currentStatus);
+
+                        // Populate the status dropdown with allowed statuses
+                        const statusSelect = document.getElementById('orderStatus');
+                        statusSelect.innerHTML = ''; // Clear existing options
+                        allowedStatuses.forEach(status => {
+                            const option = document.createElement('option');
+                            option.value = status;
+                            option.text = status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
+                            if (status === currentStatus) {
+                                option.selected = true;
+                            }
+                            statusSelect.appendChild(option);
+                        });
+
                         const modal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
                         modal.show();
                     } else {
@@ -587,7 +608,21 @@
         function updateItemStatus(orderId, itemId, currentStatus) {
             document.getElementById('updateItemOrderId').value = orderId;
             document.getElementById('updateOrderItemId').value = itemId;
-            document.getElementById('itemStatus').value = currentStatus || 'pending';
+
+            const allowedStatuses = getAllowedStatuses(currentStatus);
+
+            // Populate the item status dropdown with allowed statuses
+            const statusSelect = document.getElementById('itemStatus');
+            statusSelect.innerHTML = ''; // Clear existing options
+            allowedStatuses.forEach(status => {
+                const option = document.createElement('option');
+                option.value = status;
+                option.text = status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
+                if (status === currentStatus) {
+                    option.selected = true;
+                }
+                statusSelect.appendChild(option);
+            });
 
             const modal = new bootstrap.Modal(document.getElementById('updateItemStatusModal'));
             modal.show();
@@ -613,7 +648,6 @@
                         modal.hide();
                         Swal.fire('Success', 'Item status updated successfully', 'success')
                             .then(() => {
-                                // Refresh the order details modal instead of reloading the page
                                 window.location.reload();
                                 viewOrderDetails(orderId);
                             });
