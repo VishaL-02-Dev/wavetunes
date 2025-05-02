@@ -88,6 +88,7 @@
                 font-size: 0.875rem;
                 display: block;
             }
+
             @media print {
                 .no-print {
                     display: none;
@@ -260,7 +261,7 @@
                 <div class="bg-white rounded-lg shadow-md p-6 sticky top-6 order-section">
                     <h2 class="text-2xl font-semibold mb-6 text-gray-800">Order Actions</h2>
                     <div class="space-y-4">
-                        <button onclick="window.print()"
+                        <button onclick="downloadInvoice('<%= order._id %>')"
                             class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-md transition flex justify-center items-center no-print">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor">
@@ -291,14 +292,31 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            Swal.fire({
-                title: 'Order Placed Successfully!',
-                text: 'Thank you for your purchase. Your order has been received.',
-                icon: 'success',
-                confirmButtonColor: '#10B981'
-            });
-        });
+        async function downloadInvoice(orderId) {
+            try {
+                const response = await fetch(`/user/orders/${orderId}/invoice`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer <%= user.token %>' // Adjust if token is stored differently
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to download invoice');
+                }
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `invoice_${orderId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Error downloading invoice:', error);
+                alert('Failed to download invoice. Please try again.');
+            }
+        }
     </script>
 
     <%- include('./partials/user/footer') %>

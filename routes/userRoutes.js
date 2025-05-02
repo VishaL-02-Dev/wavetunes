@@ -81,6 +81,7 @@ router.post('/placeOrder',protect,orderController.placeOrder);
 router.post('/checkout/process-wallet-payment',protect,orderController.processWalletPayment);
 router.get('/myOrders',protect,orderController.loadMyOrders);
 router.get('/orders/:id',protect,orderController.loadOrderDetails);
+router.get('/orders/:id/invoice',protect,orderController.generateInvoice);
 router.post('/orders/:id/cancel',protect,orderController.cancelOrder);
 router.post('/orders/:orderId/items/:itemId/cancel',protect,orderController.cancelOrderItem);
 

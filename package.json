@@ -11,6 +11,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.9.0",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.5.1",
     "config": "^3.3.12",
@@ -31,6 +32,7 @@
     "parser": "^0.1.4",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "pdfkit": "^0.17.0",
     "razorpay": "^2.9.6",
     "xlsx": "^0.18.5"
   }

@@ -9,6 +9,8 @@ const jwt = require('jsonwebtoken');
 const { instance } = require('../config/razorpay');
 const crypto = require('crypto');
 const WalletService = require('./walletService');
+const PDFDocument = require('pdfkit');
+const axios = require('axios');
 
 // Helper function to create order items
 const createOrderItems = (cartItems, currentDate) => {
@@ -927,6 +929,184 @@ const loadOrderDetails = async (req, res) => {
     }
 };
 
+
+//Generate Invoice
+const generateInvoice = async (req, res) => {
+    const token = req.cookies.jwt;
+    const orderId = req.params.id;
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+
+        const order = await Order.findOne({
+            _id: orderId,
+            userId: userId
+        })
+            .populate('addressId')
+            .populate({
+                path: 'items.productId',
+                select: 'name price images'
+            });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        // Create a new PDF document
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=invoice_${order.orderId}.pdf`);
+        doc.pipe(res);
+
+        // Header
+        doc.font('Helvetica-Bold').fontSize(20).text('Invoice', 50, 50, { align: 'center' });
+        doc.font('Helvetica').fontSize(12);
+        doc.text('WaveTunes', 50, 80, { align: 'center' });
+        doc.text('123 Business Street, Commerce City, India - 400001', 50, 95, { align: 'center' });
+        doc.text('Email: support@wavetunes.com', 50, 110, { align: 'center' });
+        doc.moveDown(2);
+
+        // Order and Customer Details (Two-column layout)
+        doc.fontSize(10);
+        const leftColumnX = 50;
+        const rightColumnX = 300;
+        doc.font('Helvetica-Bold').text('Billed To:', leftColumnX, doc.y);
+        doc.font('Helvetica').text(`${order.addressId.addressType} Address`, leftColumnX, doc.y + 15);
+        doc.text(`${order.addressId.address}`, leftColumnX, doc.y);
+        doc.text(`${order.addressId.city}, ${order.addressId.district}, ${order.addressId.state} - ${order.addressId.pinCode}`, leftColumnX, doc.y);
+        doc.text(`Phone: ${order.addressId.phone}`, leftColumnX, doc.y);
+
+        doc.font('Helvetica-Bold').text('Invoice Details:', rightColumnX, doc.y - 60);
+        doc.font('Helvetica').text(`Order Number: ${order.orderId}`, rightColumnX, doc.y + 15);
+        doc.text(`Order Date: ${new Date(order.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, rightColumnX, doc.y);
+        doc.text(`Payment Method: ${order.paymentMethod}`, rightColumnX, doc.y);
+        doc.text(`Order Status: ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}`, rightColumnX, doc.y);
+        doc.moveDown(3);
+
+        // Items Table
+        doc.font('Helvetica-Bold').fontSize(12).text('Order Items', 50);
+        doc.moveDown(0.5);
+
+        // Table Setup
+        const tableLeft = 50;
+        const colWidths = { image: 50, product: 200, qty: 50, unitPrice: 80, discount: 80, total: 80 };
+        const tableWidth = Object.values(colWidths).reduce((sum, w) => sum + w, 0);
+        const rowHeight = 50;
+        const headerHeight = 20;
+
+        // Table Header
+        const tableTop = doc.y;
+        doc.fontSize(10).font('Helvetica-Bold');
+        const headers = [
+            { text: 'Image', x: tableLeft, width: colWidths.image, align: 'center' },
+            { text: 'Product', x: tableLeft + colWidths.image, width: colWidths.product, align: 'left' },
+            { text: 'Qty', x: tableLeft + colWidths.image + colWidths.product, width: colWidths.qty, align: 'right' },
+            { text: 'Unit Price (Rs)', x: tableLeft + colWidths.image + colWidths.product + colWidths.qty, width: colWidths.unitPrice, align: 'right' },
+            { text: 'Discount (Rs)', x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice, width: colWidths.discount, align: 'right' },
+            { text: 'Total (Rs)', x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount, width: colWidths.total, align: 'right' }
+        ];
+
+        headers.forEach(header => {
+            doc.text(header.text, header.x, tableTop, { width: header.width, align: header.align });
+        });
+
+        // Draw Table Header Grid
+        doc.lineWidth(0.5);
+        doc.rect(tableLeft, tableTop - 5, tableWidth, headerHeight).stroke();
+        headers.forEach((header, i) => {
+            if (i < headers.length - 1) {
+                const x = header.x + header.width;
+                doc.moveTo(x, tableTop - 5).lineTo(x, tableTop + headerHeight - 5).stroke();
+            }
+        });
+        doc.moveTo(tableLeft, tableTop + headerHeight - 5).lineTo(tableLeft + tableWidth, tableTop + headerHeight - 5).stroke();
+
+        // Table Rows
+        doc.font('Helvetica');
+        let currentY = tableTop + headerHeight;
+        for (const item of order.items) {
+            const originalPrice = (item.price + (item.discount || 0)).toFixed(2);
+            const discount = (item.discount || 0).toFixed(2);
+            const total = (item.price * item.quantity).toFixed(2);
+            const rowTop = currentY;
+
+            // Image (if available)
+            if (item.productId && item.productId.images && item.productId.images.length > 0) {
+                const imageUrl = item.productId.images[0].url;
+                console.log(`Fetching image: ${imageUrl}`); // Debug log
+                try {
+                    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+                    if (response.status === 200) {
+                        const imageBuffer = Buffer.from(response.data);
+                        doc.image(imageBuffer, tableLeft + 5, rowTop + 5, { width: colWidths.image - 10, height: 40 });
+                    } else {
+                        console.error(`Failed to fetch image from ${imageUrl}: Status ${response.status}`);
+                    }
+                } catch (err) {
+                    console.error(`Error fetching image from ${imageUrl}:`, err.message);
+                }
+            } else {
+                console.log(`No image available for product: ${item.productId ? item.productId.name : 'Unknown'}`);
+            }
+
+            // Text Columns
+            const rowData = [
+                { text: '', x: tableLeft, width: colWidths.image, align: 'center' },
+                { text: item.productId ? item.productId.name : 'Unknown Product', x: tableLeft + colWidths.image, width: colWidths.product, align: 'left' },
+                { text: item.quantity.toString(), x: tableLeft + colWidths.image + colWidths.product, width: colWidths.qty, align: 'right' },
+                { text: originalPrice, x: tableLeft + colWidths.image + colWidths.product + colWidths.qty, width: colWidths.unitPrice, align: 'right' },
+                { text: discount, x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice, width: colWidths.discount, align: 'right' },
+                { text: total, x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount, width: colWidths.total, align: 'right' }
+            ];
+
+            rowData.forEach(cell => {
+                if (cell.text) {
+                    doc.text(cell.text, cell.x + 5, rowTop + 15, { width: cell.width - 10, align: cell.align });
+                }
+            });
+
+            // Draw Row Grid
+            doc.rect(tableLeft, rowTop, tableWidth, rowHeight).stroke();
+            headers.forEach((header, i) => {
+                if (i < headers.length - 1) {
+                    const x = header.x + header.width;
+                    doc.moveTo(x, rowTop).lineTo(x, rowTop + rowHeight).stroke();
+                }
+            });
+            doc.moveTo(tableLeft, rowTop + rowHeight).lineTo(tableLeft + tableWidth, rowTop + rowHeight).stroke();
+
+            currentY += rowHeight;
+            doc.y = currentY;
+        }
+
+        // Total Amount
+        doc.moveDown(2);
+        doc.font('Helvetica-Bold').fontSize(12).text(`Total Amount: Rs${order.totalAmount.toFixed(2)}`, 50, doc.y, { align: 'right' });
+
+        // Footer
+        doc.moveDown(2);
+        doc.font('Helvetica').fontSize(10);
+        doc.text('Thank you for shopping with WaveTunes!', 50, doc.y, { align: 'center', lineBreak: false });
+        doc.text('For any queries, please contact us at support@wavetunes.com', 50, doc.y + 15, { align: 'center', lineBreak: false });
+
+        // Finalize PDF
+        doc.end();
+
+    } catch (error) {
+        console.error('Error generating invoice:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error generating invoice',
+            error: error.message
+        });
+    }
+};
+
+
 // Cancel Order
 const cancelOrder = async (req, res) => {
     const token = req.cookies.jwt;
@@ -1680,6 +1860,7 @@ module.exports = {
     initiateRazorpayOrder,
     verifyRazorpay,
     retryRazorpayPayment,
+    generateInvoice,
     applyCoupon,
     loadMyOrders,
     loadOrderDetails,

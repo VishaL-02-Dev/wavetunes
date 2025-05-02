@@ -64,8 +64,6 @@
                 display: block;
             }
 
-
-
             @media print {
                 .no-print {
                     display: none;
@@ -87,8 +85,7 @@
                 <li class="mx-2 text-white">/</li>
                 <li><a href="/user/myOrders" class="text-white hover:text-blue-700">My Orders</a></li>
                 <li class="mx-2 text-white">/</li>
-                <li class="text-white font-medium">Order Details</li>
-            </ol>
+                <li class="text-white font-medium">Order Details</li劲 </ol>
         </nav>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -167,8 +164,8 @@
                                         </span></p>
                                 </div>
                                 <div class="text-right">
-                                    <% let discount=item.discount || 0; let originalPrice=item.price + discount;
-                                        let offerPercentage=originalPrice> 0 ? (discount / originalPrice) * 100 : 0;
+                                    <% let discount=item.discount || 0; let originalPrice=item.price + discount; let
+                                        offerPercentage=originalPrice> 0 ? (discount / originalPrice) * 100 : 0;
                                         %>
                                         <% if (discount> 0 && offerPercentage > 0) { %>
                                             <p class="text-lg font-medium text-gray-900">
@@ -228,6 +225,10 @@
                                         Return Order
                                     </button>
                                     <% } %>
+                                        <button onclick="downloadInvoice('<%= order._id %>')"
+                                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-md transition no-print mt-4">
+                                            Download Invoice
+                                        </button>
                                         <a href="/user/myOrders"
                                             class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 rounded-md transition text-center no-print">
                                             View All Orders
@@ -243,6 +244,55 @@
     </div>
 
     <script>
+        function downloadInvoice(orderId) {
+            Swal.fire({
+                title: 'Generating Invoice',
+                text: 'Please wait while we prepare your invoice...',
+                icon: 'info',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch(`/user/orders/${orderId}/invoice`, {
+                method: 'GET',
+                headers: { 'Accept': 'application/pdf' }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to generate invoice');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `invoice_${orderId}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    Swal.fire({
+                        title: 'Success',
+                        text: 'Invoice downloaded successfully!',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Failed to download invoice. Please try again.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                });
+        }
+
         function returnItem(orderId, itemId) {
             Swal.fire({
                 title: 'Return Item',
