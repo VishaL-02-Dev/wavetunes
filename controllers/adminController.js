@@ -8,7 +8,6 @@ const moment = require('moment-timezone');
 // Load login page
 const loadLogin = async (req, res) => {
     try {
-        // console.log("login rendered");
         res.render('admin/login', { error: null });
     } catch (error) {
         console.log(error);
@@ -76,6 +75,7 @@ const getDashboard = async (req, res) => {
     let totalProducts = 0;
     let totalRevenue = 0;
     let recentOrders = [];
+    let topProducts = [];
 
     try {
         totalUsers = await User.countDocuments({ isAdmin: false });
@@ -119,7 +119,66 @@ const getDashboard = async (req, res) => {
             .populate('userId', 'fname lname')
             .lean();
 
-        // console.log('getDashboard - Total Revenue:', totalRevenue[0]?.total || 0);
+        // Fetch top 10 best-selling products
+        topProducts = await Order.aggregate([
+            {
+                $match: {
+                    status: { $nin: ['cancelled', 'returned'] },
+                    createdAt: dateFilter
+                }
+            },
+            {
+                $unwind: '$items'
+            },
+            {
+                $match: {
+                    'items.status': { $nin: ['cancelled', 'returned'] }
+                }
+            },
+            {
+                $group: {
+                    _id: '$items.productId',
+                    unitsSold: { $sum: '$items.quantity' },
+                    totalRevenue: { $sum: { $multiply: ['$items.quantity', '$items.price'] } }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'product'
+                }
+            },
+            {
+                $unwind: '$product'
+            },
+            {
+                $lookup: {
+                    from: 'categories',
+                    localField: 'product.category',
+                    foreignField: '_id',
+                    as: 'category'
+                }
+            },
+            {
+                $unwind: '$category'
+            },
+            {
+                $project: {
+                    name: '$product.name',
+                    category: '$category.name',
+                    unitsSold: 1,
+                    totalRevenue: 1
+                }
+            },
+            {
+                $sort: { unitsSold: -1 }
+            },
+            {
+                $limit: 10
+            }
+        ]);
 
         res.render('admin/dashboard', {
             currentPage: 'dashboard',
@@ -130,7 +189,8 @@ const getDashboard = async (req, res) => {
                 totalOrders,
                 totalRevenue: totalRevenue[0]?.total || 0
             },
-            recentOrders
+            recentOrders,
+            topProducts
         });
     } catch (error) {
         console.error('Dashboard Error:', error);
@@ -143,7 +203,8 @@ const getDashboard = async (req, res) => {
                 totalOrders,
                 totalRevenue: totalRevenue[0]?.total || 0
             },
-            recentOrders
+            recentOrders,
+            topProducts
         });
     }
 };
@@ -247,8 +308,6 @@ const getSalesReport = async (req, res) => {
             }
         ]);
 
-        // console.log(`getSalesReport (${period}) - Sales Data:`, JSON.stringify(salesData, null, 2));
-
         if (period === 'daily') {
             const today = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
             const todayStr = new Date(today).toISOString().split('T')[0];
@@ -318,11 +377,7 @@ const getSalesReportDetails = async (req, res) => {
                 break;
         }
 
-        // console.log(`getSalesReportDetails (${period}) - Date Filter:`, {
-        //     start: dateFilter.$gte,
-        //     end: dateFilter.$lte
-        // });
-
+        // Aggregate sales data (unchanged)
         const salesData = await Order.aggregate([
             {
                 $match: {
@@ -359,19 +414,46 @@ const getSalesReportDetails = async (req, res) => {
             }
         ]);
 
-        // console.log(`getSalesReportDetails (${period}) - Sales Data:`, JSON.stringify(salesData, null, 2));
-
-        const orders = await Order.find({
-            createdAt: dateFilter
-        })
-            .populate('userId', 'fname lname')
-            .lean()
-            .select('orderId userId totalAmount status createdAt');
-
-        // console.log(`getSalesReportDetails (${period}) - Orders Count:`, orders.length);
-        if (orders.length > 0) {
-            // console.log(`getSalesReportDetails (${period}) - Sample Order:`, JSON.stringify(orders[0], null, 2));
-        }
+        // Fetch orders with calculated discountAmount
+        const orders = await Order.aggregate([
+            {
+                $match: {
+                    createdAt: dateFilter
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userId',
+                    foreignField: '_id',
+                    as: 'userId'
+                }
+            },
+            {
+                $unwind: { path: '$userId', preserveNullAndEmptyArrays: true }
+            },
+            {
+                $addFields: {
+                    discountAmount: {
+                        $sum: '$items.discount'
+                    }
+                }
+            },
+            {
+                $project: {
+                    orderId: 1,
+                    userId: {
+                        fname: '$userId.fname',
+                        lname: '$userId.lname'
+                    },
+                    totalAmount: 1,
+                    paymentMethod: 1,
+                    discountAmount: 1,
+                    status: 1,
+                    createdAt: 1
+                }
+            }
+        ]);
 
         const formattedSalesData = salesData.map(item => ({
             date: item.date,
@@ -389,6 +471,89 @@ const getSalesReportDetails = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch sales report details',
+            error: error.message
+        });
+    }
+};
+
+// Top 10 Best-Selling Products
+const getTopProducts = async (req, res) => {
+    try {
+        const now = moment().tz('Asia/Kolkata');
+        const dateFilter = {
+            $gte: now.clone().subtract(12, 'months').startOf('month').toDate(),
+            $lte: now.endOf('month').toDate()
+        };
+
+        const topProducts = await Order.aggregate([
+            {
+                $match: {
+                    status: { $nin: ['cancelled', 'returned'] },
+                    createdAt: dateFilter
+                }
+            },
+            {
+                $unwind: '$items'
+            },
+            {
+                $match: {
+                    'items.status': { $nin: ['cancelled', 'returned'] }
+                }
+            },
+            {
+                $group: {
+                    _id: '$items.productId',
+                    unitsSold: { $sum: '$items.quantity' },
+                    totalRevenue: { $sum: { $multiply: ['$items.quantity', '$items.price'] } }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'product'
+                }
+            },
+            {
+                $unwind: '$product'
+            },
+            {
+                $lookup: {
+                    from: 'categories',
+                    localField: 'product.category',
+                    foreignField: '_id',
+                    as: 'category'
+                }
+            },
+            {
+                $unwind: '$category'
+            },
+            {
+                $project: {
+                    name: '$product.name',
+                    category: '$category.name',
+                    unitsSold: 1,
+                    totalRevenue: 1
+                }
+            },
+            {
+                $sort: { unitsSold: -1 }
+            },
+            {
+                $limit: 10
+            }
+        ]);
+
+        res.status(200).json({
+            success: true,
+            topProducts
+        });
+    } catch (error) {
+        console.error('Error fetching top products:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch top products',
             error: error.message
         });
     }
@@ -418,5 +583,6 @@ module.exports = {
     getSalesReport,
     getDashboard,
     getSalesReportDetails,
+    getTopProducts,
     logout
 };

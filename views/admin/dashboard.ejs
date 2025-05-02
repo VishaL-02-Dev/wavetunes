@@ -130,6 +130,50 @@
                     </div>
                 </div>
 
+                <!-- Top 10 Best-Selling Products -->
+                <div class="card bg-dark text-white mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Top 10 Best-Selling Products</h5>
+                        <table id="topProductsTable" class="table table-dark table-hover">
+                            <thead>
+                                <tr>
+                                    <th>SlNo:</th>
+                                    <th>Product Name</th>
+                                    <th>Category</th>
+                                    <th>Units Sold</th>
+                                    <th>Total Revenue (Rs.)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topProductsTableBody">
+                                <% if (topProducts && topProducts.length> 0) { %>
+                                    <% topProducts.forEach((product, index)=> { %>
+                                        <tr>
+                                            <td>
+                                                <%= index + 1 %>.
+                                            </td>
+                                            <td>
+                                                <%= product.name %>
+                                            </td>
+                                            <td>
+                                                <%= product.category.name %>
+                                            </td>
+                                            <td>
+                                                <%= product.unitsSold %>
+                                            </td>
+                                            <td>Rs.<%= product.totalRevenue.toFixed(2) %>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="5" class="text-center">No products found.</td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- Recent Orders -->
                 <div class="card bg-dark text-white">
                     <div class="card-body">
@@ -286,11 +330,11 @@
             salesData.forEach((item, index) => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${moment(item.date).tz('Asia/Kolkata').format('MMM DD, YYYY')}</td>
-                    <td>Rs.${parseFloat(item.totalSales).toFixed(2)}</td>
-                    <td>${item.orderCount}</td>
-                `;
+            <td>${index + 1}</td>
+            <td>${moment(item.date).tz('Asia/Kolkata').format('MMM DD, YYYY')}</td>
+            <td>Rs.${parseFloat(item.totalSales).toFixed(2)}</td>
+            <td>${item.orderCount}</td>
+        `;
                 tbody.appendChild(row);
             });
         }
@@ -333,7 +377,7 @@
                     if (data.success) {
                         updateChart(data.chartData.labels, data.chartData.sales, period);
                         updateTable(data.salesData);
-                        updateTotalRevenue(period); // Update total revenue for the period
+                        updateTotalRevenue(period);
                     } else {
                         Swal.fire('Error', data.message, 'error');
                     }
@@ -347,7 +391,7 @@
         // Download PDF
         document.getElementById('downloadPdf').addEventListener('click', () => {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const doc = new jsPDF({ orientation: 'landscape' });
             const period = document.getElementById('periodFilter').value;
 
             Swal.fire({
@@ -399,14 +443,15 @@
                             body: salesTableData,
                             startY: 35,
                             theme: 'grid',
-                            styles: { textColor: [0, 0, 0], fillColor: [255, 255, 255], fontSize: 10 },
+                            styles: { textColor: [0, 0, 0], fillColor: [255, 255, 255], fontSize: 9 },
                             headStyles: { fillColor: [13, 110, 253], textColor: [255, 255, 255] },
                             columnStyles: {
-                                0: { cellWidth: 20 },
-                                1: { cellWidth: 50 },
-                                2: { cellWidth: 50 },
-                                3: { cellWidth: 40 }
-                            }
+                                0: { cellWidth: 30 },
+                                1: { cellWidth: 60 },
+                                2: { cellWidth: 60 },
+                                3: { cellWidth: 50 }
+                            },
+                            margin: { left: 14, right: 14 }
                         });
                     }
 
@@ -420,6 +465,8 @@
                         order.orderId,
                         `${order.userId?.fname || 'Unknown'} ${order.userId?.lname || 'User'}`,
                         `Rs.${parseFloat(order.totalAmount).toFixed(2)}`,
+                        order.paymentMethod || 'N/A',
+                        `Rs.${parseFloat(order.discountAmount || 0).toFixed(2)}`,
                         order.status,
                         moment(order.createdAt).tz('Asia/Kolkata').format('MMM DD, YYYY')
                     ]);
@@ -429,19 +476,30 @@
                         doc.text('No orders found for this period.', 14, finalY + 5);
                     } else {
                         doc.autoTable({
-                            head: [['SlNo:', 'Order ID', 'User', 'Total (Rs.)', 'Status', 'Date']],
+                            head: [['SlNo:', 'Order ID', 'User', 'Total (Rs.)', 'Payment Method', 'Discount (Rs.)', 'Status', 'Date']],
                             body: orderTableData,
                             startY: finalY,
                             theme: 'grid',
-                            styles: { textColor: [0, 0, 0], fillColor: [255, 255, 255], fontSize: 10 },
-                            headStyles: { fillColor: [13, 110, 253], textColor: [255, 255, 255] },
+                            styles: { textColor: [0, 0, 0], fillColor: [255, 255, 255], fontSize: 7, cellPadding: 2 },
+                            headStyles: { fillColor: [13, 110, 253], textColor: [255, 255, 255], fontSize: 8 },
                             columnStyles: {
                                 0: { cellWidth: 20 },
                                 1: { cellWidth: 40 },
                                 2: { cellWidth: 50 },
                                 3: { cellWidth: 30 },
-                                4: { cellWidth: 30 },
-                                5: { cellWidth: 40 }
+                                4: { cellWidth: 35 },
+                                5: { cellWidth: 30 },
+                                6: { cellWidth: 30 },
+                                7: { cellWidth: 40 }
+                            },
+                            margin: { left: 14, right: 14 },
+                            pageBreak: 'auto',
+                            tableWidth: 'auto',
+                            didParseCell: (data) => {
+                                if (data.section === 'body') {
+                                    data.cell.styles.valign = 'middle';
+                                    data.cell.styles.halign = data.column.index === 0 ? 'center' : 'left';
+                                }
                             }
                         });
                     }
@@ -449,7 +507,9 @@
                     finalY = orderTableData.length === 0 ? finalY + 15 : doc.lastAutoTable.finalY + 10;
                     doc.setFontSize(12);
                     const totalRevenue = data.salesData.reduce((sum, item) => sum + parseFloat(item.totalSales), 0);
+                    const totalDiscount = data.orders.reduce((sum, order) => sum + parseFloat(order.discountAmount || 0), 0);
                     doc.text(`Total Revenue: Rs.${totalRevenue.toFixed(2)}`, 14, finalY);
+                    doc.text(`Total Discount: Rs.${totalDiscount.toFixed(2)}`, 14, finalY + 10);
 
                     doc.save(`sales-report-${period}-${moment().tz('Asia/Kolkata').format('YYYYMMDD')}.pdf`);
                 })
@@ -463,53 +523,155 @@
         // Download Excel
         document.getElementById('downloadExcel').addEventListener('click', () => {
             const period = document.getElementById('periodFilter').value;
-            const tableRows = document.querySelectorAll('#salesTableBody tr');
 
-            if (tableRows.length === 0) {
-                Swal.fire('Error', 'No sales data available to export.', 'error');
+            if (typeof XLSX === 'undefined') {
+                console.error('XLSX library is not loaded');
+                Swal.fire('Error', 'Excel export library failed to load. Please try again later.', 'error');
                 return;
             }
 
-            const tableData = Array.from(tableRows).map((row, index) => {
-                const cells = row.querySelectorAll('td');
-                return {
-                    'SlNo:': cells[0]?.textContent?.trim() || `${(index + 1).toString()}.`,
-                    Date: cells[1]?.textContent?.trim() || '',
-                    'Total Sales': cells[2]?.textContent?.trim().replace('Rs.', '') || '',
-                    'Order Count': cells[3]?.textContent?.trim() || ''
-                };
+            Swal.fire({
+                title: 'Generating Excel...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
             });
 
-            const isValidData = tableData.every(row =>
-                row['SlNo:'] && row.Date && row['Total Sales'] && row['Order Count'] &&
-                !isNaN(parseFloat(row['Total Sales'])) && !isNaN(parseInt(row['Order Count']))
-            );
+            fetch(`/admin/sales-report-details?period=${period}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    Swal.close();
 
-            if (!isValidData) {
-                Swal.fire('Error', 'Invalid or incomplete sales data. Please refresh and try again.', 'error');
-                return;
-            }
+                    if (!data.success) {
+                        Swal.fire('Error', data.message || 'Failed to fetch sales details', 'error');
+                        return;
+                    }
 
-            try {
-                const ws = XLSX.utils.json_to_sheet(tableData);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'Sales Report');
-                XLSX.write(wb, `sales-report-${period}-${typeof moment.tz !== 'undefined'
-                    ? moment().tz('Asia/Kolkata').format('YYYYMMDD')
-                    : new Date().toISOString().split('T')[0]}.xlsx`);
-            } catch (error) {
-                console.error('Excel Export Error:', {
-                    message: error.message,
-                    stack: error.stack,
-                    tableData
+                    try {
+                        // Sales Summary Data
+                        const salesTableData = data.salesData.map((item, index) => ({
+                            'SlNo:': index + 1,
+                            Date: moment(item.date).tz('Asia/Kolkata').format('MMM DD, YYYY'),
+                            'Total Sales (Rs.)': parseFloat(item.totalSales).toFixed(2),
+                            'Order Count': item.orderCount
+                        }));
+
+                        // Detailed Order List Data
+                        const orderTableData = data.orders.map((order, index) => ({
+                            'SlNo:': index + 1,
+                            'Order ID': order.orderId,
+                            User: `${order.userId?.fname || 'Unknown'} ${order.userId?.lname || 'User'}`,
+                            'Total (Rs.)': parseFloat(order.totalAmount).toFixed(2),
+                            'Payment Method': order.paymentMethod || 'N/A',
+                            'Discount (Rs.)': parseFloat(order.discountAmount || 0).toFixed(2),
+                            Status: order.status,
+                            Date: moment(order.createdAt).tz('Asia/Kolkata').format('MMM DD, YYYY')
+                        }));
+
+                        // Summary Metrics
+                        const totalRevenue = data.salesData.reduce((sum, item) => sum + parseFloat(item.totalSales), 0).toFixed(2);
+                        const totalDiscount = data.orders.reduce((sum, order) => sum + parseFloat(order.discountAmount || 0), 0).toFixed(2);
+                        const summaryData = [
+                            { Metric: 'Total Revenue (Rs.)', Value: totalRevenue },
+                            { Metric: 'Total Discount (Rs.)', Value: totalDiscount }
+                        ];
+
+                        // Create workbook
+                        const wb = XLSX.utils.book_new();
+
+                        // Sales Summary Sheet
+                        if (salesTableData.length > 0) {
+                            const wsSales = XLSX.utils.json_to_sheet(salesTableData);
+                            XLSX.utils.book_append_sheet(wb, wsSales, 'Sales Summary');
+                        } else {
+                            const wsSales = XLSX.utils.json_to_sheet([{ Message: 'No sales data available for this period.' }]);
+                            XLSX.utils.book_append_sheet(wb, wsSales, 'Sales Summary');
+                        }
+
+                        // Detailed Order List Sheet
+                        if (orderTableData.length > 0) {
+                            const wsOrders = XLSX.utils.json_to_sheet(orderTableData);
+                            XLSX.utils.book_append_sheet(wb, wsOrders, 'Detailed Orders');
+                        } else {
+                            const wsOrders = XLSX.utils.json_to_sheet([{ Message: 'No orders found for this period.' }]);
+                            XLSX.utils.book_append_sheet(wb, wsOrders, 'Detailed Orders');
+                        }
+
+                        // Summary Metrics Sheet
+                        const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+                        XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+                        // Generate filename
+                        const fileName = `sales-report-${period}-${moment().tz('Asia/Kolkata').format('YYYYMMDD')}.xlsx`;
+
+                        // Write file
+                        XLSX.writeFile(wb, fileName);
+                    } catch (error) {
+                        console.error('Excel Export Error:', {
+                            message: error.message,
+                            stack: error.stack,
+                            salesDataLength: data.salesData?.length || 0,
+                            ordersLength: data.orders?.length || 0
+                        });
+                        Swal.fire('Error', `Failed to export Excel file: ${error.message}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    Swal.close();
+                    console.error('Fetch Error:', error);
+                    Swal.fire('Error', 'Failed to fetch sales data: ' + error.message, 'error');
                 });
-                Swal.fire('Error', 'Failed to export Excel file: ' + error.message, 'error');
-            }
         });
 
-        // Initialize with monthly data
+        // Initialize with monthly data and fetch top products
         document.addEventListener('DOMContentLoaded', () => {
             fetchSalesData('monthly');
+
+            // Fetch top 10 best-selling products
+            fetch('/admin/top-products', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const tbody = document.getElementById('topProductsTableBody');
+                        tbody.innerHTML = '';
+                        if (data.topProducts.length > 0) {
+                            data.topProducts.forEach((product, index) => {
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                            <td>${index + 1}.</td>
+                            <td>${product.name}</td>
+                            <td>${product.category}</td>
+                            <td>${product.unitsSold}</td>
+                            <td>Rs.${parseFloat(product.totalRevenue).toFixed(2)}</td>
+                        `;
+                                tbody.appendChild(row);
+                            });
+                        } else {
+                            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No products found.</td></tr>';
+                        }
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    Swal.fire('Error', 'Failed to load top products', 'error');
+                });
 
             document.getElementById('periodFilter').addEventListener('change', (e) => {
                 fetchSalesData(e.target.value);
