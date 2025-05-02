@@ -17,8 +17,8 @@ router.use(express.json());
 router.use(express.urlencoded({extended:true}));
 
 
-router.get('/login',userController.loadLogin);
-router.post('/login',userController.login);
+router.get('/login',optionalProtect,userController.loadLogin);
+router.post('/login',optionalProtect,userController.login);
 router.get('/signup',userController.signup);
 router.post('/signup',userController.addUser);
 router.get('/logout',userController.logout);

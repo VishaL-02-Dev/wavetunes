@@ -13,8 +13,8 @@ router.use(express.static('public'));
 router.use(express.json());
 
 //Login
-router.get('/login',adminController.loadLogin);
-router.post('/login',adminController.login);
+router.get('/login',optionalProtect,adminController.loadLogin);
+router.post('/login',optionalProtect,adminController.login);
 router.get('/dashboard', protect,authorize('admin'),adminController.getDashboard);
 router.get('/logout',protect,authorize('admin'),adminController.logout);
 router.get('/customers',protect,authorize('admin'),customerController.getCustomers);

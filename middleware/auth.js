@@ -108,20 +108,17 @@ const authorize = (...roles)=>{
 
 const optionalProtect = async (req, res, next) => {
     try {
-       
         const token = req.cookies.jwt || 
                       (req.headers.authorization?.startsWith('Bearer ') 
                        ? req.headers.authorization.split(' ')[1] 
                        : null);
 
         if (!token) {
-            return next(); 
+            return next(); // No token, proceed without setting user/admin
         }
 
-        
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        
         const user = await User.findById(decoded.id).select('-password');
 
         if (!user) {
@@ -133,7 +130,6 @@ const optionalProtect = async (req, res, next) => {
             });
         }
 
-        
         if (user.status === 'Blocked') {
             res.clearCookie('jwt');
             return res.status(403).json({
@@ -143,19 +139,26 @@ const optionalProtect = async (req, res, next) => {
             });
         }
 
-        //Set role
-        req.user = {
+        // Attach based on role
+        const userData = {
             ...user.toObject(),
             role: user.isAdmin ? 'admin' : 'user'
         };
+
+        if (user.isAdmin) {
+            req.admin = userData;
+        } else {
+            req.user = userData;
+        }
 
         next();
     } catch (error) {
         console.error('Optional authentication error:', error.message);
         res.clearCookie('jwt');
-        return next(); 
+        return next(); // Proceed without user/admin if token is invalid
     }
 };
+
 
 module.exports= {
     protect,

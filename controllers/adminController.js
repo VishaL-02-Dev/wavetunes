@@ -8,6 +8,9 @@ const moment = require('moment-timezone');
 // Load login page
 const loadLogin = async (req, res) => {
     try {
+        if (req.admin) {
+            return res.redirect('/admin/dashboard');
+        }
         res.render('admin/login', { error: null });
     } catch (error) {
         console.log(error);

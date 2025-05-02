@@ -318,6 +318,9 @@ const loadOtp = async (req, res) => {
 // Login page
 const loadLogin = async (req, res) => {
     try {
+        if (req.user) {
+            return res.redirect('/');
+        }
         // console.log("Login rendered");
         res.render('user/login');
     } catch (error) {
