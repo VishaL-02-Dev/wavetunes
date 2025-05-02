@@ -39,6 +39,14 @@
                     </div>
 
                     <div>
+                        <label for="referral-code" class="block text-sm font-medium">Referral Code (Optional)</label>
+                        <input type="text" id="referral-code" name="referralCode"
+                            class="w-full bg-transparent text-white border border-[#00aaff] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#00aaff]"
+                            placeholder="Enter referral code">
+                        <div id="referral-code-error" class="text-red-500 text-sm mt-1"></div>
+                    </div>
+
+                    <div>
                         <label for="password" class="block text-sm font-medium">Password</label>
                         <input type="password" id="password" name="password"
                             class="w-full bg-transparent text-white border border-[#00aaff] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#00aaff]"
@@ -70,9 +78,7 @@
                     </div>
                 </form>
             </div>
-
         </div>
-
 
         <script>
             document.getElementById('signup-form').addEventListener("submit", async function (event) {
@@ -81,13 +87,14 @@
                 let hasError = false;
 
                 // Clear previous errors
-                document.querySelectorAll('.error-message').forEach(elem => elem.textContent = '');
+                document.querySelectorAll('.text-red-500').forEach(elem => elem.textContent = '');
 
                 // Get input values
                 const fname = document.getElementById('first-name').value.trim();
                 const lname = document.getElementById('last-name').value.trim();
                 const email = document.getElementById('email').value.trim();
                 const phone = document.getElementById('phone').value.trim();
+                const referralCode = document.getElementById('referral-code').value.trim();
                 const password = document.getElementById('password').value.trim();
                 const confirmPassword = document.getElementById('confirm-password').value.trim();
 
@@ -95,6 +102,7 @@
                 const nameRegex = /^[A-Za-z\s]+$/;
                 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
                 const phoneRegex = /^[0-9]{10}$/;
+                const referralCodeRegex = /^[A-Z0-9]{8}$/;
 
                 if (!nameRegex.test(fname)) {
                     document.getElementById('first-name-error').textContent = 'First name should contain only letters';
@@ -112,6 +120,10 @@
                     document.getElementById('phone-error').textContent = 'Phone number must be 10 digits';
                     hasError = true;
                 }
+                if (referralCode && !referralCodeRegex.test(referralCode)) {
+                    document.getElementById('referral-code-error').textContent = 'Referral code must be 8 alphanumeric characters';
+                    hasError = true;
+                }
                 if (password.length < 6) {
                     document.getElementById('password-error').textContent = 'Password must be at least 6 characters';
                     hasError = true;
@@ -127,7 +139,7 @@
                     const response = await fetch('/user/signup', {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ fname, lname, email, phone, password })
+                        body: JSON.stringify({ fname, lname, email, phone, referralCode, password })
                     });
 
                     const result = await response.json();
@@ -170,6 +182,9 @@
                     if (id === 'phone') {
                         if (!/^[0-9]{10}$/.test(value)) errorElement.textContent = 'Phone number must be 10 digits';
                     }
+                    if (id === 'referral-code' && value) {
+                        if (!/^[A-Z0-9]{8}$/.test(value)) errorElement.textContent = 'Referral code must be 8 alphanumeric characters';
+                    }
                     if (id === 'password' && value.length < 6) {
                         errorElement.textContent = 'Password must be at least 6 characters';
                     }
@@ -178,6 +193,5 @@
                     }
                 });
             });
-
         </script>
         <%- include("partials/user/footer") %>

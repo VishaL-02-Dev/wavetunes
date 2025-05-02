@@ -7,8 +7,7 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 require('dotenv').config();
 
-
-//Password hashing
+// Password hashing
 const sPass = async (password) => {
     try {
         const hashPass = await bcrypt.hash(password, 10);
@@ -16,30 +15,41 @@ const sPass = async (password) => {
     } catch (error) {
         console.log(error.message);
     }
-}
+};
 
-//Sign up page
+// Generate a unique referral code
+const generateReferralCode = async () => {
+    let code;
+    let isUnique = false;
+    while (!isUnique) {
+        code = crypto.randomBytes(4).toString('hex').toUpperCase(); // Generates an 8-character code
+        const existingUser = await User.findOne({ referralCode: code });
+        if (!existingUser) {
+            isUnique = true;
+        }
+    }
+    return code;
+};
+
+// Sign up page
 const signup = async (req, res) => {
     try {
-        console.log("Signup rendered")
+        console.log("Signup rendered");
         res.render('user/signup');
     } catch (error) {
         console.log(error);
     }
-}
+};
 
-
-//Adding user to the DB
+// Adding user to the DB
 const addUser = async (req, res) => {
     try {
-        // console.log("Incoming Signup Request:", req.body); // Debugging
-
         if (!req.body) {
             console.log("No data received!");
             return res.status(400).json({ error: "No data received" });
         }
 
-        const { fname, lname, email, phone, password } = req.body;
+        const { fname, lname, email, phone, password, referralCode } = req.body;
 
         if (!fname || !lname || !email || !phone || !password) {
             console.log("Missing Fields!");
@@ -72,14 +82,21 @@ const addUser = async (req, res) => {
             return res.status(400).json({ error: "User already exists" });
         }
 
+        // Validate referral code if provided
+        let referrer = null;
+        if (referralCode) {
+            referrer = await User.findOne({ referralCode });
+            if (!referrer) {
+                return res.status(400).json({ error: "Invalid referral code" });
+            }
+        }
+
         // Generate OTP and store it in session
         const otp = generateOtp();
         const emailSent = await sendVerificationEmail(email, otp);
 
         if (!emailSent) {
-
             return res.status(400).json({ error: "Failed to send OTP. Try again" });
-
         }
 
         req.session.userOtp = otp;
@@ -88,7 +105,8 @@ const addUser = async (req, res) => {
             lname,
             phone,
             email,
-            password
+            password,
+            referredBy: referralCode || null
         };
 
         console.log("Session stored", req.session.userData);
@@ -102,7 +120,7 @@ const addUser = async (req, res) => {
     } catch (error) {
         console.log('catch invoked');
         console.log(error);
-        return res.status(500).json({ error: "Internal server error" })
+        return res.status(500).json({ error: "Internal server error" });
     }
 };
 
@@ -117,7 +135,7 @@ const verifyOtp = async (req, res) => {
         console.log("Stored OTP:", req.session.userOtp);
 
         if (!otp) {
-            return res.status(400).json({ success: false, message: "OTP is required" })
+            return res.status(400).json({ success: false, message: "OTP is required" });
         }
 
         if (!req.session.userOtp) {
@@ -131,7 +149,7 @@ const verifyOtp = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Invalid OTP"
-            })
+            });
         }
 
         if (!userData) {
@@ -141,8 +159,8 @@ const verifyOtp = async (req, res) => {
             });
         }
 
-
-        // console.log('req.session.userdata ethi');
+        // Generate a unique referral code for the new user
+        const newReferralCode = await generateReferralCode();
 
         // Retrieve user data from session and hash the password
         const sPassword = await sPass(userData.password);
@@ -153,10 +171,29 @@ const verifyOtp = async (req, res) => {
             phone: userData.phone,
             password: sPassword,
             status: 'Unblocked',
+            referralCode: newReferralCode,
+            referredBy: userData.referredBy
         });
 
         const savedUser = await newUser.save();
         console.log("User created");
+
+        // Handle referral bonus
+        if (userData.referredBy) {
+            const referrer = await User.findOne({ referralCode: userData.referredBy });
+            if (referrer) {
+                try {
+                    // Credit 50 INR to new user's wallet
+                    await WalletService.addFunds(savedUser._id, 50, 'Referral Bonus - New User');
+                    // Credit 50 INR to referrer's wallet
+                    await WalletService.addFunds(referrer._id, 50, 'Referral Bonus - Referrer');
+                    console.log("Referral bonus credited: 50 INR to both users");
+                } catch (walletError) {
+                    console.error("Failed to credit referral bonus:", walletError);
+                    // Continue with user creation despite wallet error
+                }
+            }
+        }
 
         const token = jwt.sign(
             { id: savedUser._id, email: savedUser.email, role: "user" },
@@ -164,18 +201,9 @@ const verifyOtp = async (req, res) => {
             { expiresIn: "1h" }
         );
 
-        // req.session.user = {
-        //     _id: savedUser._id.toString(),
-        //     fname: savedUser.fname,
-        //     lname:savedUser.lname,
-        //     email: savedUser.email
-        // };
-
         // Clear session
         delete req.session.userOtp;
         delete req.session.userData;
-
-        // req.session.save();
 
         return res.status(200).json({
             success: true,
@@ -186,9 +214,10 @@ const verifyOtp = async (req, res) => {
 
     } catch (error) {
         console.error("Error verifying OTP:", error);
-        return res.json({ success: false, message: "Server error, try again" });
+        return res.status(500).json({ success: false, message: "Server error, try again" });
     }
 };
+
 
 // Generate a 6-digit OTP
 const generateOtp = () => {
@@ -223,8 +252,7 @@ const sendVerificationEmail = async (email, otp) => {
 // Resend OTP
 const resendOtp = async (req, res) => {
     try {
-
-        console.log("Session Data at resend: ", req.session.userData);
+        // console.log("Session Data at resend: ", req.session.userData);
 
         if (!req.session.userData || !req.session.userData.email) {
             return res.status(400).json({
@@ -233,7 +261,7 @@ const resendOtp = async (req, res) => {
             });
         }
 
-        //Generate and send new OTP
+        // Generate and send new OTP
         const newOtp = generateOtp();
         req.session.userOtp = newOtp;
 
@@ -245,7 +273,7 @@ const resendOtp = async (req, res) => {
                 } else {
                     resolve();
                 }
-            })
+            });
         });
 
         const emailSent = await sendVerificationEmail(req.session.userData.email, newOtp);
@@ -269,7 +297,7 @@ const resendOtp = async (req, res) => {
     }
 };
 
-//Load OTP
+// Load OTP
 const loadOtp = async (req, res) => {
     try {
         if (!req.session.userOtp || !req.session.userData) {
@@ -283,26 +311,24 @@ const loadOtp = async (req, res) => {
         res.render('user/otpverify', { context: "registration" });
     } catch (error) {
         console.log("Error loading OTP page", error);
-        res.redirect('/user/signup')
+        res.redirect('/user/signup');
     }
-}
+};
 
-//Login page
+// Login page
 const loadLogin = async (req, res) => {
     try {
-        console.log("Login rendered")
+        // console.log("Login rendered");
         res.render('user/login');
     } catch (error) {
         console.log(error);
     }
-}
+};
 
-//Login method 
+// Login method 
 const login = async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
-    //  console.log(req.body);
-    //  console.log(user)
     try {
         if (!user) {
             return res.status(400).json({
@@ -345,7 +371,6 @@ const login = async (req, res) => {
             secure: false,
             maxAge: 3 * 24 * 60 * 60 * 1000
         });
-        // res.cookie('user',user)
 
         return res.status(200).json({
             success: true,
@@ -365,29 +390,26 @@ const login = async (req, res) => {
     }
 };
 
-
-//Home page
+// Home page
 const loadHome = async (req, res) => {
     try {
-        console.log("Homepage rendered")
+        // console.log("Homepage rendered");
         res.render('home');
     } catch (error) {
         console.log(error);
     }
-}
+};
 
-
-//Load Forgot Password Page
+// Load Forgot Password Page
 const loadForgotPassword = async (req, res) => {
     try {
         res.render('user/forgotPassword');
     } catch (error) {
         console.log('Error loading the forgot password page', error);
     }
-}
+};
 
-
-//Forgot Password
+// Forgot Password
 const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
@@ -420,7 +442,6 @@ const forgotPassword = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "OTP sent successfully",
-
         });
 
     } catch (error) {
@@ -431,10 +452,9 @@ const forgotPassword = async (req, res) => {
             message: "Internal server error"
         });
     }
-}
+};
 
-
-//Send OTP for password Reset
+// Send OTP for password Reset
 const sendPasswordResetEmail = async (email, otp) => {
     try {
         const transporter = nodemailer.createTransport({
@@ -446,7 +466,7 @@ const sendPasswordResetEmail = async (email, otp) => {
         });
 
         const info = await transporter.sendMail({
-            fron: process.env.NODEMAILER_EMAIL,
+            from: process.env.NODEMAILER_EMAIL,
             to: email,
             subject: 'Password Reset Request',
             text: `Your OTP for password reset is ${otp}. This otp will expire in 10 minutes`
@@ -455,11 +475,12 @@ const sendPasswordResetEmail = async (email, otp) => {
         return info.accepted.length > 0;
 
     } catch (error) {
-        consol.error('Error sending password reset emial: ', error);
+        console.error('Error sending password reset email: ', error);
         return false;
     }
-}
+};
 
+// Load Verify Reset OTP
 const loadVerifyResetOtp = async (req, res) => {
     try {
         if (!req.session.resetOtp || !req.session.resetEmail) {
@@ -474,16 +495,16 @@ const loadVerifyResetOtp = async (req, res) => {
 
     } catch (error) {
         console.log('Error loading reset OTP page', error);
-        res.redirect('/user/forgoPassword');
+        res.redirect('/user/forgotPassword');
     }
 };
 
-
+// Verify Reset OTP
 const verifyResetOtp = async (req, res) => {
     try {
         const { otp } = req.body;
 
-        console.log("Recieved OTP: ", otp);
+        console.log("Received OTP: ", otp);
         console.log('Stored Reset OTP: ', req.session.resetOtp);
 
         if (!otp) {
@@ -500,7 +521,7 @@ const verifyResetOtp = async (req, res) => {
             });
         }
 
-        if (req.session.resetOtp != otp) {
+        if (req.session.resetOtp !== otp) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid OTP'
@@ -526,10 +547,8 @@ const verifyResetOtp = async (req, res) => {
             success: true,
             message: 'OTP verified successfully',
             token: resetToken,
-            // redirectUrl:`/user/resetPassword`,
             redirectUrl: `/user/resetPassword?token=${resetToken}`
         });
-
 
     } catch (error) {
         console.error('Error verifying reset OTP:', error);
@@ -538,9 +557,9 @@ const verifyResetOtp = async (req, res) => {
             message: 'Server error, try again'
         });
     }
-}
+};
 
-
+// Resend Reset OTP
 const resendResetOtp = async (req, res) => {
     try {
         if (!req.session.resetEmail) {
@@ -551,16 +570,16 @@ const resendResetOtp = async (req, res) => {
         }
 
         const newOtp = generateOtp();
-        req.session.resetOtp = newOtp();
+        req.session.resetOtp = newOtp;
 
         await new Promise((resolve, reject) => {
             req.session.save((err) => {
                 if (err) {
                     console.log('Session save error:', err);
                     reject(err);
-                } else {
-                    resolve();
                 }
+
+                resolve();
             });
         });
 
@@ -576,19 +595,19 @@ const resendResetOtp = async (req, res) => {
 
         return res.status(500).json({
             success: false,
-            message: 'OTP resent succesfully'
+            message: 'Failed to resend OTP. Try again'
         });
 
     } catch (error) {
-        console.error('Error resending reset OTP. Tr again'.error);
+        console.error('Error resending reset OTP:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error. Try again'
         });
     }
-}
+};
 
-//Load the reset password page
+// Load the reset password page
 const loadResetPassword = async (req, res) => {
     try {
         const { token } = req.query;
@@ -599,7 +618,7 @@ const loadResetPassword = async (req, res) => {
     }
 };
 
-//Reset password
+// Reset password
 const resetPassword = async (req, res) => {
     try {
         const { token, password } = req.body;
@@ -625,7 +644,7 @@ const resetPassword = async (req, res) => {
             decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         } catch (error) {
             return res.status(400).json({
-                succss: false,
+                success: false,
                 field: 'general',
                 message: 'Invalid or expired reset OTP'
             });
@@ -664,12 +683,12 @@ const resetPassword = async (req, res) => {
             message: "Internal server error"
         });
     }
-}
+};
 
-//Logout
+// Logout
 const logout = async (req, res) => {
     try {
-        //Clear the JWT cookie
+        // Clear the JWT cookie
         res.clearCookie('jwt');
         return res.status(200).json({
             success: true,
@@ -684,7 +703,6 @@ const logout = async (req, res) => {
         });
     }
 };
-
 
 module.exports = {
     loadLogin,
@@ -704,4 +722,3 @@ module.exports = {
     loadResetPassword,
     resetPassword,
 }
-
