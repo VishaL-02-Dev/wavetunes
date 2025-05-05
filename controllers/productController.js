@@ -439,10 +439,7 @@ const displayProduct = async (req, res) => {
             }
         }
         if (search) {
-            query.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } }
-            ];
+            query.name = { $regex: search, $options: 'i' }; // Search by name
         }
         // Only show offers that are not expired
         query.$or = [

@@ -192,7 +192,7 @@
                                                             onclick="cancelItem('<%= order._id %>', '<%= item._id %>')">Cancel
                                                             Item</button>
                                                         <% } %>
-                                                            <% if (order.items.length> 1 && item.status === 'delivered'
+                                                            <% if (order.items.length>= 1 && item.status === 'delivered'
                                                                 && order.status === 'delivered' && item.status !=
                                                                 'returned' && item.status != 'cancelled' && order.status
                                                                 != 'returned' && order.status != 'cancelled') { %>

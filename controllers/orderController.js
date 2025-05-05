@@ -1443,8 +1443,16 @@ const adminGetOrders = async (req, res) => {
         let query = {};
 
         if (search) {
+            // Find users with matching email
+            const matchingUsers = await User.find({
+                email: { $regex: search, $options: 'i' }
+            }).select('_id');
+            const userIds = matchingUsers.map(user => user._id);
+
+            // Search by orderId or userId (from matching emails)
             query.$or = [
-                { orderId: { $regex: search, $options: 'i' } }
+                { orderId: { $regex: search, $options: 'i' } },
+                { userId: { $in: userIds } }
             ];
         }
 
@@ -1476,7 +1484,7 @@ const adminGetOrders = async (req, res) => {
         const totalPages = Math.ceil(totalCount / itemsPerPage);
 
         const orders = await Order.find(query)
-            .populate('userId', 'name email phone')
+            .populate('userId', 'fname email phone')
             .populate('items.productId', 'name price images')
             .sort({ date: -1 })
             .skip(skip)
