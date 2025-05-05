@@ -33,7 +33,11 @@ const orderItemSchema=new mongoose.Schema({
     },
     refundDate:{
         type:Date
-    }
+    },
+    returnReason:{
+        type:String,
+        default:''
+    },
 });
 
 const orderSchema= new mongoose.Schema({
@@ -74,7 +78,11 @@ const orderSchema= new mongoose.Schema({
         type: String,
         enum: ['none', 'partial', 'full'],
         default: 'none'
-    }    
+    },
+    returnReason:{
+        type:String,
+        default:''
+    },
 },
 {timestamps:true});
 

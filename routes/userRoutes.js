@@ -38,8 +38,8 @@ router.get('/auth/google/callback',passport.authenticate('google',{failureRedire
 });
 
 //Forgot Password routes
-router.get('/forgotPassword',userController.loadForgotPassword);
-router.post('/forgotPassword',userController.forgotPassword);
+router.get('/forgotPassword',optionalProtect,userController.loadForgotPassword);
+router.post('/forgotPassword',optionalProtect,userController.forgotPassword);
 router.get('/verifyResetOtp',userController.loadVerifyResetOtp);
 router.post('/verifyResetOtp',userController.verifyResetOtp);
 router.post('/verifyResetOtp',userController.resendResetOtp);

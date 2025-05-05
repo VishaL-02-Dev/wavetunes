@@ -13,7 +13,7 @@ const PDFDocument = require('pdfkit');
 const axios = require('axios');
 
 // Helper function to create order items
-const createOrderItems = (cartItems, currentDate) => {
+const createOrderItems = (cartItems, currentDate, paymentMethod) => {
     let subtotal = 0;
     let originalSubtotal = 0;
 
@@ -24,7 +24,7 @@ const createOrderItems = (cartItems, currentDate) => {
                 quantity: item.quantity,
                 price: 0,
                 discount: 0,
-                status: 'pending',
+                status: paymentMethod === 'COD' ? 'pending' : 'processing',
                 refunded: false,
                 refundAmount: 0
             };
@@ -56,7 +56,7 @@ const createOrderItems = (cartItems, currentDate) => {
             quantity: item.quantity,
             discountApplied: offerPercentage > 0 ? 'offer' : 'none',
             image: item.product.images && item.product.images.length > 0 ? item.product.images[0] : null,
-            status: 'pending',
+            status: paymentMethod === 'COD' ? 'pending' : 'processing',
             refunded: false,
             refundAmount: 0
         };
@@ -64,7 +64,6 @@ const createOrderItems = (cartItems, currentDate) => {
 
     return { orderItems, subtotal, originalSubtotal };
 };
-
 // Load Checkout
 const loadCheckout = async (req, res) => {
     const token = req.cookies.jwt;
@@ -235,7 +234,7 @@ const placeOrder = async (req, res) => {
         }
 
         const currentDate = new Date();
-        const { orderItems, subtotal, originalSubtotal } = createOrderItems(cart.items, currentDate);
+        const { orderItems, subtotal, originalSubtotal } = createOrderItems(cart.items, currentDate, paymentMethod);
 
         let discount = 0;
         let coupon = null;
@@ -265,7 +264,7 @@ const placeOrder = async (req, res) => {
             orderId: `ORD-${Date.now()}`,
             items: orderItems,
             addressId: address._id,
-            paymentMethod:'COD',
+            paymentMethod: 'COD',
             subtotal,
             shipping,
             tax,
@@ -333,7 +332,7 @@ const processWalletPayment = async (req, res) => {
         }
 
         const currentDate = new Date();
-        const { orderItems, subtotal, originalSubtotal } = createOrderItems(cart.items, currentDate);
+        const { orderItems, subtotal, originalSubtotal } = createOrderItems(cart.items, currentDate, 'Wallet');
 
         const shipping = subtotal > 0 ? 10 : 0;
         const tax = 0;
@@ -514,7 +513,7 @@ const initiateRazorpayOrder = async (req, res) => {
         }
 
         const currentDate = new Date();
-        const { orderItems, subtotal, originalSubtotal } = createOrderItems(cart.items, currentDate);
+        const { orderItems, subtotal, originalSubtotal } = createOrderItems(cart.items, currentDate, 'Razorpay');
 
         let shipping = subtotal > 0 ? 10 : 0;
         let tax = 0;
@@ -616,7 +615,6 @@ const verifyRazorpay = async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, discountType } = req.body;
 
     try {
-        
         const body = `${razorpay_order_id}|${razorpay_payment_id}`;
         const expectedSignature = crypto
             .createHmac('sha256', process.env.RAZORPAY_SECRET)
@@ -635,7 +633,7 @@ const verifyRazorpay = async (req, res) => {
         const userId = razorpayOrder.notes.userId;
         const addressId = razorpayOrder.notes.addressId;
         const couponCode = razorpayOrder.notes.couponCode;
-        const orderId = razorpayOrder.notes.orderId; 
+        const orderId = razorpayOrder.notes.orderId;
 
         const user = await User.findById(userId);
         if (!user) {
@@ -700,15 +698,10 @@ const verifyRazorpay = async (req, res) => {
             }
         }
 
-    
         pendingOrder.status = 'processing';
-        pendingOrder.items.forEach(item => {
-            item.status = 'processing';
-        });
-
+        // Item statuses are already set to 'processing' in createOrderItems
         await pendingOrder.save();
         await Cart.findOneAndDelete({ user: userId });
-
 
         const completeOrder = await Order.findById(pendingOrder._id)
             .populate('addressId')
@@ -737,7 +730,7 @@ const verifyRazorpay = async (req, res) => {
 // Retry Razorpay Payment
 const retryRazorpayPayment = async (req, res) => {
     const token = req.cookies.jwt;
-    const { orderId } = req.body; 
+    const { orderId } = req.body;
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -784,6 +777,12 @@ const retryRazorpayPayment = async (req, res) => {
             }
         }
 
+        // Update item statuses to 'processing' for consistency
+        order.items.forEach(item => {
+            item.status = 'processing';
+        });
+        await order.save();
+
         const amount = Math.round(order.totalAmount * 100);
         const options = {
             amount: amount,
@@ -810,7 +809,7 @@ const retryRazorpayPayment = async (req, res) => {
                 email: user.email,
                 contact: user.phone || ''
             },
-            pendingOrderId: order.orderId 
+            pendingOrderId: order.orderId
         });
 
     } catch (error) {
@@ -1037,7 +1036,7 @@ const generateInvoice = async (req, res) => {
             // Image (if available)
             if (item.productId && item.productId.images && item.productId.images.length > 0) {
                 const imageUrl = item.productId.images[0].url;
-                console.log(`Fetching image: ${imageUrl}`); // Debug log
+                // console.log(`Fetching image: ${imageUrl}`); // Debug log
                 try {
                     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
                     if (response.status === 200) {
@@ -1404,6 +1403,16 @@ const returnOrderItem = async (req, res) => {
         item.status = 'return_requested';
         item.returnReason = reason || 'Not specified';
 
+        // Check if all items are either 'returned', 'return_requested', or 'cancelled'
+        const allItemsProcessed = order.items.every(i => 
+            i.status === 'returned' || i.status === 'cancelled' || i.status === 'return_requested'
+        );
+
+        // If all items are processed, set order status to 'return_requested'
+        if (allItemsProcessed) {
+            order.status = 'return_requested';
+        }
+
         await order.save();
 
         return res.status(200).json({
@@ -1424,7 +1433,7 @@ const returnOrderItem = async (req, res) => {
 const adminGetOrders = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const itemsPerPage = 5;
+        const itemsPerPage = 10;
         const skip = (page - 1) * itemsPerPage;
 
         const search = req.query.search || '';
@@ -1717,8 +1726,7 @@ const adminApproveReturn = async (req, res) => {
     const { orderId, itemId } = req.params;
 
     try {
-        const order = await Order.findById(orderId).populate('items.productId');
-
+        const order = await Order.findOne({ orderId }).populate('items.productId');
         if (!order) {
             return res.status(404).json({
                 success: false,
@@ -1785,8 +1793,14 @@ const adminApproveReturn = async (req, res) => {
                 );
             }
 
-            const allItemsReturned = order.items.every(i => i.status === 'returned' || i.status === 'cancelled');
-            order.refundStatus = allItemsReturned ? 'full' : 'partial';
+            // Check if all items are returned or cancelled
+            const allItemsProcessed = order.items.every(i => i.status === 'returned' || i.status === 'cancelled');
+            if (allItemsProcessed) {
+                order.status = 'returned';
+                order.refundStatus = order.paymentMethod !== 'COD' ? 'full' : 'none';
+            } else {
+                order.refundStatus = order.paymentMethod !== 'COD' ? 'partial' : 'none';
+            }
         } else {
             if (order.status !== 'return_requested') {
                 return res.status(400).json({

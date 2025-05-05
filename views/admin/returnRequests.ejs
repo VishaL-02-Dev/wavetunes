@@ -63,7 +63,7 @@
                                                 </td>
                                                 <td>
                                                     <% if (request.item) { %>
-                                                        <%= request.item.name %> (Qty: <%= request.item.quantity %>)
+                                                        <%= request.item.productId.name %> (Qty: <%= request.item.quantity %>)
                                                                 <% } else { %>
                                                                     Entire Order
                                                                     <% } %>
@@ -80,7 +80,7 @@
                                                 </td>
                                                 <td>
                                                     <button class="btn btn-success btn-sm"
-                                                        onclick="approveReturn('<%= request.order.orderId %>', '<%= request.item ? request.item._id : '' %>')">
+                                                        onclick="approveReturn(`<%= request.order.orderId %>`, `<%= request.item ? request.item._id : '' %>`)">
                                                         Approve
                                                     </button>
                                                 </td>
