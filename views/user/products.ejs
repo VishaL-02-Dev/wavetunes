@@ -87,13 +87,13 @@
                     <ul class="flex space-x-2">
                         <% if (currentPage> 1) { %>
                             <li>
-                                <a href="/products?page=<%= currentPage - 1 %>&limit=12&category=<%= category %>&search=<%= search %>&sort=<%= sort %>"
+                                <a href="/user/products?page=<%= currentPage - 1 %>&limit=3&category=<%= category %>&search=<%= search %>&sort=<%= sort %>"
                                     class="px-4 py-2 bg-gray-200 rounded">Previous</a>
                             </li>
                             <% } %>
                                 <% for (let i=1; i <=totalPages; i++) { %>
                                     <li>
-                                        <a href="/products?page=<%= i %>&limit=12&category=<%= category %>&search=<%= search %>&sort=<%= sort %>"
+                                        <a href="/user/products?page=<%= i %>&limit=3&category=<%= category %>&search=<%= search %>&sort=<%= sort %>"
                                             class="px-4 py-2 rounded <%= i === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200' %>">
                                             <%= i %>
                                         </a>
@@ -101,7 +101,7 @@
                                     <% } %>
                                         <% if (currentPage < totalPages) { %>
                                             <li>
-                                                <a href="/products?page=<%= currentPage + 1 %>&limit=12&category=<%= category %>&search=<%= search %>&sort=<%= sort %>"
+                                                <a href="/user/products?page=<%= currentPage + 1 %>&limit=3&category=<%= category %>&search=<%= search %>&sort=<%= sort %>"
                                                     class="px-4 py-2 bg-gray-200 rounded">Next</a>
                                             </li>
                                             <% } %>
@@ -128,7 +128,7 @@
                     const sort = sortFilter.value;
                     const search = searchInput.value.trim();
 
-                    window.location.href = `/user/products?page=1&limit=12&category=${category}&search=${search}&sort=${sort}`;
+                    window.location.href = `/user/products?page=1&limit=3&category=${category}&search=${search}&sort=${sort}`;
                 }
 
                 // Show clear button when there's text in the search input
@@ -155,5 +155,6 @@
 
 
         </script>
+        </body>
 
-        <%- include("partials/user/footer") %>
+        <%- include("partials/user/footer") %>`

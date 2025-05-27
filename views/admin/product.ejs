@@ -48,8 +48,6 @@
                                 <th>Name</th>
                                 <th>Brand</th>
                                 <th>Category</th>
-                                <th>Description</th>
-                                <th>Specifications</th>
                                 <th>Price</th>
                                 <th>Offer (%)</th>
                                 <th>Offer End</th>
@@ -80,12 +78,6 @@
                                     <td>
                                         <%= product.category ? product.category.name : "No Category" %>
                                     </td>
-                                    <td>
-                                        <%= product.description %>
-                                    </td>
-                                    <td>
-                                        <%= product.specifications %>
-                                    </td>
                                     <td>Rs.<%= product.price.toFixed(2) %>
                                     </td>
                                     <td>
@@ -99,13 +91,20 @@
                                         <%= product.stock %>
                                     </td>
                                     <td>
+                                        <button class="btn btn-info btn-sm mb-3"
+                                            onclick="viewProduct('<%= product._id %>')">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
                                         <button class="btn btn-warning btn-sm mb-3"
                                             onclick="editProduct('<%= product._id %>')">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
-                                        <button class="btn btn-danger btn-sm mb-3"
-                                            onclick="deleteProduct('<%= product._id %>')">
-                                            <i class="bi bi-trash"></i>
+                                        <button
+                                            class="btn <%= product.isActive ? 'btn-danger' : 'btn-success' %> btn-sm mb-3"
+                                            onclick="toggleProductStatus('<%= product._id %>', <%= product.isActive %>)">
+                                            <i
+                                                class="bi <%= product.isActive ? 'bi-pause-circle' : 'bi-play-circle' %>"></i>
+                                            <%= product.isActive ? 'Deactivate' : 'Activate' %>
                                         </button>
                                     </td>
                                 </tr>
@@ -388,7 +387,68 @@
                 </div>
             </div>
         </div>
-    </div>
+
+        <!-- View Product Modal -->
+        <div class="modal fade" id="viewProductModal" tabindex="-1" aria-labelledby="viewProductModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-black" id="viewProductModalLabel">Product Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label text-black"><strong>Product Name</strong></label>
+                            <p id="viewProductName" class="text-black"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-black"><strong>Brand</strong></label>
+                            <p id="viewProductBrand" class="text-black"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-black"><strong>Category</strong></label>
+                            <p id="viewProductCategory" class="text-black"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-black"><strong>Price</strong></label>
+                            <p id="viewProductPrice" class="text-black"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-black"><strong>Stock</strong></label>
+                            <p id="viewProductStock" class="text-black"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-black"><strong>Offer Percentage</strong></label>
+                            <p id="viewProductOfferPercentage" class="text-black"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-black"><strong>Offer End Date</strong></label>
+                            <p id="viewProductOfferEndDate" class="text-black"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-black"><strong>Status</strong></label>
+                            <p id="viewProductStatus" class="text-black"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-black"><strong>Description</strong></label>
+                            <p id="viewProductDescription" class="text-black"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-black"><strong>Specifications</strong></label>
+                            <p id="viewProductSpecifications" class="text-black"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-black"><strong>Images</strong></label>
+                            <div id="viewProductImages" class="d-flex flex-wrap"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Include Cropperjs CSS and JS -->
@@ -595,6 +655,55 @@
             return Promise.all(uploadPromises);
         }
 
+        // Function to view a product
+        function viewProduct(productId) {
+            fetch(`/admin/products/${productId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const product = data.product;
+
+                        document.getElementById('viewProductName').textContent = product.name || 'N/A';
+                        document.getElementById('viewProductBrand').textContent = product.brand || 'N/A';
+                        document.getElementById('viewProductCategory').textContent = product.category ? product.category.name : 'No Category';
+                        document.getElementById('viewProductPrice').textContent = `Rs. ${product.price.toFixed(2)}` || 'N/A';
+                        document.getElementById('viewProductStock').textContent = product.stock || '0';
+                        document.getElementById('viewProductOfferPercentage').textContent = `${product.offerPercentage}%` || '0%';
+                        document.getElementById('viewProductOfferEndDate').textContent = product.offerEndDate ? new Date(product.offerEndDate).toLocaleDateString() : '-';
+                        document.getElementById('viewProductDescription').textContent = product.description || 'N/A';
+                        document.getElementById('viewProductSpecifications').textContent = product.specifications || 'N/A';
+                        document.getElementById('viewProductStatus').textContent = product.isActive ? 'Active' : 'Inactive';
+
+                        const imagesContainer = document.getElementById('viewProductImages');
+                        imagesContainer.innerHTML = '';
+
+                        if (product.images && product.images.length > 0) {
+                            product.images.forEach(image => {
+                                const imageDiv = document.createElement('div');
+                                imageDiv.className = 'm-2';
+                                imageDiv.innerHTML = `
+                            <img src="${image.url}" alt="Product image" 
+                                 style="width: 100px; height: 100px; object-fit: cover;">
+                        `;
+                                imagesContainer.appendChild(imageDiv);
+                            });
+                        } else {
+                            imagesContainer.innerHTML = '<p>No images available</p>';
+                        }
+
+                        const viewModal = new bootstrap.Modal(document.getElementById('viewProductModal'));
+                        viewModal.show();
+                    } else {
+                        Swal.fire('Error', data.message || 'Failed to load product data', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching product data:', error);
+                    Swal.fire('Error', 'Something went wrong while loading product data', 'error');
+                });
+        }
+
+
         // ---- EDIT PRODUCT SECTION ---- //
 
         let editCropper;
@@ -769,27 +878,27 @@
             document.getElementById("editExistingImagesContainer").children[index].style.display = "none";
         }
 
-        // Function to delete a product
-        function deleteProduct(productId) {
+        // Function to toggle product status
+        function toggleProductStatus(productId, isActive) {
             Swal.fire({
-                title: 'Are you sure?',
-                text: "You won't be able to revert this!",
+                title: `Are you sure?`,
+                text: `This will ${isActive ? 'deactivate' : 'activate'} the product!`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#d33',
+                confirmButtonColor: isActive ? '#d33' : '#28a745',
                 cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!'
+                confirmButtonText: `Yes, ${isActive ? 'deactivate' : 'activate'} it!`
             }).then((result) => {
                 if (result.isConfirmed) {
-                    fetch(`/admin/products/${productId}`, {
-                        method: 'DELETE',
+                    fetch(`/admin/products/${productId}/`, {
+                        method: 'PATCH',
                     })
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
                                 Swal.fire(
-                                    'Deleted!',
-                                    'Product has been deleted.',
+                                    `${isActive ? 'Deactivated' : 'Activated'}!`,
+                                    `Product has been ${isActive ? 'deactivated' : 'activated'}.`,
                                     'success'
                                 ).then(() => {
                                     window.location.reload();
@@ -797,7 +906,7 @@
                             } else {
                                 Swal.fire(
                                     'Error!',
-                                    data.message || 'Failed to delete product.',
+                                    data.message || `Failed to ${isActive ? 'deactivate' : 'activate'} product.`,
                                     'error'
                                 );
                             }

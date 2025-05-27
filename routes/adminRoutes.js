@@ -35,7 +35,7 @@ router.get('/products',protect,authorize('admin'),productController.adminProduct
 router.get('/products/:id', protect,authorize('admin'),productController.getProduct);
 router.post('/products',protect,authorize('admin'),upload.array('images',4),productController.createProduct);
 router.patch('/products/edit/:id',protect,authorize('admin'),upload.array('images',4),productController.updateProduct);
-router.delete('/products/:id',protect,authorize('admin'), productController.deleteProduct);
+router.patch('/products/:id',protect,authorize('admin'), productController.toggleProductStatus);
 
 //Orders
 router.get('/orders',protect,authorize('admin'),orderController.adminGetOrders);

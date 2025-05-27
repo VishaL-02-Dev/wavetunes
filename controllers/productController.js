@@ -272,8 +272,8 @@ const updateProduct = async (req, res) => {
 };
 
 
-// Delete Product admin side
-const deleteProduct = async (req, res) => {
+// Deactivate/Activate Product admin side
+const toggleProductStatus = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -281,43 +281,27 @@ const deleteProduct = async (req, res) => {
         if (!product) {
             return res.status(404).json({
                 success: false,
-                message: "Product not found"
+                message: 'Product not found'
             });
         }
 
-
-        // for (const img of product.images) {
-        //     await cloudinary.uploader.destroy(img.public_id);
-        // }
-
-        // Delete the product from the database
-        await Product.findByIdAndDelete(id);
-
-        // Delete images from Cloudinary
-        try {
-            for (const img of product.images) {
-                if (img && img.public_id) {
-                    await cloudinary.uploader.destroy(img?.public_id);
-                }
-            }
-        } catch (cloudinaryError) {
-            console.error('Cloudinary error:', cloudinaryError);
-        }
-
+        product.isActive = !product.isActive;
+        await product.save();
 
         res.status(200).json({
             success: true,
-            message: "Product deleted successfully"
-        });
-
+            message: `Product ${product.isActive ? 'activated' : 'deactivated'} successfully`,
+            isActive: product.isActive
+        })
     } catch (error) {
-        console.error('Product deletion error:', error);
+        console.error('Product status toggle error:', error);
         res.status(500).json({
             success: false,
             message: "Internal server error"
         });
     }
-};
+}
+
 
 //Admin side 
 const getProduct = async (req, res) => {
@@ -346,6 +330,9 @@ const getProduct = async (req, res) => {
     }
 };
 
+//--------- User side controller functions -----------//
+
+// Product detail page User side
 const getProductById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -358,21 +345,24 @@ const getProductById = async (req, res) => {
             });
         }
 
-        let product = await Product.findById(id).populate('category');
+        let product = await Product.findOne({ _id: id, isActive: true }).populate('category');
 
         if (!product) {
-            return res.status(404).render('error', {
-                message: 'Product not found',
-                error: { status: 404 }
+            return res.status(404).render('user/product-detail', {
+                errorMessage: 'No product here. It may be deactivated or not available.',
+                product: null,
+                relatedProducts: [],
+                categoryName: null,
+                categorySlug: null
             });
         }
 
-        // Add offerPrice to product
-        const productObj = product.toObject();
-        if (product.offerPercentage && product.offerPercentage > 0 && (product.offerEndDate === null || product.offerEndDate >= new Date())) {
-            productObj.offerPrice = Math.round(product.price * (1 - product.offerPercentage / 100));
-        }
-        product = productObj;
+        // // Add offerPrice to product
+        // const productObj = product.toObject();
+        // if (product.offerPercentage && product.offerPercentage > 0 && (product.offerEndDate === null || product.offerEndDate >= new Date())) {
+        //     productObj.offerPrice = Math.round(product.price * (1 - product.offerPercentage / 100));
+        // }
+        // product = productObj;
 
         const categorySlugMap = {
             "Neckbands": "neckbands",
@@ -408,7 +398,8 @@ const getProductById = async (req, res) => {
             product,
             relatedProducts,
             categoryName: product.category.name,
-            categorySlug
+            categorySlug,
+            errorMessage:null
         });
 
     } catch (error) {
@@ -420,7 +411,7 @@ const getProductById = async (req, res) => {
     }
 };
 
-
+// Display all products user side
 const displayProduct = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -468,7 +459,7 @@ const displayProduct = async (req, res) => {
         const totalProducts = await Product.countDocuments(query);
         const totalPages = Math.ceil(totalProducts / limit);
 
-        let products = await Product.find(query)
+        let products = await Product.find({ ...query, isActive: true })
             .populate({
                 path: 'category',
                 match: { status: { $ne: 'Unlisted' } },
@@ -505,7 +496,7 @@ const displayProduct = async (req, res) => {
     }
 };
 
-
+//User-side products display according to category
 const getCategoryProducts = async (req, res) => {
     const { categorySlug } = req.params;
     const categoryMap = {
@@ -522,14 +513,23 @@ const getCategoryProducts = async (req, res) => {
         // Find the corresponding category ObjectId from the database
         const category = await Category.findOne({ name: categoryMap[categorySlug], status: 'Listed' });
 
-        if (!category) {
-            return res.status(404).send("Category not found in the database");
-        }
-
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 12;
         const search = req.query.search || '';
         const sort = req.query.sort || 'newest';
+
+        if (!category) {
+            // return res.status(404).send("Category not found in the database");
+            return res.render('user/category', {
+                products: [],
+                categoryName: categoryMap[categorySlug],
+                categorySlug,
+                currentPage: page,
+                totalPages: 0,
+                search,
+                sort,
+            });
+        }
 
         // Use the found category's ObjectId to query products
         const filter = {
@@ -562,7 +562,7 @@ const getCategoryProducts = async (req, res) => {
 
         const totalProducts = await Product.countDocuments(filter);
         const totalPages = Math.ceil(totalProducts / limit);
-        let products = await Product.find(filter)
+        let products = await Product.find({ ...filter, isActive: true })
             .sort(sortOption)
             .limit(limit)
             .skip((page - 1) * limit);
@@ -596,7 +596,7 @@ module.exports = {
     createProduct,
     getProduct,
     updateProduct,
-    deleteProduct,
+    toggleProductStatus,
     getProductById,
     displayProduct,
     adminProduct,

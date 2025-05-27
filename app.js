@@ -73,6 +73,7 @@ app.get('/', async (req, res) => {
     // Fetch products with stock > 1, in listed categories, sorted by newest, limited to 8
     let products = await Product.find({
       stock: { $gt: 1 },
+      isActive:true,
       category: { $in: listedCategoryIds },
       $or: [
         { offerEndDate: { $gte: new Date() } }, // Offers that are still valid

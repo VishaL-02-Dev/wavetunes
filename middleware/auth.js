@@ -8,11 +8,12 @@ const protect = async(req,res,next)=>{
         const token = req.cookies.jwt || (req.headers.authorization?.startsWith('Bearer') ? req.headers.authorization.split(' ')[1] : null);
         
         if(!token){
-            return res.status(401).json({
-                success:false,
-                message:'Not authorized, please login again',
-                action: 'LOGOUT'
-            });
+            // return res.status(401).json({
+            //     success:false,
+            //     message:'Not authorized, please login again',
+            //     action: 'LOGOUT'
+            // });
+               return res.redirect('/user/login');
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -85,11 +86,12 @@ const optionalProtect = async (req, res, next) => {
 
         if (!user) {
             res.clearCookie('jwt');
-            return res.status(401).json({
-                success: false,
-                message: 'User not found',
-                action: 'LOGOUT'
-            });
+            // return res.status(401).json({
+            //     success: false,
+            //     message: 'User not found',
+            //     action: 'LOGOUT'
+            // });
+            return res.redirect('/user/login');
         }
 
         if (user.status === 'Blocked') {
