@@ -339,17 +339,26 @@ const getProductById = async (req, res) => {
 
         // Check if ID is valid
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(404).render('error', {
+            return res.status(400).render('error', {
                 message: 'Invalid product ID format',
                 error: { status: 400 }
             });
         }
 
-        let product = await Product.findOne({ _id: id, isActive: true }).populate('category');
+        // Fetch product with active status and listed category
+        let product = await Product.findOne({ 
+            _id: id, 
+            isActive: true 
+        }).populate({
+            path: 'category',
+            select: 'name status',
+            match: { status: 'Listed' } // Only include listed categories
+        });
 
-        if (!product) {
+        // Check if product exists and has a listed category
+        if (!product || !product.category) {
             return res.status(404).render('user/product-detail', {
-                errorMessage: 'No product here. It may be deactivated or not available.',
+                errorMessage: 'Product not found, inactive, or belongs to an unlisted category.',
                 product: null,
                 relatedProducts: [],
                 categoryName: null,
@@ -357,12 +366,19 @@ const getProductById = async (req, res) => {
             });
         }
 
-        // // Add offerPrice to product
-        // const productObj = product.toObject();
-        // if (product.offerPercentage && product.offerPercentage > 0 && (product.offerEndDate === null || product.offerEndDate >= new Date())) {
-        //     productObj.offerPrice = Math.round(product.price * (1 - product.offerPercentage / 100));
-        // }
-        // product = productObj;
+        // Add offerPrice to product (uncommented and updated)
+        const productObj = product.toObject();
+        if (product.offerPercentage > 0 && (product.offerEndDate === null || product.offerEndDate >= new Date())) {
+            productObj.offerPrice = Math.round(product.price * (1 - product.offerPercentage / 100));
+        }
+        // Optionally, account for categoryOffer
+        const categoryOffer = product.category.categoryOffer || 0;
+        if (categoryOffer > 0) {
+            productObj.offerPrice = Math.round(productObj.offerPrice ? 
+                productObj.offerPrice * (1 - categoryOffer / 100) : 
+                product.price * (1 - categoryOffer / 100));
+        }
+        product = productObj;
 
         const categorySlugMap = {
             "Neckbands": "neckbands",
@@ -372,24 +388,34 @@ const getProductById = async (req, res) => {
 
         const categorySlug = categorySlugMap[product.category.name] || "unknown";
 
-        // Fetch related products (optional)
+        // Fetch related products
         let relatedProducts = [];
         if (product.category) {
             relatedProducts = await Product.find({
                 category: product.category._id,
-                _id: { $ne: product._id } // Exclude current product
-            }).limit(4);
-            // Add offerPrice to related products
-            relatedProducts = relatedProducts.map(related => {
-                const relatedObj = related.toObject();
-                if (related.offerPercentage && related.offerPercentage > 0 && (related.offerEndDate === null || related.offerEndDate >= new Date())) {
-                    relatedObj.offerPrice = Math.round(related.price * (1 - related.offerPercentage / 100));
-                }
-                return relatedObj;
-            });
+                _id: { $ne: product._id },
+                isActive: true
+            })
+                .populate({
+                    path: 'category',
+                    select: 'name status',
+                    match: { status: 'Listed' }
+                })
+                .limit(4);
+
+            // Filter out products with unlisted categories and add offerPrice
+            relatedProducts = relatedProducts
+                .filter(related => related.category)
+                .map(related => {
+                    const relatedObj = related.toObject();
+                    if (related.offerPercentage > 0 && (related.offerEndDate === null || related.offerEndDate >= new Date())) {
+                        relatedObj.offerPrice = Math.round(related.price * (1 - related.offerPercentage / 100));
+                    }
+                    return relatedObj;
+                });
         }
 
-        // Increment view count (optional)
+        // Increment view count
         product.views = (product.views || 0) + 1;
         await Product.findByIdAndUpdate(id, { views: product.views });
 
@@ -399,7 +425,7 @@ const getProductById = async (req, res) => {
             relatedProducts,
             categoryName: product.category.name,
             categorySlug,
-            errorMessage:null
+            errorMessage: null
         });
 
     } catch (error) {
@@ -419,24 +445,26 @@ const displayProduct = async (req, res) => {
         let category = req.query.category;
         const search = req.query.search;
         const sort = req.query.sort || 'newest';
-        const categories = await Category.find({ status: { $ne: 'Unlisted' } }).select('name');
+        const categories = await Category.find({ status: 'Listed' }).select('name');
 
         // Build query
-        const query = {};
+        const query = { isActive: true }; // Only active products
         if (category) {
-            const categoryDoc = await Category.findOne({ name: category, status: { $ne: 'Unlisted' } }).select('_id');
+            const categoryDoc = await Category.findOne({ name: category, status: 'Listed' }).select('_id');
             if (categoryDoc) {
                 query.category = categoryDoc._id;
+            } else {
+                query.category = null; // Ensure no products are returned if category is unlisted
             }
         }
         if (search) {
-            query.name = { $regex: search, $options: 'i' }; // Search by name
+            query.name = { $regex: search, $options: 'i' };
         }
         // Only show offers that are not expired
         query.$or = [
-            { offerEndDate: { $gte: new Date() } }, // Offers that are still valid
-            { offerEndDate: null }, // Offers without an end date
-            { offerPercentage: 0 } // Products without offers
+            { offerEndDate: { $gte: new Date() } },
+            { offerEndDate: null },
+            { offerPercentage: 0 }
         ];
 
         // Build sort options
@@ -459,20 +487,23 @@ const displayProduct = async (req, res) => {
         const totalProducts = await Product.countDocuments(query);
         const totalPages = Math.ceil(totalProducts / limit);
 
-        let products = await Product.find({ ...query, isActive: true })
+        let products = await Product.find(query)
             .populate({
                 path: 'category',
-                match: { status: { $ne: 'Unlisted' } },
-                select: 'name'
+                select: 'name status',
+                match: { status: 'Listed' } // Only listed categories
             })
             .sort(sortOption)
             .skip((page - 1) * limit)
             .limit(limit);
 
-        // Add offerPrice to each product
+        // Filter out products with unlisted categories
+        products = products.filter(product => product.category);
+
+        // Add offerPrice to each product, including categoryOffer
         products = products.map(product => {
             const productObj = product.toObject();
-            if (product.offerPercentage && product.offerPercentage > 0) {
+            if (product.offerPercentage > 0 && (product.offerEndDate === null || product.offerEndDate >= new Date())) {
                 productObj.offerPrice = Math.round(product.price * (1 - product.offerPercentage / 100));
             }
             return productObj;

@@ -145,10 +145,10 @@ const addToCart = async (req, res) => {
                 userId: user._id,
                 product: productId
             });
-            // Log if the wishlist item was removed
-            if (wishlist) {
-                console.log(`Removed product ${productId} from wishlist for user ${user._id}`);
-            }
+            // // Log if the wishlist item was removed
+            // if (wishlist) {
+            //     console.log(`Removed product ${productId} from wishlist for user ${user._id}`);
+            // }
         } catch (wishlistError) {
             console.error('Error removing from wishlist:', wishlistError);
             // Log the error but don't fail the cart addition

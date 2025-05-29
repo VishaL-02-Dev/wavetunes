@@ -78,18 +78,39 @@
                 border-radius: 0.5rem;
                 position: relative;
             }
+
+            /* Improved error message styling */
+            .error-message {
+                background-color: #fee2e2;
+                border: 1px solid #ef4444;
+                color: #b91c1c;
+                padding: 1rem;
+                border-radius: 0.5rem;
+                margin-bottom: 2rem;
+                text-align: center;
+            }
+
+            .error-message a {
+                color: #3b82f6;
+                text-decoration: underline;
+                transition: color 0.2s;
+            }
+
+            .error-message a:hover {
+                color: #1d4ed8;
+            }
         </style>
 </head>
 
 <body>
     <div class="container mx-auto px-4 py-8">
         <% if (errorMessage) { %>
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-8" role="alert">
+            <div class="error-message">
                 <strong class="font-bold">Error:</strong>
                 <span class="block sm:inline">
                     <%= errorMessage %>
                 </span>
-                <a href="/admin/products" class="underline hover:text-blue-700 ml-2">Browse other products</a>
+                <a href="/user/products" class="ml-2">Browse other products</a>
             </div>
             <% } else { %>
                 <nav class="mb-8" aria-label="Breadcrumb">
@@ -118,7 +139,7 @@
                                 <!-- Multiple images gallery -->
                                 <div class="product-gallery">
                                     <div class="thumbnail-container">
-                                        <% product.images.forEach(function(image, index) { %>
+                                        <% product.images.forEach((image, index)=> { %>
                                             <img src="<%= image.url %>"
                                                 alt="<%= product.name %> thumbnail <%= index + 1 %>"
                                                 class="thumbnail <%= index === 0 ? 'active' : '' %>"
@@ -347,39 +368,40 @@
                         </div>
                     </form>
                 </div>
-                <% } %>
 
-                    <!-- Related Products -->
-                    <% if (relatedProducts && relatedProducts.length> 0) { %>
-                        <div class="mx-auto px-4 py-8">
-                            <h2 class="text-2xl font-bold mb-6">You May Also Like</h2>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <% relatedProducts.forEach(relatedProduct=> { %>
-                                    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
-                                        <% if (relatedProduct.images && relatedProduct.images.length> 0) { %>
-                                            <img src="<%= relatedProduct.images[0].url %>"
-                                                class="w-full h-48 object-contain" alt="<%= relatedProduct.name %>">
-                                            <% } else { %>
-                                                <img src="/images/default.jpg" class="w-full h-48 object-contain"
-                                                    alt="Default product image">
-                                                <% } %>
-                                                    <div class="p-4">
-                                                        <h3 class="text-lg font-semibold mb-2">
-                                                            <%= relatedProduct.name %>
-                                                        </h3>
-                                                        <div class="flex justify-between items-center">
-                                                            <span class="text-gray-900 font-bold">₹<%=
-                                                                    relatedProduct.price %></span>
-                                                            <a href="/user/product/<%= relatedProduct._id %>"
-                                                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition">
-                                                                View Details
-                                                            </a>
-                                                        </div>
+                <!-- Related Products -->
+                <% if (relatedProducts && relatedProducts.length> 0) { %>
+                    <div class="mx-auto px-4 py-8">
+                        <h2 class="text-2xl font-bold mb-6">You May Also Like</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <% relatedProducts.forEach(relatedProduct=> { %>
+                                <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+                                    <% if (relatedProduct.images && relatedProduct.images.length> 0) { %>
+                                        <img src="<%= relatedProduct.images[0].url %>"
+                                            class="w-full h-48 object-contain" alt="<%= relatedProduct.name %>">
+                                        <% } else { %>
+                                            <img src="/images/default.jpg" class="w-full h-48 object-contain"
+                                                alt="Default product image">
+                                            <% } %>
+                                                <div class="p-4">
+                                                    <h3 class="text-lg font-semibold mb-2">
+                                                        <%= relatedProduct.name %>
+                                                    </h3>
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-gray-900 font-bold">₹<%=
+                                                                relatedProduct.offerPrice || relatedProduct.price %>
+                                                                </span>
+                                                        <a href="/user/product/<%= relatedProduct._id %>"
+                                                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition">
+                                                            View Details
+                                                        </a>
                                                     </div>
-                                    </div>
-                                    <% }) %>
-                            </div>
+                                                </div>
+                                </div>
+                                <% }) %>
                         </div>
+                    </div>
+                    <% } %>
                         <% } %>
     </div>
 
@@ -591,6 +613,5 @@
                 });
         }
     </script>
-
 </body>
 <%- include('./partials/user/footer') %>

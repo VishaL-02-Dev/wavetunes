@@ -1,5 +1,25 @@
 <%- include("partials/user/header") %>
+    <style>
+    .error-message {
+        background-color: #fee2e2;
+        border: 1px solid #ef4444;
+        color: #b91c1c;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
 
+    .error-message a {
+        color: #3b82f6;
+        text-decoration: underline;
+        transition: color 0.2s;
+    }
+
+    .error-message a:hover {
+        color: #1d4ed8;
+    }
+</style>
     <body>
         <div class="container mx-auto my-10 px-4">
             <!-- Filters and Search Section -->
