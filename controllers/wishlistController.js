@@ -102,10 +102,16 @@ const getWishlist=async(req,res)=>{
         }
 
         const wishlist=await Wishlist.find({ userId: user._id})
-            .populate('product')
+            .populate({
+             path:'product',
+             select:'name price offerPercentage images stock isActive',
+             match: { isActive: true }
+            })
             .sort({createdAt: -1});
-
-        return res.render('user/wishlist',{ wishlist });
+        
+        const activeWishlist=wishlist.filter(item=>item.product !==null)
+        
+        return res.render('user/wishlist',{ wishlist: activeWishlist });
     } catch (error) {
         console.error('Error fetching wishlist:', error);
         res.status(500).json({ 

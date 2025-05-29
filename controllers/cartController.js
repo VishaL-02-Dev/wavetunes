@@ -13,7 +13,7 @@ const loadCart = async (req, res) => {
 
         let cart = await Cart.findOne({ user: userId }).populate({
             path: 'items.product',
-            select: 'name price offerPercentage images stock'
+            select: 'name price offerPercentage images stock isActive'
         });
 
         // Log cart items to debug offerPercentage
@@ -24,7 +24,6 @@ const loadCart = async (req, res) => {
         //     discountedPrice: item.product.offerPercentage > 0 ? item.product.price * (1 - item.product.offerPercentage / 100) : item.product.price,
         //     quantity: item.quantity
         // })) : [], null, 2));
-
         if (!cart) {
             cart = {
                 items: [],
@@ -34,6 +33,13 @@ const loadCart = async (req, res) => {
                 total: 0
             };
         } else {
+            const originalItemCount = cart.items.length;
+            cart.items = cart.items.filter(item => item.product && item.product.isActive);
+
+            if (cart.items.length < originalItemCount) {
+                await cart.save();
+            }
+
             cart.subtotal = cart.items.reduce((sum, item) => {
                 const price = item.product.offerPercentage > 0
                     ? item.product.price * (1 - item.product.offerPercentage / 100)
@@ -135,15 +141,13 @@ const addToCart = async (req, res) => {
 
         // Remove product from wishlist if it exists
         try {
-            let wishlist = await Wishlist.findOne({ user: user._id });
-            if (wishlist && Array.isArray(wishlist.items)) {
-                const wishlistItemIndex = wishlist.items.findIndex(
-                    item => item.product.toString() === productId
-                );
-                if (wishlistItemIndex > -1) {
-                    wishlist.items.splice(wishlistItemIndex, 1);
-                    await wishlist.save();
-                }
+            const wishlist = await Wishlist.findOneAndDelete({
+                userId: user._id,
+                product: productId
+            });
+            // Log if the wishlist item was removed
+            if (wishlist) {
+                console.log(`Removed product ${productId} from wishlist for user ${user._id}`);
             }
         } catch (wishlistError) {
             console.error('Error removing from wishlist:', wishlistError);

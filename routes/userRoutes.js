@@ -99,7 +99,7 @@ router.post('/orders/:id/return',protect,orderController.returnOrder);
 router.post('/orders/:orderId/items/:itemId/return',protect,orderController.returnOrderItem);
 
 //Profile Management
-router.get('/profile',protect,profileController.loadProfile);
+router.get('/profile',optionalProtect,profileController.loadProfile);
 router.patch('/profile/editProfile',protect,profileController.editProfile);
 router.post('/profile/addAddress',protect,addressController.addAddress);
 router.get('/profile/getAddress/:index',protect,addressController.getAddress);

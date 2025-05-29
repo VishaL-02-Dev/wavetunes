@@ -64,6 +64,8 @@ const createOrderItems = (cartItems, currentDate, paymentMethod) => {
 
     return { orderItems, subtotal, originalSubtotal };
 };
+
+
 // Load Checkout
 const loadCheckout = async (req, res) => {
     const token = req.cookies.jwt;
@@ -75,11 +77,24 @@ const loadCheckout = async (req, res) => {
         let addresses = await Address.find({ userId }).sort({ isDefault: -1 });
         let cart = await Cart.findOne({ user: userId }).populate({
             path: 'items.product',
-            select: 'name price offerPercentage images stock'
+            select: 'name price offerPercentage images stock isActive'
         });
 
         if (!cart || !cart.items || cart.items.length === 0) {
             return res.redirect('/user/cart');
+        }
+
+        const activeItems = cart.items.filter(item => item.product && item.product.isActive);
+        if (activeItems.length === 0) {
+            cart.items = [];
+            await cart.save();
+            return res.redirect('/user/cart');
+        }
+
+        // Update cart with active items only
+        if (activeItems.length < cart.items.length) {
+            cart.items = activeItems;
+            await cart.save();
         }
 
         cart.subtotal = cart.items.reduce((sum, item) => {
@@ -109,6 +124,7 @@ const loadCheckout = async (req, res) => {
         res.redirect('/user/cart');
     }
 };
+
 
 // Apply Coupon
 const applyCoupon = async (req, res) => {
@@ -213,6 +229,7 @@ const applyCoupon = async (req, res) => {
     }
 };
 
+
 // Place Order (COD and others)
 const placeOrder = async (req, res) => {
     const token = req.cookies.jwt;
@@ -295,6 +312,7 @@ const placeOrder = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error placing order' });
     }
 };
+
 
 // Wallet Payment Method
 const processWalletPayment = async (req, res) => {
@@ -451,6 +469,7 @@ const processWalletPayment = async (req, res) => {
     }
 };
 
+
 // Razorpay Order
 const razorpayOrder = async (req, res) => {
     try {
@@ -474,6 +493,7 @@ const razorpayOrder = async (req, res) => {
         });
     }
 };
+
 
 // Initiate Razorpay Order
 const initiateRazorpayOrder = async (req, res) => {
@@ -726,6 +746,7 @@ const verifyRazorpay = async (req, res) => {
         });
     }
 };
+
 
 // Retry Razorpay Payment
 const retryRazorpayPayment = async (req, res) => {
@@ -1140,7 +1161,7 @@ const cancelOrder = async (req, res) => {
         }
 
         order.status = 'cancelled';
-        if (order.paymentMethod !== 'COD' && order.paymentMethod !== 'Razorpay') {
+        if (order.paymentMethod !== 'COD') {
             order.refundStatus = 'full';
             await refundToWallet(
                 userId,
@@ -1228,7 +1249,7 @@ const cancelOrderItem = async (req, res) => {
         refundAmount = Math.max(0, Number(refundAmount.toFixed(2)));
 
         item.status = 'cancelled';
-        if (order.paymentMethod !== 'COD' && order.paymentMethod !== 'Razorpay') {
+        if (order.paymentMethod !== 'COD') {
             item.refunded = true;
             item.refundAmount = refundAmount;
             item.refundDate = new Date();
@@ -1404,7 +1425,7 @@ const returnOrderItem = async (req, res) => {
         item.returnReason = reason || 'Not specified';
 
         // Check if all items are either 'returned', 'return_requested', or 'cancelled'
-        const allItemsProcessed = order.items.every(i => 
+        const allItemsProcessed = order.items.every(i =>
             i.status === 'returned' || i.status === 'cancelled' || i.status === 'return_requested'
         );
 
@@ -1576,22 +1597,32 @@ const adminUpdateOrderStatus = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
 
-        order.status = status;
-        if (order.items && order.items.length > 0) {
-            order.items.forEach(item => {
-                item.status = status;
-            });
-            if (status === 'cancelled' && order.status !== 'cancelled') {
-                if (order.items && order.items.length > 0) {
-                    for (const item of order.items) {
-                        await Product.findByIdAndUpdate(
-                            item.productId,
-                            { $inc: { stock: item.quantity || 0 } },
-                            { new: true }
-                        );
-                    }
+        // order.status = status;
+    if(order.items && order.items.length>0){
+        for(const item of order.items){
+            if(item.status!=='cancelled'){
+                if(status==='cancelled' && item.status !=='cancelled' ){
+                    await Product.findByIdAndUpdate(
+                        item.productId,
+                        {$inc: {stock:item.quantity || 0}},
+                        {new:true}
+                    );
                 }
             }
+        }
+    }
+
+    const itemStatuses= order.items.map(item=>item.status);
+    const uniqueStatuses = [...new Set(itemStatuses)];
+    if (uniqueStatuses.length === 1) {
+            // All items have the same status
+            order.status = uniqueStatuses[0];
+        } else if (uniqueStatuses.includes('cancelled') && uniqueStatuses.length === 2 && itemStatuses.every(s => s === 'cancelled' || s === status)) {
+            // All items are either cancelled or the new status
+            order.status = status;
+        } else {
+            // Mixed statuses, set order to 'processing' unless all cancelled
+            order.status = itemStatuses.every(s => s === 'cancelled') ? 'cancelled' : 'processing';
         }
 
         await order.save();

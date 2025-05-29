@@ -176,6 +176,8 @@
                         text: 'Product added to cart!',
                         icon: 'success',
                         confirmButtonColor: '#3B82F6'
+                    }).then(()=>{
+                        location.reload();
                     });
                 } else {
                     Swal.fire({
