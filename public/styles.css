@@ -15,12 +15,12 @@ h1 {
     align-items: center;
     padding: 10px 20px;
 }
+
 .nav-center {
     flex-grow: 1;
     display: flex;
     justify-content: center;
 }
-
 
 .nav-link {
     font-size: 1.2rem;
@@ -74,14 +74,13 @@ h1 {
     font-size: 1.1rem;
 }
 
-
 /* Signup Page Styles */
 .signup-body {
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background: linear-gradient(to bottom,black,white);
+    background: linear-gradient(to bottom, black, white);
     color: white;
 }
 
@@ -92,7 +91,6 @@ h1 {
     box-shadow: 0 4px 10px rgba(149, 144, 144, 0.5);
     width: 100%;
     max-width: 400px;
-    
 }
 
 .signup-container h2 {
@@ -100,7 +98,6 @@ h1 {
     margin-bottom: 20px;
     color: #00aaff;
 }
-
 
 /* OTP Page Styles */
 /* .otp {
@@ -143,8 +140,6 @@ h1 {
     transition: 0.3s ease-in-out;
 } */
 
-
-
 /* Verify Button */
 .verify-btn {
     background: #00aaff;
@@ -185,9 +180,7 @@ h1 {
     background: #0077cc;
 }
 
-
-
-/* Lgin Styles */
+/* Login Styles */
 .login-body {
     display: flex;
     justify-content: center;
@@ -230,4 +223,186 @@ h1 {
 
 .btn-danger:hover {
     background-color: #c1351d;
+}
+
+/* Media Queries for Responsiveness */
+
+/* Mobile Devices (max-width: 640px) */
+@media (max-width: 640px) {
+
+    /* Header */
+    header {
+        padding: 10px 0;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    .navbar-custom {
+        flex-direction: column;
+        padding: 10px;
+    }
+
+    .nav-center {
+        justify-content: center;
+        margin-top: 10px;
+    }
+
+    .nav-link {
+        font-size: 1rem;
+        margin: 0 10px;
+    }
+
+    /* Product Section */
+    .product-list {
+        gap: 15px;
+    }
+
+    .product {
+        width: 100%;
+        max-width: 250px;
+        padding: 10px;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+    }
+
+    .card-text {
+        font-size: 0.9rem;
+    }
+
+    .card-body {
+        padding: 10px;
+    }
+
+    /* Signup Page */
+    .signup-container {
+        padding: 20px;
+        margin: 10px;
+        max-width: 100%;
+    }
+
+    .signup-container h2 {
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+    }
+
+    /* OTP Page */
+    .otp {
+        padding: 10px;
+    }
+
+    .otp-container h2 {
+        font-size: 1.5rem;
+    }
+
+    .otp-container p {
+        font-size: 0.9rem;
+    }
+
+    .otp-inputs {
+        gap: 5px;
+    }
+
+    .otp-field {
+        width: 35px;
+        height: 45px;
+        font-size: 16px;
+    }
+
+    .verify-btn {
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    .resend-text {
+        font-size: 12px;
+    }
+
+    #resend-otp {
+        padding: 8px;
+        font-size: 12px;
+    }
+
+    /* Login Page */
+    .login-container {
+        padding: 10px;
+        margin: 10px;
+        max-width: 100%;
+    }
+
+    .login-form h2 {
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+    }
+}
+
+/* Tablet Devices (max-width: 768px) */
+@media (max-width: 768px) {
+
+    /* Header */
+    h1 {
+        font-size: 1.75rem;
+    }
+
+    .navbar-custom {
+        padding: 10px 15px;
+    }
+
+    .nav-link {
+        font-size: 1.1rem;
+    }
+
+    /* Product Section */
+    .product {
+        width: 280px;
+    }
+
+    /* Signup Page */
+    .signup-container {
+        padding: 25px;
+        max-width: 350px;
+    }
+
+    /* OTP Page */
+    .otp-container h2 {
+        font-size: 1.75rem;
+    }
+
+    .otp-field {
+        width: 38px;
+        height: 48px;
+        font-size: 18px;
+    }
+
+    /* Login Page */
+    .login-container {
+        max-width: 350px;
+    }
+}
+
+/* Large Screens (min-width: 1024px) */
+@media (min-width: 1024px) {
+
+    /* Header */
+    .navbar-custom {
+        padding: 10px 30px;
+    }
+
+    /* Product Section */
+    .product-list {
+        gap: 30px;
+    }
+
+    .product {
+        width: 320px;
+    }
+
+    /* Signup and Login Pages */
+    .signup-container,
+    .login-container {
+        max-width: 450px;
+    }
 }
