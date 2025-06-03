@@ -101,6 +101,10 @@ router.post('/orders/:orderId/items/:itemId/return',protect,orderController.retu
 //Profile Management
 router.get('/profile',optionalProtect,profileController.loadProfile);
 router.patch('/profile/editProfile',protect,profileController.editProfile);
+router.post('/profile/verifyEmail',protect,profileController.verifyEmailOtp);
+router.post('/profile/resendOtp',protect,profileController.resendOtp);
+router.get('/verify-email-otp',protect,profileController.loadVerifyEmailOtp);
+router.post('/profile/verifyEmailOtp',protect,profileController.verifyEmailOtp);
 router.post('/profile/addAddress',protect,addressController.addAddress);
 router.get('/profile/getAddress/:index',protect,addressController.getAddress);
 router.post('/profile/editAddress/:index',protect,addressController.editAddress);

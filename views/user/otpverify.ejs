@@ -13,10 +13,11 @@
 
     <div class="bg-black bg-opacity-80 p-8 rounded-lg shadow-lg max-w-sm w-full text-center">
         <h2 class="text-2xl text-cyan-400 mb-2">
-            <%= context==='passwordReset' ? "Reset Your Password" : "Verify Your Email" %>
+            <%= context === 'passwordReset' ? "Reset Your Password" : context === 'email-verification' ? "Verify Your Email" : "Verify Your Account" %>
         </h2>
         <p class="text-sm text-gray-300 mb-5">
-            <%= context==='passwordReset' ? "A 6-digit OTP has been sent to your email to reset your password."
+            <%= context === 'passwordReset' ? "A 6-digit OTP has been sent to your email to reset your password."
+                : context === 'email-verification' ? "A 6-digit OTP has been sent to your new email to verify it."
                 : "A 6-digit OTP has been sent to your email to verify your account." %>
         </p>
 
@@ -36,7 +37,7 @@
         </div>
 
         <button
-            class="verify-btn bg-blue-400 text-white py-3 w-full rounded-lg cursor-pointer text-lg transition ease-in-out duration-300 hover:bg-navy-500">Verify
+            class="verify-btn bg-blue-400 text-white py-3 w-full rounded-lg cursor-pointer text-lg transition ease-in-out duration-300 hover:bg-blue-500">Verify
             OTP</button>
 
         <p class="text-sm text-gray-300 mt-5">Resend OTP in <span id="timer">60</span> seconds</p>
@@ -90,49 +91,43 @@
                     const userData = JSON.parse(sessionStorage.getItem('pendingData'));
                     console.log("Retrieved userData", userData);
 
+                    let endpoint, body;
                     if (context === 'passwordReset') {
-                        let response = await fetch("/user/verifyResetOtp", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ otp, userData }),
-                        });
-
-                        let result = await response.json();
-                        console.log("OTP Verification Response:", result);
-
-                        if (result.success) {
-                            sessionStorage.removeItem('pendingData');
-                            Swal.fire("Success", "OTP Verified Successfully!", "success", 2000).then(() => {
-                                window.location.href = result.redirectUrl;
-                            });
-                        } else {
-                            otpFields.forEach(field => field.value = "");
-                            otpFields[0].focus();
-                            Swal.fire("Error", result.message || "Invalid OTP", "error");
-                        }
-                    }
-                    else {
-                        let response = await fetch("/user/otpverify", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ otp, userData, context }),
-                        });
-
-                        let result = await response.json();
-                        console.log("OTP Verification Response:", result);
-
-                        if (result.success) {
-                            sessionStorage.removeItem('pendingData');
-                            Swal.fire("Success", "OTP Verified Successfully!", "success", 2000).then(() => {
-                                window.location.href = result.redirectUrl;
-                            });
-                        } else {
-                            otpFields.forEach(field => field.value = "");
-                            otpFields[0].focus();
-                            Swal.fire("Error", result.message || "Invalid OTP", "error");
-                        }
+                        endpoint = "/user/verifyResetOtp";
+                        body = { otp, userData };
+                    } else if (context === 'email-verification') {
+                        endpoint = "/user/profile/verifyEmailOtp";
+                        body = { otp };
+                    } else {
+                        endpoint = "/user/otpverify";
+                        body = { otp, userData, context };
                     }
 
+                    let response = await fetch(endpoint, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(body),
+                    });
+
+                    let result = await response.json();
+                    console.log("OTP Verification Response:", result);
+
+                    if (result.success) {
+                        sessionStorage.removeItem('pendingData');
+                        Swal.fire({
+                            title: "Success",
+                            text: result.message || "OTP Verified Successfully!",
+                            icon: "success",
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.href = result.redirectUrl || "/user/profile";
+                        });
+                    } else {
+                        otpFields.forEach(field => field.value = "");
+                        otpFields[0].focus();
+                        Swal.fire("Error", result.message || "Invalid OTP", "error");
+                    }
                 } catch (error) {
                     console.error("Error verifying OTP:", error);
                     Swal.fire("Error", "Something went wrong, try again", "error");
@@ -140,36 +135,36 @@
             });
 
             resendBtn.addEventListener("click", async function () {
-                // const storedData = sessionStorage.getItem('pendingData');
-
-                // if (!storedData) {  // Check if null
-                //     console.log("No user data found in session storage");
-                //     Swal.fire('Error', "Session expired. Please sign up again.", 'error');
-                //     return;
-                // }
-
                 try {
-                    // const userData = JSON.parse(storedData);  // Parse only if valid
-                    // console.log("Resending OTP for user: ", userData);
+                    const userData = JSON.parse(sessionStorage.getItem('pendingData'));
+                    console.log("Resending OTP for user: ", userData);
 
-                    let response = await fetch("/user/otpverify/resendotp", {
+                    let endpoint = context === 'email-verification' ? "/user/profile/resendOtp" : "/user/otpverify/resendotp";
+                    let body = context === 'email-verification' ? {} : userData;
+
+                    let response = await fetch(endpoint, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        // body: JSON.stringify(userData)
+                        body: JSON.stringify(body)
                     });
 
                     let result = await response.json();
                     console.log("Resend OTP Response:", result);
 
                     if (result.success) {
-                        Swal.fire("Success", "New OTP sent!", "success");
+                        Swal.fire({
+                            title: "Success",
+                            text: "New OTP sent!",
+                            icon: "success",
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
                         timer = 60;
                         timerDisplay.textContent = timer;
                         startTimer();
                     } else {
                         Swal.fire("Error", result.message || "Failed to resend OTP", "error");
                     }
-
                 } catch (error) {
                     console.error("Error resending OTP:", error);
                     Swal.fire("Error", "Something went wrong, try again", "error");
@@ -196,8 +191,6 @@
             }
 
             startTimer();
-
-
         });
     </script>
 </body>

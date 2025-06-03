@@ -238,8 +238,8 @@ const sendVerificationEmail = async (email, otp) => {
         const info = await transporter.sendMail({
             from: process.env.NODEMAILER_EMAIL,
             to: email,
-            subject: "Verify Your Account",
-            text: `Your OTP is ${otp}`,
+            subject: 'WaveTunes Email Verification OTP',
+            text: `Your OTP for email verification is ${otp}. It is valid for 1 minute.`
         });
 
         return info.accepted.length > 0;

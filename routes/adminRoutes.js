@@ -24,11 +24,13 @@ router.post('/customers/:id',protect,authorize('admin'),customerController.userS
 router.get('/sales-report',protect,authorize('admin'), adminController.getSalesReport);
 router.get('/sales-report-details', protect,authorize('admin'),adminController.getSalesReportDetails);
 router.get('/top-products', protect,authorize('admin'),adminController.getTopProducts);
+
 //Categories
 router.get('/categories',protect,authorize('admin'),categoryController.loadCategory);
 router.post('/categories',protect,authorize('admin'),categoryController.addCategory);
 router.patch('/categories',protect,authorize('admin'),categoryController.toggleCategoryStatus);
 router.put('/categories',protect,authorize('admin'),categoryController.editCategory);
+
 
 //Products
 router.get('/products',protect,authorize('admin'),productController.adminProduct);

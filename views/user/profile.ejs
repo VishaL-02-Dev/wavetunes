@@ -1,7 +1,5 @@
 <head>
-    <title>
-        WaveTunes | Profile
-    </title>
+    <title>WaveTunes | Profile</title>
 </head>
 <%- include("partials/user/header") %>
 
@@ -64,7 +62,7 @@
                         <div class="flex items-center space-x-3">
                             <input type="text"
                                 class="w-full p-2 bg-gray-800 rounded border border-gray-600 text-green-400 focus:outline-none focus:border-blue-400"
-                                value= '<%= user.referralCode %>' id="referralCode" readonly>
+                                value='<%= user.referralCode %>' id="referralCode" readonly>
                             <button class="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded text-white font-semibold"
                                 onclick="copyReferralCode()">
                                 <i class="fas fa-copy mr-2"></i> Copy
@@ -137,8 +135,8 @@
                                                                 <%= address.address %>
                                                             </p>
                                                             <p class="text-gray-400">
-                                                                <%= address.city %>, <%= address.state %>
-                                                                        PIN: <%= address.pinCode %>
+                                                                <%= address.city %>, <%= address.state %> PIN: <%=
+                                                                            address.pinCode %>
                                                             </p>
                                                             <p class="text-gray-400">Phone: <%= address.phone %>
                                                             </p>
@@ -236,294 +234,303 @@
             </div>
         </div>
 
-            <!-- Edit Profile Modal -->
-            <div id="edit-profile-modal"
-                class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-                <div class="bg-gray-900 text-white rounded-lg shadow-lg max-w-md w-full mx-4">
-                    <div class="flex justify-between items-center border-b border-gray-700 p-4">
-                        <h3 class="text-xl font-semibold">Edit Profile</h3>
-                        <button id="close-modal" class="text-gray-400 hover:text-white">
-                            <i class="fas fa-times"></i>
+        <!-- Edit Profile Modal -->
+        <div id="edit-profile-modal"
+            class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+            <div class="bg-gray-900 text-white rounded-lg shadow-lg max-w-md w-full mx-4">
+                <div class="flex justify-between items-center border-b border-gray-700 p-4">
+                    <h3 class="text-xl font-semibold">Edit Profile</h3>
+                    <button id="close-modal" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="edit-profile-form" class="p-6 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="edit-fname" class="block text-sm font-medium">First Name</label>
+                            <input type="text" id="edit-fname" name="fname" value="<%= user.fname %>"
+                                class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
+                            <p class="error-message" id="edit-fname-error"></p>
+                        </div>
+                        <div>
+                            <label for="edit-lname" class="block text-sm font-medium">Last Name</label>
+                            <input type="text" id="edit-lname" name="lname" value="<%= user.lname %>"
+                                class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
+                            <p class="error-message" id="edit-lname-error"></p>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="edit-email" class="block text-sm font-medium">Email Address</label>
+                        <input type="email" id="edit-email" name="email" value="<%= user.email %>"
+                            class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
+                        <p class="error-message" id="edit-email-error"></p>
+                    </div>
+                    <div>
+                        <label for="edit-phone" class="block text-sm font-medium">Phone Number</label>
+                        <input type="tel" id="edit-phone" name="phone" value="<%= user.phone || '' %>"
+                            class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
+                        <p class="error-message" id="edit-phone-error"></p>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" id="cancel-edit"
+                            class="py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded text-white font-medium">
+                            Cancel
+                        </button>
+                        <button type="submit" id="save-profile-btn"
+                            class="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded text-white font-semibold" disabled>
+                            Save Changes
                         </button>
                     </div>
-                    <form id="edit-profile-form" class="p-6 space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="edit-fname" class="block text-sm font-medium">First Name</label>
-                                <input type="text" id="edit-fname" name="fname" value="<%= user.fname %>"
-                                    class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
-                                <p class="error-message" id="edit-fname-error"></p>
-                            </div>
-                            <div>
-                                <label for="edit-lname" class="block text-sm font-medium">Last Name</label>
-                                <input type="text" id="edit-lname" name="lname" value="<%= user.lname %>"
-                                    class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
-                                <p class="error-message" id="edit-lname-error"></p>
-                            </div>
-                        </div>
-                        <div>
-                            <label for="edit-email" class="block text-sm font-medium">Email Address</label>
-                            <input type="email" id="edit-email" name="email" value="<%= user.email %>"
-                                class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
-                            <p class="error-message" id="edit-email-error"></p>
-                        </div>
-                        <div>
-                            <label for="edit-phone" class="block text-sm font-medium">Phone Number</label>
-                            <input type="tel" id="edit-phone" name="phone" value="<%= user.phone || '' %>"
-                                class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
-                            <p class="error-message" id="edit-phone-error"></p>
-                        </div>
-                        <div class="flex justify-end space-x-3 pt-4">
-                            <button type="button" id="cancel-edit"
-                                class="py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded text-white font-medium">
-                                Cancel
-                            </button>
-                            <button type="submit" id="save-profile-btn"
-                                class="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded text-white font-semibold"
-                                disabled>
-                                Save Changes
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                </form>
             </div>
+        </div>
 
-            <!-- Address Modal (Add/Edit) -->
-            <div id="address-modal"
-                class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-                <div class="bg-gray-900 text-white rounded-lg shadow-lg max-w-md w-full mx-4">
-                    <div class="flex justify-between items-center border-b border-gray-700 p-4">
-                        <h3 id="address-modal-title" class="text-xl font-semibold">Add New Address</h3>
-                        <button id="close-address-modal" class="text-gray-400 hover:text-white">
-                            <i class="fas fa-times"></i>
+        <!-- Address Modal (Add/Edit) -->
+        <div id="address-modal"
+            class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+            <div class="bg-gray-900 text-white rounded-lg shadow-lg max-w-md w-full mx-4">
+                <div class="flex justify-between items-center border-b border-gray-700 p-4">
+                    <h3 id="address-modal-title" class="text-xl font-semibold">Add New Address</h3>
+                    <button id="close-address-modal" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="address-form" class="p-6 space-y-4">
+                    <input type="hidden" id="address-index" value="-1">
+                    <div>
+                        <label for="address-type" class="block text-sm font-medium">Address Type (e.g. Home,
+                            Work)</label>
+                        <select id="address-type" name="type"
+                            class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
+                            <option value="" disabled selected>Select Address Type</option>
+                            <option value="Home">Home</option>
+                            <option value="Work">Work</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <p class="error-message" id="address-type-error"></p>
+                    </div>
+                    <div>
+                        <label for="address" class="block text-sm font-medium">Address</label>
+                        <textarea id="address" name="address"
+                            class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400"></textarea>
+                        <p class="error-message" id="address-error"></p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="address-city" class="block text-sm font-medium">City</label>
+                            <input type="text" id="address-city" name="city"
+                                class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
+                            <p class="error-message" id="address-city-error"></p>
+                        </div>
+                        <div>
+                            <label for="address-state" class="block text-sm font-medium">State</label>
+                            <input type="text" id="address-state" name="state"
+                                class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
+                            <p class="error-message" id="address-state-error"></p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="address-district" class="block text-sm font-medium">District</label>
+                            <input type="text" id="address-district" name="district"
+                                class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
+                            <p class="error-message" id="address-district-error"></p>
+                        </div>
+                        <div>
+                            <label for="address-pin" class="block text-sm font-medium">PIN Code</label>
+                            <input type="text" id="address-pin" name="pinCode"
+                                class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
+                            <p class="error-message" id="address-pin-error"></p>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="address-phone" class="block text-sm font-medium">Phone</label>
+                        <input type="tel" id="address-phone" name="phone"
+                            class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
+                        <p class="error-message" id="address-phone-error"></p>
+                    </div>
+                    <div id="default-address-wrapper" class="flex items-center space-x-2 mt-4">
+                        <input type="checkbox" id="address-default" name="isDefault"
+                            class="h-4 w-4 bg-gray-800 border-gray-600 rounded focus:ring-blue-500">
+                        <label for="address-default" class="text-sm font-medium">Set as default delivery
+                            address</label>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" id="cancel-address"
+                            class="py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded text-white font-medium">
+                            Cancel
+                        </button>
+                        <button type="submit" id="save-address-btn"
+                            class="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded text-white font-semibold" disabled>
+                            Save Address
                         </button>
                     </div>
-                    <form id="address-form" class="p-6 space-y-4">
-                        <input type="hidden" id="address-index" value="-1">
-                        <div>
-                            <label for="address-type" class="block text-sm font-medium">Address Type (e.g. Home,
-                                Work)</label>
-                            <select id="address-type" name="type"
-                                class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
-                                <option value="" disabled selected>Select Address Type</option>
-                                <option value="Home">Home</option>
-                                <option value="Work">Work</option>
-                                <option value="Other">Other</option>
-                            </select>
-                            <p class="error-message" id="address-type-error"></p>
-                        </div>
-                        <div>
-                            <label for="address" class="block text-sm font-medium">Address</label>
-                            <textarea id="address" name="address"
-                                class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400"></textarea>
-                            <p class="error-message" id="address-error"></p>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="address-city" class="block text-sm font-medium">City</label>
-                                <input type="text" id="address-city" name="city"
-                                    class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
-                                <p class="error-message" id="address-city-error"></p>
-                            </div>
-                            <div>
-                                <label for="address-state" class="block text-sm font-medium">State</label>
-                                <input type="text" id="address-state" name="state"
-                                    class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
-                                <p class="error-message" id="address-state-error"></p>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="address-district" class="block text-sm font-medium">District</label>
-                                <input type="text" id="address-district" name="district"
-                                    class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
-                                <p class="error-message" id="address-district-error"></p>
-                            </div>
-                            <div>
-                                <label for="address-pin" class="block text-sm font-medium">PIN Code</label>
-                                <input type="text" id="address-pin" name="pinCode"
-                                    class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
-                                <p class="error-message" id="address-pin-error"></p>
-                            </div>
-                        </div>
-                        <div>
-                            <label for="address-phone" class="block text-sm font-medium">Phone</label>
-                            <input type="tel" id="address-phone" name="phone"
-                                class="w-full p-2 mt-1 bg-gray-800 rounded border border-gray-600 focus:outline-none focus:border-blue-400">
-                            <p class="error-message" id="address-phone-error"></p>
-                        </div>
-                        <div id="default-address-wrapper" class="flex items-center space-x-2 mt-4">
-                            <input type="checkbox" id="address-default" name="isDefault"
-                                class="h-4 w-4 bg-gray-800 border-gray-600 rounded focus:ring-blue-500">
-                            <label for="address-default" class="text-sm font-medium">Set as default delivery
-                                address</label>
-                        </div>
-                        <div class="flex justify-end space-x-3 pt-4">
-                            <button type="button" id="cancel-address"
-                                class="py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded text-white font-medium">
-                                Cancel
-                            </button>
-                            <button type="submit" id="save-address-btn"
-                                class="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded text-white font-semibold"
-                                disabled>
-                                Save Address
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                </form>
             </div>
+        </div>
 
-            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-            <script>
-                document.addEventListener('DOMContentLoaded', function () {
-                    // Tab functionality
-                    const tabButtons = document.querySelectorAll('.tab-button');
-                    const tabContents = document.querySelectorAll('.tab-content');
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // Tab functionality
+                const tabButtons = document.querySelectorAll('.tab-button');
+                const tabContents = document.querySelectorAll('.tab-content');
 
-                    tabButtons.forEach(button => {
-                        button.addEventListener('click', function () {
-                            tabButtons.forEach(btn => {
-                                btn.classList.remove('text-blue-400', 'border-b-2', 'border-blue-400');
-                                btn.classList.add('text-gray-400');
-                            });
-                            tabContents.forEach(content => content.classList.add('hidden'));
-
-                            this.classList.remove('text-gray-400');
-                            this.classList.add('text-blue-400', 'border-b-2', 'border-blue-400');
-
-                            const tabId = this.getAttribute('data-tab');
-                            document.getElementById(tabId).classList.remove('hidden');
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', function () {
+                        tabButtons.forEach(btn => {
+                            btn.classList.remove('text-blue-400', 'border-b-2', 'border-blue-400');
+                            btn.classList.add('text-gray-400');
                         });
+                        tabContents.forEach(content => content.classList.add('hidden'));
+
+                        this.classList.remove('text-gray-400');
+                        this.classList.add('text-blue-400', 'border-b-2', 'border-blue-400');
+
+                        const tabId = this.getAttribute('data-tab');
+                        document.getElementById(tabId).classList.remove('hidden');
                     });
+                });
 
-                    // Edit Profile Modal - Validation
-                    const editProfileForm = document.getElementById('edit-profile-form');
-                    const saveProfileBtn = document.getElementById('save-profile-btn');
+                // Edit Profile Modal - Validation
+                const editProfileForm = document.getElementById('edit-profile-form');
+                const saveProfileBtn = document.getElementById('save-profile-btn');
 
-                    const profileFields = [
-                        {
-                            id: 'edit-fname',
-                            validate: value => {
-                                if (!value.trim()) return 'First Name is required';
-                                if (value.length < 2) return 'First Name must be at least 2 characters';
-                                if (!/^[a-zA-Z\s]+$/.test(value)) return 'First Name must contain only letters and spaces';
-                                return '';
-                            }
-                        },
-                        {
-                            id: 'edit-lname',
-                            validate: value => {
-                                if (!value.trim()) return 'Last Name is required';
-                                if (value.length < 2) return 'Last Name must be at least 2 characters';
-                                if (!/^[a-zA-Z\s]+$/.test(value)) return 'Last Name must contain only letters and spaces';
-                                return '';
-                            }
-                        },
-                        {
-                            id: 'edit-email',
-                            validate: value => {
-                                if (!value.trim()) return 'Email is required';
-                                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Invalid email format';
-                                return '';
-                            }
-                        },
-                        {
-                            id: 'edit-phone',
-                            validate: value => {
-                                if (value.trim() && !/^\d{10}$/.test(value)) return 'Phone Number must be exactly 10 digits';
-                                return '';
-                            }
+                const profileFields = [
+                    {
+                        id: 'edit-fname',
+                        validate: value => {
+                            if (!value.trim()) return 'First Name is required';
+                            if (value.length < 2) return 'First Name must be at least 2 characters';
+                            if (!/^[a-zA-Z\s]+$/.test(value)) return 'First Name must contain only letters and spaces';
+                            return '';
                         }
-                    ];
-
-                    function validateProfileForm() {
-                        let allValid = true;
-                        const errors = [];
-
-                        profileFields.forEach(field => {
-                            const input = document.getElementById(field.id);
-                            const errorElement = document.getElementById(`${field.id}-error`);
-                            const value = input.value.trim();
-                            const error = field.validate(value);
-
-                            if (error) {
-                                errorElement.textContent = error;
-                                errorElement.style.display = 'block';
-                                input.classList.add('input-error');
-                                allValid = false;
-                                errors.push(error);
-                            } else {
-                                errorElement.textContent = '';
-                                errorElement.style.display = 'none';
-                                input.classList.remove('input-error');
-                            }
-                        });
-
-                        saveProfileBtn.disabled = !allValid;
-                        return { isValid: allValid, errors };
+                    },
+                    {
+                        id: 'edit-lname',
+                        validate: value => {
+                            if (!value.trim()) return 'Last Name is required';
+                            if (value.length < 2) return 'Last Name must be at least 2 characters';
+                            if (!/^[a-zA-Z\s]+$/.test(value)) return 'Last Name must contain only letters and spaces';
+                            return '';
+                        }
+                    },
+                    {
+                        id: 'edit-email',
+                        validate: value => {
+                            if (!value.trim()) return 'Email is required';
+                            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Invalid email format';
+                            return '';
+                        }
+                    },
+                    {
+                        id: 'edit-phone',
+                        validate: value => {
+                            if (value.trim() && !/^\d{10}$/.test(value)) return 'Phone Number must be exactly 10 digits';
+                            return '';
+                        }
                     }
+                ];
+
+                function validateProfileForm() {
+                    let allValid = true;
+                    const errors = [];
 
                     profileFields.forEach(field => {
                         const input = document.getElementById(field.id);
-                        input.addEventListener('input', validateProfileForm);
-                        input.addEventListener('blur', validateProfileForm);
+                        const errorElement = document.getElementById(`${field.id}-error`);
+                        const value = input.value.trim();
+                        const error = field.validate(value);
+
+                        if (error) {
+                            errorElement.textContent = error;
+                            errorElement.style.display = 'block';
+                            input.classList.add('input-error');
+                            allValid = false;
+                            errors.push(error);
+                        } else {
+                            errorElement.textContent = '';
+                            errorElement.style.display = 'none';
+                            input.classList.remove('input-error');
+                        }
                     });
 
-                    // Edit Profile Modal - Form Submission
-                    const editProfileBtn = document.getElementById('edit-profile-btn');
-                    const editProfileModal = document.getElementById('edit-profile-modal');
-                    const closeModalBtn = document.getElementById('close-modal');
-                    const cancelEditBtn = document.getElementById('cancel-edit');
+                    saveProfileBtn.disabled = !allValid;
+                    return { isValid: allValid, errors };
+                }
 
-                    function toggleEditProfileModal() {
-                        editProfileModal.classList.toggle('hidden');
-                        if (!editProfileModal.classList.contains('hidden')) {
-                            validateProfileForm();
-                        } else {
-                            profileFields.forEach(field => {
-                                const input = document.getElementById(field.id);
-                                const errorElement = document.getElementById(`${field.id}-error`);
-                                errorElement.textContent = '';
-                                errorElement.style.display = 'none';
-                                input.classList.remove('input-error');
-                            });
-                            saveProfileBtn.disabled = true;
-                        }
+                profileFields.forEach(field => {
+                    const input = document.getElementById(field.id);
+                    input.addEventListener('input', validateProfileForm);
+                    input.addEventListener('blur', validateProfileForm);
+                });
+
+                const editProfileBtn = document.getElementById('edit-profile-btn');
+                const editProfileModal = document.getElementById('edit-profile-modal');
+                const closeModalBtn = document.getElementById('close-modal');
+                const cancelEditBtn = document.getElementById('cancel-edit');
+
+                function toggleEditProfileModal() {
+                    editProfileModal.classList.toggle('hidden');
+                    if (!editProfileModal.classList.contains('hidden')) {
+                        validateProfileForm();
+                    } else {
+                        profileFields.forEach(field => {
+                            const input = document.getElementById(field.id);
+                            const errorElement = document.getElementById(`${field.id}-error`);
+                            errorElement.textContent = '';
+                            errorElement.style.display = 'none';
+                            input.classList.remove('input-error');
+                        });
+                        saveProfileBtn.disabled = true;
+                    }
+                }
+
+                editProfileBtn.addEventListener('click', toggleEditProfileModal);
+                closeModalBtn.addEventListener('click', toggleEditProfileModal);
+                cancelEditBtn.addEventListener('click', toggleEditProfileModal);
+
+                editProfileForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+
+                    const { isValid, errors } = validateProfileForm();
+                    if (!isValid) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Invalid Input',
+                            html: errors.map(error => `<p>${error}</p>`).join('')
+                        });
+                        return;
                     }
 
-                    editProfileBtn.addEventListener('click', toggleEditProfileModal);
-                    closeModalBtn.addEventListener('click', toggleEditProfileModal);
-                    cancelEditBtn.addEventListener('click', toggleEditProfileModal);
+                    const formData = new FormData(this);
+                    const profileData = Object.fromEntries(formData.entries());
 
-                    editProfileForm.addEventListener('submit', function (e) {
-                        e.preventDefault();
-
-                        const { isValid, errors } = validateProfileForm();
-                        if (!isValid) {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Invalid Input',
-                                html: errors.map(error => `<p>${error}</p>`).join('')
-                            });
-                            return;
-                        }
-
-                        const formData = new FormData(this);
-                        const profileData = Object.fromEntries(formData.entries());
-
-                        fetch('/user/profile/editProfile', {
-                            method: 'PATCH',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(profileData)
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
+                    fetch('/user/profile/editProfile', {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(profileData)
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                if (data.redirect) {
+                                    // Store pendingData in sessionStorage
+                                    if (data.pendingData) {
+                                        sessionStorage.setItem('pendingData', JSON.stringify(data.pendingData));
+                                    }
+                                    Swal.fire({
+                                        title: 'OTP Sent!',
+                                        text: 'An OTP has been sent to your new email. Please verify.',
+                                        icon: 'info',
+                                        confirmButtonColor: '#3B82F6'
+                                    }).then(() => {
+                                        window.location.href = data.redirect;
+                                    });
+                                } else {
                                     toggleEditProfileModal();
-
-                                    // Update displayed profile information
                                     document.querySelector('h1').textContent = `${profileData.fname} ${profileData.lname}`;
                                     document.querySelectorAll('#personal-info p')[0].textContent = profileData.fname;
                                     document.querySelectorAll('#personal-info p')[1].textContent = profileData.lname;
@@ -536,355 +543,239 @@
                                         icon: 'success',
                                         confirmButtonColor: '#3B82F6'
                                     });
-                                } else {
-                                    Swal.fire({
-                                        title: 'Error',
-                                        text: 'Error updating profile: ' + data.message,
-                                        icon: 'error',
-                                        confirmButtonColor: '#3B82F6'
-                                    });
                                 }
+                            } else {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: data.message || 'Error updating profile',
+                                    icon: 'error',
+                                    confirmButtonColor: '#3B82F6'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                title: 'Error',
+                                text: 'An error occurred while updating your profile.',
+                                icon: 'error',
+                                confirmButtonColor: '#3B82F6'
+                            });
+                        });
+                });
+
+                // Address Modal - Validation
+                const addressForm = document.getElementById('address-form');
+                const saveAddressBtn = document.getElementById('save-address-btn');
+
+                const addressFields = [
+                    {
+                        id: 'address-type',
+                        validate: value => {
+                            if (!value) return 'Address Type is required';
+                            if (!['Home', 'Work', 'Other'].includes(value)) return 'Invalid Address Type';
+                            return '';
+                        }
+                    },
+                    {
+                        id: 'address',
+                        validate: value => {
+                            if (!value.trim()) return 'Address is required';
+                            if (value.length < 5) return 'Address must be at least 5 characters';
+                            return '';
+                        }
+                    },
+                    {
+                        id: 'address-city',
+                        validate: value => {
+                            if (!value.trim()) return 'City is required';
+                            if (value.length < 2) return 'City must be at least 2 characters';
+                            if (!/^[a-zA-Z\s]+$/.test(value)) return 'City must contain only letters and spaces';
+                            return '';
+                        }
+                    },
+                    {
+                        id: 'address-district',
+                        validate: value => {
+                            if (!value.trim()) return 'District is required';
+                            if (value.length < 2) return 'District must be at least 2 characters';
+                            if (!/^[a-zA-Z\s]+$/.test(value)) return 'District must contain only letters and spaces';
+                            return '';
+                        }
+                    },
+                    {
+                        id: 'address-state',
+                        validate: value => {
+                            if (!value.trim()) return 'State is required';
+                            if (value.length < 2) return 'State must be at least 2 characters';
+                            if (!/^[a-zA-Z\s]+$/.test(value)) return 'State must contain only letters and spaces';
+                            return '';
+                        }
+                    },
+                    {
+                        id: 'address-pin',
+                        validate: value => {
+                            if (!value.trim()) return 'PIN Code is required';
+                            if (!/^\d{6}$/.test(value)) return 'PIN Code must be exactly 6 digits';
+                            return '';
+                        }
+                    },
+                    {
+                        id: 'address-phone',
+                        validate: value => {
+                            if (!value.trim()) return 'Phone Number is required';
+                            if (!/^\d{10}$/.test(value)) return 'Phone Number must be exactly 10 digits';
+                            return '';
+                        }
+                    }
+                ];
+
+                function validateAddressForm() {
+                    let allValid = true;
+                    const errors = [];
+
+                    addressFields.forEach(field => {
+                        const input = document.getElementById(field.id);
+                        const errorElement = document.getElementById(`${field.id}-error`);
+                        const value = input.value.trim();
+                        const error = field.validate(value);
+
+                        if (error) {
+                            errorElement.textContent = error;
+                            errorElement.style.display = 'block';
+                            input.classList.add('input-error');
+                            allValid = false;
+                            errors.push(error);
+                        } else {
+                            errorElement.textContent = '';
+                            errorElement.style.display = 'none';
+                            input.classList.remove('input-error');
+                        }
+                    });
+
+                    saveAddressBtn.disabled = !allValid;
+                    return { isValid: allValid, errors };
+                }
+
+                addressFields.forEach(field => {
+                    const input = document.getElementById(field.id);
+                    input.addEventListener('input', validateAddressForm);
+                    input.addEventListener('blur', validateAddressForm);
+                });
+
+                // Address Modal - Open and Populate
+                const addAddressBtn = document.getElementById('add-address-btn');
+                const addressModal = document.getElementById('address-modal');
+                const closeAddressModalBtn = document.getElementById('close-address-modal');
+                const cancelAddressBtn = document.getElementById('cancel-address');
+                const addressModalTitle = document.getElementById('address-modal-title');
+                const addressIndex = document.getElementById('address-index');
+                const defaultAddressWrapper = document.getElementById('default-address-wrapper');
+
+                function toggleAddressModal() {
+                    addressModal.classList.toggle('hidden');
+                    if (!addressModal.classList.contains('hidden')) {
+                        validateAddressForm();
+                    } else {
+                        addressForm.reset();
+                        addressFields.forEach(field => {
+                            const input = document.getElementById(field.id);
+                            const errorElement = document.getElementById(`${field.id}-error`);
+                            errorElement.textContent = '';
+                            errorElement.style.display = 'none';
+                            input.classList.remove('input-error');
+                        });
+                        saveAddressBtn.disabled = true;
+                    }
+                }
+
+                addAddressBtn.addEventListener('click', function () {
+                    addressForm.reset();
+                    addressIndex.value = -1;
+                    addressModalTitle.textContent = 'Add New Address';
+                    defaultAddressWrapper.classList.remove('hidden');
+                    toggleAddressModal();
+                });
+
+                closeAddressModalBtn.addEventListener('click', toggleAddressModal);
+                cancelAddressBtn.addEventListener('click', toggleAddressModal);
+
+                // Handle Edit Address buttons
+                const addressesContainer = document.getElementById('addresses-container');
+
+                addressesContainer.addEventListener('click', function (e) {
+                    if (e.target.classList.contains('edit-address-btn') || e.target.parentElement.classList.contains('edit-address-btn')) {
+                        const button = e.target.classList.contains('edit-address-btn') ? e.target : e.target.parentElement;
+                        const index = button.getAttribute('data-index');
+                        fetch(`/user/profile/getAddress/${index}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        })
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! Status: ${response.status}`);
+                                }
+                                return response.json();
+                            })
+                            .then(address => {
+                                // Populate form with address data
+                                document.getElementById('address-type').value = address.addressType || '';
+                                document.getElementById('address').value = address.address || '';
+                                document.getElementById('address-city').value = address.city || '';
+                                document.getElementById('address-state').value = address.state || '';
+                                document.getElementById('address-district').value = address.district || '';
+                                document.getElementById('address-pin').value = address.pinCode || '';
+                                document.getElementById('address-phone').value = address.phone || '';
+                                document.getElementById('address-default').checked = address.isDefault || false;
+                                addressIndex.value = index;
+
+                                addressModalTitle.textContent = 'Edit Address';
+                                defaultAddressWrapper.classList.add('hidden');
+                                toggleAddressModal();
+                                validateAddressForm();
                             })
                             .catch(error => {
                                 console.error('Error:', error);
                                 Swal.fire({
                                     title: 'Error',
-                                    text: 'An error occurred while updating your profile.',
+                                    text: 'Failed to load address information.',
                                     icon: 'error',
                                     confirmButtonColor: '#3B82F6'
                                 });
                             });
-                    });
-
-                    // Address Modal - Validation
-                    const addressForm = document.getElementById('address-form');
-                    const saveAddressBtn = document.getElementById('save-address-btn');
-
-                    const addressFields = [
-                        {
-                            id: 'address-type',
-                            validate: value => {
-                                if (!value) return 'Address Type is required';
-                                if (!['Home', 'Work', 'Other'].includes(value)) return 'Invalid Address Type';
-                                return '';
-                            }
-                        },
-                        {
-                            id: 'address',
-                            validate: value => {
-                                if (!value.trim()) return 'Address is required';
-                                if (value.length < 5) return 'Address must be at least 5 characters';
-                                return '';
-                            }
-                        },
-                        {
-                            id: 'address-city',
-                            validate: value => {
-                                if (!value.trim()) return 'City is required';
-                                if (value.length < 2) return 'City must be at least 2 characters';
-                                if (!/^[a-zA-Z\s]+$/.test(value)) return 'City must contain only letters and spaces';
-                                return '';
-                            }
-                        },
-                        {
-                            id: 'address-district',
-                            validate: value => {
-                                if (!value.trim()) return 'District is required';
-                                if (value.length < 2) return 'District must be at least 2 characters';
-                                if (!/^[a-zA-Z\s]+$/.test(value)) return 'District must contain only letters and spaces';
-                                return '';
-                            }
-                        },
-                        {
-                            id: 'address-state',
-                            validate: value => {
-                                if (!value.trim()) return 'State is required';
-                                if (value.length < 2) return 'State must be at least 2 characters';
-                                if (!/^[a-zA-Z\s]+$/.test(value)) return 'State must contain only letters and spaces';
-                                return '';
-                            }
-                        },
-                        {
-                            id: 'address-pin',
-                            validate: value => {
-                                if (!value.trim()) return 'PIN Code is required';
-                                if (!/^\d{6}$/.test(value)) return 'PIN Code must be exactly 6 digits';
-                                return '';
-                            }
-                        },
-                        {
-                            id: 'address-phone',
-                            validate: value => {
-                                if (!value.trim()) return 'Phone Number is required';
-                                if (!/^\d{10}$/.test(value)) return 'Phone Number must be exactly 10 digits';
-                                return '';
-                            }
-                        }
-                    ];
-
-                    function validateAddressForm() {
-                        let allValid = true;
-                        const errors = [];
-
-                        addressFields.forEach(field => {
-                            const input = document.getElementById(field.id);
-                            const errorElement = document.getElementById(`${field.id}-error`);
-                            const value = input.value.trim();
-                            const error = field.validate(value);
-
-                            if (error) {
-                                errorElement.textContent = error;
-                                errorElement.style.display = 'block';
-                                input.classList.add('input-error');
-                                allValid = false;
-                                errors.push(error);
-                            } else {
-                                errorElement.textContent = '';
-                                errorElement.style.display = 'none';
-                                input.classList.remove('input-error');
-                            }
-                        });
-
-                        saveAddressBtn.disabled = !allValid;
-                        return { isValid: allValid, errors };
                     }
 
-                    addressFields.forEach(field => {
-                        const input = document.getElementById(field.id);
-                        input.addEventListener('input', validateAddressForm);
-                        input.addEventListener('blur', validateAddressForm);
-                    });
+                    // Set as default address
+                    if (e.target.classList.contains('set-default-btn') || e.target.parentElement.classList.contains('set-default-btn')) {
+                        const button = e.target.classList.contains('set-default-btn') ? e.target : e.target.parentElement;
+                        const index = button.getAttribute('data-index');
 
-                    // Address Modal - Open and Populate
-                    const addAddressBtn = document.getElementById('add-address-btn');
-                    const addressModal = document.getElementById('address-modal');
-                    const closeAddressModalBtn = document.getElementById('close-address-modal');
-                    const cancelAddressBtn = document.getElementById('cancel-address');
-                    const addressModalTitle = document.getElementById('address-modal-title');
-                    const addressIndex = document.getElementById('address-index');
-                    const defaultAddressWrapper = document.getElementById('default-address-wrapper');
-
-                    function toggleAddressModal() {
-                        addressModal.classList.toggle('hidden');
-                        if (!addressModal.classList.contains('hidden')) {
-                            validateAddressForm();
-                        } else {
-                            addressForm.reset();
-                            addressFields.forEach(field => {
-                                const input = document.getElementById(field.id);
-                                const errorElement = document.getElementById(`${field.id}-error`);
-                                errorElement.textContent = '';
-                                errorElement.style.display = 'none';
-                                input.classList.remove('input-error');
-                            });
-                            saveAddressBtn.disabled = true;
-                        }
-                    }
-
-                    addAddressBtn.addEventListener('click', function () {
-                        addressForm.reset();
-                        addressIndex.value = -1;
-                        addressModalTitle.textContent = 'Add New Address';
-                        defaultAddressWrapper.classList.remove('hidden');
-                        toggleAddressModal();
-                    });
-
-                    closeAddressModalBtn.addEventListener('click', toggleAddressModal);
-                    cancelAddressBtn.addEventListener('click', toggleAddressModal);
-
-                    // Handle Edit Address buttons
-                    const addressesContainer = document.getElementById('addresses-container');
-
-                    addressesContainer.addEventListener('click', function (e) {
-                        if (e.target.classList.contains('edit-address-btn') || e.target.parentElement.classList.contains('edit-address-btn')) {
-                            const button = e.target.classList.contains('edit-address-btn') ? e.target : e.target.parentElement;
-                            const index = button.getAttribute('data-index');
-                            fetch(`/user/profile/getAddress/${index}`, {
-                                method: 'GET',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                }
-                            })
-                                .then(response => {
-                                    if (!response.ok) {
-                                        throw new Error(`HTTP error! Status: ${response.status}`);
-                                    }
-                                    return response.json();
-                                })
-                                .then(address => {
-                                    // Populate form with address data
-                                    document.getElementById('address-type').value = address.addressType || '';
-                                    document.getElementById('address').value = address.address || '';
-                                    document.getElementById('address-city').value = address.city || '';
-                                    document.getElementById('address-state').value = address.state || '';
-                                    document.getElementById('address-district').value = address.district || '';
-                                    document.getElementById('address-pin').value = address.pinCode || '';
-                                    document.getElementById('address-phone').value = address.phone || '';
-                                    document.getElementById('address-default').checked = address.isDefault || false;
-                                    addressIndex.value = index;
-
-                                    addressModalTitle.textContent = 'Edit Address';
-                                    defaultAddressWrapper.classList.add('hidden');
-                                    toggleAddressModal();
-                                    validateAddressForm();
-                                })
-                                .catch(error => {
-                                    console.error('Error:', error);
-                                    Swal.fire({
-                                        title: 'Error',
-                                        text: 'Failed to load address information.',
-                                        icon: 'error',
-                                        confirmButtonColor: '#3B82F6'
-                                    });
-                                });
-                        }
-
-                        // Set as default address
-                        if (e.target.classList.contains('set-default-btn') || e.target.parentElement.classList.contains('set-default-btn')) {
-                            const button = e.target.classList.contains('set-default-btn') ? e.target : e.target.parentElement;
-                            const index = button.getAttribute('data-index');
-
-                            fetch('/user/profile/setDefault', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({ addressIndex: index })
-                            })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.success) {
-                                        Swal.fire({
-                                            title: 'Success!',
-                                            text: 'Default address has been set successfully.',
-                                            icon: 'success',
-                                            showConfirmButton: false,
-                                            timer: 2000,
-                                            timerProgressBar: true
-                                        }).then(() => {
-                                            window.location.reload();
-                                        });
-                                    } else {
-                                        Swal.fire({
-                                            title: 'Error',
-                                            text: 'Error setting default address: ' + data.message,
-                                            icon: 'error',
-                                            confirmButtonColor: '#3B82F6'
-                                        });
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error('Error:', error);
-                                    Swal.fire({
-                                        title: 'Error',
-                                        text: 'Failed to set default address.',
-                                        icon: 'error',
-                                        confirmButtonColor: '#3B82F6'
-                                    });
-                                });
-                        }
-
-                        // Delete address
-                        if (e.target.classList.contains('delete-address-btn') || e.target.parentElement.classList.contains('delete-address-btn')) {
-                            const button = e.target.classList.contains('delete-address-btn') ? e.target : e.target.parentElement;
-                            const index = button.getAttribute('data-index');
-
-                            Swal.fire({
-                                title: 'Are you sure?',
-                                text: 'You are about to delete this address.',
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonColor: '#EF4444',
-                                cancelButtonColor: '#6B7280',
-                                confirmButtonText: 'Yes, delete it!'
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    fetch('/user/profile/deleteAddress', {
-                                        method: 'DELETE',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                        },
-                                        credentials: 'include',
-                                        body: JSON.stringify({ addressIndex: index })
-                                    })
-                                        .then(response => response.json())
-                                        .then(data => {
-                                            if (data.success) {
-                                                Swal.fire({
-                                                    title: 'Deleted!',
-                                                    text: 'Address has been deleted.',
-                                                    icon: 'success',
-                                                    confirmButtonColor: '#3B82F6'
-                                                }).then(() => {
-                                                    window.location.reload();
-                                                });
-                                            } else {
-                                                Swal.fire({
-                                                    title: 'Error',
-                                                    text: 'Error deleting address: ' + data.message,
-                                                    icon: 'error',
-                                                    confirmButtonColor: '#3B82F6'
-                                                });
-                                            }
-                                        })
-                                        .catch(error => {
-                                            console.error('Error:', error);
-                                            Swal.fire({
-                                                title: 'Error',
-                                                text: 'Failed to delete address.',
-                                                icon: 'error',
-                                                confirmButtonColor: '#3B82F6'
-                                            });
-                                        });
-                                }
-                            });
-                        }
-                    });
-
-                    // Address form submission
-                    addressForm.addEventListener('submit', function (e) {
-                        e.preventDefault();
-
-                        const { isValid, errors } = validateAddressForm();
-                        if (!isValid) {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Invalid Input',
-                                html: errors.map(error => `<p>${error}</p>`).join('')
-                            });
-                            return;
-                        }
-
-                        const formData = new FormData(this);
-                        const addressData = Object.fromEntries(formData.entries());
-                        addressData.index = addressIndex.value;
-                        addressData.isDefault = !!addressData.isDefault;
-
-                        const url = addressIndex.value === '-1' ? '/user/profile/addAddress' : `/user/profile/editAddress/${addressData.index}`;
-
-                        fetch(url, {
+                        fetch('/user/profile/setDefault', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify(addressData)
+                            body: JSON.stringify({ addressIndex: index })
                         })
                             .then(response => response.json())
                             .then(data => {
                                 if (data.success) {
-                                    toggleAddressModal();
                                     Swal.fire({
                                         title: 'Success!',
-                                        text: 'Address saved successfully!',
+                                        text: 'Default address has been set successfully.',
                                         icon: 'success',
-                                        confirmButtonColor: '#3B82F6'
+                                        showConfirmButton: false,
+                                        timer: 2000,
+                                        timerProgressBar: true
                                     }).then(() => {
                                         window.location.reload();
                                     });
                                 } else {
                                     Swal.fire({
                                         title: 'Error',
-                                        text: 'Error saving address: ' + data.message,
+                                        text: 'Error setting default address: ' + data.message,
                                         icon: 'error',
                                         confirmButtonColor: '#3B82F6'
                                     });
@@ -894,102 +785,51 @@
                                 console.error('Error:', error);
                                 Swal.fire({
                                     title: 'Error',
-                                    text: 'Failed to save address.',
+                                    text: 'Failed to set default address.',
                                     icon: 'error',
                                     confirmButtonColor: '#3B82F6'
                                 });
                             });
-                    });
+                    }
 
-                    // Change Password Form
-                    const changePasswordForm = document.getElementById('change-password-form');
+                    // Delete address
+                    if (e.target.classList.contains('delete-address-btn') || e.target.parentElement.classList.contains('delete-address-btn')) {
+                        const button = e.target.classList.contains('delete-address-btn') ? e.target : e.target.parentElement;
+                        const index = button.getAttribute('data-index');
 
-                    changePasswordForm.addEventListener('submit', function (e) {
-                        e.preventDefault();
-
-                        const formData = new FormData(this);
-                        const passwordData = Object.fromEntries(formData.entries());
-
-                        // Validate passwords match
-                        if (passwordData.newPassword !== passwordData.confirmPassword) {
-                            Swal.fire({
-                                title: 'Error',
-                                text: 'New passwords do not match!',
-                                icon: 'error',
-                                confirmButtonColor: '#3B82F6'
-                            });
-                            return;
-                        }
-
-                        fetch('/api/password/change', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(passwordData)
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    Swal.fire({
-                                        title: 'Success!',
-                                        text: 'Password updated successfully!',
-                                        icon: 'success',
-                                        confirmButtonColor: '#3B82F6'
-                                    });
-                                    this.reset();
-                                } else {
-                                    Swal.fire({
-                                        title: 'Error',
-                                        text: 'Error updating password: ' + data.message,
-                                        icon: 'error',
-                                        confirmButtonColor: '#3B82F6'
-                                    });
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-                                Swal.fire({
-                                    title: 'Error',
-                                    text: 'Failed to update password.',
-                                    icon: 'error',
-                                    confirmButtonColor: '#3B82F6'
-                                });
-                            });
-                    });
-
-                    // Deactivate Account
-                    const deactivateBtn = document.getElementById('deactivate-account');
-
-                    deactivateBtn.addEventListener('click', function () {
                         Swal.fire({
                             title: 'Are you sure?',
-                            text: 'You are about to deactivate your account. You can reactivate it later by logging in.',
+                            text: 'You are about to delete this address.',
                             icon: 'warning',
                             showCancelButton: true,
-                            confirmButtonColor: '#FBBF24',
+                            confirmButtonColor: '#EF4444',
                             cancelButtonColor: '#6B7280',
-                            confirmButtonText: 'Yes, deactivate it!'
+                            confirmButtonText: 'Yes, delete it!'
                         }).then((result) => {
                             if (result.isConfirmed) {
-                                fetch('/api/account/deactivate', {
-                                    method: 'POST'
+                                fetch('/user/profile/deleteAddress', {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    credentials: 'include',
+                                    body: JSON.stringify({ addressIndex: index })
                                 })
                                     .then(response => response.json())
                                     .then(data => {
                                         if (data.success) {
                                             Swal.fire({
-                                                title: 'Deactivated',
-                                                text: 'Your account has been deactivated. You will be logged out now.',
+                                                title: 'Deleted!',
+                                                text: 'Address has been deleted.',
                                                 icon: 'success',
                                                 confirmButtonColor: '#3B82F6'
                                             }).then(() => {
-                                                window.location.href = '/logout';
+                                                window.location.reload();
                                             });
                                         } else {
                                             Swal.fire({
                                                 title: 'Error',
-                                                text: 'Error deactivating account: ' + data.message,
+                                                text: 'Error deleting address: ' + data.message,
                                                 icon: 'error',
                                                 confirmButtonColor: '#3B82F6'
                                             });
@@ -999,107 +839,94 @@
                                         console.error('Error:', error);
                                         Swal.fire({
                                             title: 'Error',
-                                            text: 'Failed to deactivate account.',
+                                            text: 'Failed to delete address.',
                                             icon: 'error',
                                             confirmButtonColor: '#3B82F6'
                                         });
                                     });
                             }
                         });
-                    });
+                    }
+                });
 
-                    // Delete Account
-                    const deleteBtn = document.getElementById('delete-account');
+                // Address form submission
+                addressForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
 
-                    deleteBtn.addEventListener('click', function () {
+                    const { isValid, errors } = validateAddressForm();
+                    if (!isValid) {
                         Swal.fire({
-                            title: 'Warning!',
-                            text: 'Are you sure you want to permanently delete your account? This action cannot be undone.',
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#EF4444',
-                            cancelButtonColor: '#6B7280',
-                            confirmButtonText: 'Delete Account'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
+                            icon: 'error',
+                            title: 'Invalid Input',
+                            html: errors.map(error => `<p>${error}</p>`).join('')
+                        });
+                        return;
+                    }
+
+                    const formData = new FormData(this);
+                    const addressData = Object.fromEntries(formData.entries());
+                    addressData.index = addressIndex.value;
+                    addressData.isDefault = !!addressData.isDefault;
+
+                    const url = addressIndex.value === '-1' ? '/user/profile/addAddress' : `/user/profile/editAddress/${addressData.index}`;
+
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(addressData)
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                toggleAddressModal();
                                 Swal.fire({
-                                    title: 'Confirm Deletion',
-                                    text: 'To confirm, please type "DELETE" in all caps:',
-                                    input: 'text',
-                                    inputAttributes: {
-                                        autocapitalize: 'off'
-                                    },
-                                    showCancelButton: true,
-                                    confirmButtonText: 'Confirm',
-                                    confirmButtonColor: '#EF4444',
-                                    cancelButtonColor: '#6B7280',
-                                    showLoaderOnConfirm: true,
-                                    preConfirm: (confirmPhrase) => {
-                                        if (confirmPhrase !== 'DELETE') {
-                                            Swal.showValidationMessage(
-                                                'The confirmation phrase is incorrect'
-                                            );
-                                        }
-                                        return confirmPhrase;
-                                    },
-                                    allowOutsideClick: () => !Swal.isLoading()
-                                }).then((result) => {
-                                    if (result.isConfirmed) {
-                                        fetch('/api/account/delete', {
-                                            method: 'POST'
-                                        })
-                                            .then(response => response.json())
-                                            .then(data => {
-                                                if (data.success) {
-                                                    Swal.fire({
-                                                        title: 'Deleted!',
-                                                        text: 'Your account has been permanently deleted. You will be redirected to the homepage.',
-                                                        icon: 'success',
-                                                        confirmButtonColor: '#3B82F6'
-                                                    }).then(() => {
-                                                        window.location.href = '/';
-                                                    });
-                                                } else {
-                                                    Swal.fire({
-                                                        title: 'Error',
-                                                        text: 'Error deleting account: ' + data.message,
-                                                        icon: 'error',
-                                                        confirmButtonColor: '#3B82F6'
-                                                    });
-                                                }
-                                            })
-                                            .catch(error => {
-                                                console.error('Error:', error);
-                                                Swal.fire({
-                                                    title: 'Error',
-                                                    text: 'Failed to delete account.',
-                                                    icon: 'error',
-                                                    confirmButtonColor: '#3B82F6'
-                                                });
-                                            });
-                                    }
+                                    title: 'Success!',
+                                    text: 'Address saved successfully!',
+                                    icon: 'success',
+                                    confirmButtonColor: '#3B82F6'
+                                }).then(() => {
+                                    window.location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'Error saving address: ' + data.message,
+                                    icon: 'error',
+                                    confirmButtonColor: '#3B82F6'
                                 });
                             }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                title: 'Error',
+                                text: 'Failed to save address.',
+                                icon: 'error',
+                                confirmButtonColor: '#3B82F6'
+                            });
                         });
-                    });
                 });
-                function copyReferralCode() {
-                    var codeInput = document.getElementById('referralCode');
-                    codeInput.select();
-                    document.execCommand('copy');
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Copied!',
-                        text: 'Referral code copied to clipboard.',
-                        timer: 1500,
-                        showConfirmButton: false,
-                        toast: true,
-                        position: 'top-end'
-                    });
-                }
-            </script>
+            });
 
-            <%- include("partials/user/footer") %>
+            function copyReferralCode() {
+                var codeInput = document.getElementById('referralCode');
+                codeInput.select();
+                document.execCommand('copy');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Copied!',
+                    text: 'Referral code copied to clipboard.',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+            }
+        </script>
+
+        <%- include("partials/user/footer") %>
     </body>
 
     </html>
