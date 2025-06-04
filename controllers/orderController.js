@@ -1005,6 +1005,8 @@ const generateInvoice = async (req, res) => {
         doc.text(`Order Date: ${new Date(order.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, rightColumnX, doc.y);
         doc.text(`Payment Method: ${order.paymentMethod}`, rightColumnX, doc.y);
         doc.text(`Order Status: ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}`, rightColumnX, doc.y);
+        // Add Refund Status
+        doc.text(`Refund Status: ${order.refundStatus.charAt(0).toUpperCase() + order.refundStatus.slice(1)}`, rightColumnX, doc.y);
         doc.moveDown(3);
 
         // Items Table
@@ -1013,7 +1015,7 @@ const generateInvoice = async (req, res) => {
 
         // Table Setup
         const tableLeft = 50;
-        const colWidths = { image: 50, product: 200, qty: 50, unitPrice: 80, discount: 80, total: 80 };
+        const colWidths = { image: 50, product: 150, qty: 50, unitPrice: 70, discount: 70, total: 70, status: 70, refund: 70 };
         const tableWidth = Object.values(colWidths).reduce((sum, w) => sum + w, 0);
         const rowHeight = 50;
         const headerHeight = 20;
@@ -1027,7 +1029,9 @@ const generateInvoice = async (req, res) => {
             { text: 'Qty', x: tableLeft + colWidths.image + colWidths.product, width: colWidths.qty, align: 'right' },
             { text: 'Unit Price (Rs)', x: tableLeft + colWidths.image + colWidths.product + colWidths.qty, width: colWidths.unitPrice, align: 'right' },
             { text: 'Discount (Rs)', x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice, width: colWidths.discount, align: 'right' },
-            { text: 'Total (Rs)', x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount, width: colWidths.total, align: 'right' }
+            { text: 'Total (Rs)', x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount, width: colWidths.total, align: 'right' },
+            { text: 'Status', x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount + colWidths.total, width: colWidths.status, align: 'right' },
+            { text: 'Refund (Rs)', x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount + colWidths.total + colWidths.status, width: colWidths.refund, align: 'right' }
         ];
 
         headers.forEach(header => {
@@ -1048,16 +1052,21 @@ const generateInvoice = async (req, res) => {
         // Table Rows
         doc.font('Helvetica');
         let currentY = tableTop + headerHeight;
+        let totalRefunded = 0;
         for (const item of order.items) {
             const originalPrice = (item.price + (item.discount || 0)).toFixed(2);
             const discount = (item.discount || 0).toFixed(2);
             const total = (item.price * item.quantity).toFixed(2);
+            const itemStatus = item.status.charAt(0).toUpperCase() + item.status.slice(1);
+            const refundAmount = (item.refunded && item.refundAmount > 0) ? item.refundAmount.toFixed(2) : '0.00';
+            if (item.refunded && item.refundAmount > 0) {
+                totalRefunded += item.refundAmount;
+            }
             const rowTop = currentY;
 
             // Image (if available)
             if (item.productId && item.productId.images && item.productId.images.length > 0) {
                 const imageUrl = item.productId.images[0].url;
-                // console.log(`Fetching image: ${imageUrl}`); // Debug log
                 try {
                     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
                     if (response.status === 200) {
@@ -1069,8 +1078,6 @@ const generateInvoice = async (req, res) => {
                 } catch (err) {
                     console.error(`Error fetching image from ${imageUrl}:`, err.message);
                 }
-            } else {
-                console.log(`No image available for product: ${item.productId ? item.productId.name : 'Unknown'}`);
             }
 
             // Text Columns
@@ -1080,7 +1087,9 @@ const generateInvoice = async (req, res) => {
                 { text: item.quantity.toString(), x: tableLeft + colWidths.image + colWidths.product, width: colWidths.qty, align: 'right' },
                 { text: originalPrice, x: tableLeft + colWidths.image + colWidths.product + colWidths.qty, width: colWidths.unitPrice, align: 'right' },
                 { text: discount, x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice, width: colWidths.discount, align: 'right' },
-                { text: total, x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount, width: colWidths.total, align: 'right' }
+                { text: total, x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount, width: colWidths.total, align: 'right' },
+                { text: itemStatus, x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount + colWidths.total, width: colWidths.status, align: 'right' },
+                { text: refundAmount, x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount + colWidths.total + colWidths.status, width: colWidths.refund, align: 'right' }
             ];
 
             rowData.forEach(cell => {
@@ -1103,9 +1112,13 @@ const generateInvoice = async (req, res) => {
             doc.y = currentY;
         }
 
-        // Total Amount
+        // Total Amount and Refund Information
         doc.moveDown(2);
-        doc.font('Helvetica-Bold').fontSize(12).text(`Total Amount: Rs${order.totalAmount.toFixed(2)}`, 50, doc.y, { align: 'right' });
+        doc.font('Helvetica-Bold').fontSize(12);
+        doc.text(`Total Amount: Rs${order.totalAmount.toFixed(2)}`, 50, doc.y, { align: 'right' });
+        if (totalRefunded > 0) {
+            doc.text(`Total Refunded: Rs${totalRefunded.toFixed(2)}`, 50, doc.y, { align: 'right' });
+        }
 
         // Footer
         doc.moveDown(2);
@@ -1125,7 +1138,6 @@ const generateInvoice = async (req, res) => {
         });
     }
 };
-
 
 // Cancel Order
 const cancelOrder = async (req, res) => {
