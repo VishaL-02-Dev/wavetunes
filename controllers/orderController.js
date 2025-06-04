@@ -1161,7 +1161,7 @@ const cancelOrder = async (req, res) => {
         }
 
         order.status = 'cancelled';
-        if (order.paymentMethod !== 'COD') {
+        if (order.paymentMethod !== 'COD' && order.status !=='pending') {
             order.refundStatus = 'full';
             await refundToWallet(
                 userId,
