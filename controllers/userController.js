@@ -724,4 +724,5 @@ module.exports = {
     resendResetOtp,
     loadResetPassword,
     resetPassword,
+    generateReferralCode
 }

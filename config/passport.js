@@ -1,5 +1,6 @@
 const passport = require('passport');
 const googleStrategy = require('passport-google-oauth20').Strategy;
+const { generateReferralCode } = require('../controllers/userController');
 const User = require('../model/userModel');
 const env = require('dotenv').config();
 
@@ -12,7 +13,7 @@ passport.use(new googleStrategy({
 async (accessToken,refreshToken,profile,done)=>{
     try {
         let user = await User.findOne({googleId:profile.id});
-
+        let newReferralCode = await generateReferralCode();
         if(user){
             return done(null,user);
         }else{
@@ -25,6 +26,7 @@ async (accessToken,refreshToken,profile,done)=>{
                 lname:lname,
                 email:profile.emails[0].value,
                 googleId:profile.id,
+                refferalCode: newReferralCode,
             });
             await user.save();
             return done(null,user);
