@@ -214,18 +214,20 @@
                 <div class="bg-white rounded-lg shadow-md p-6 sticky top-6 order-section">
                     <h2 class="text-2xl font-semibold mb-6 text-gray-800">Order Actions</h2>
                     <div class="space-y-4">
-                        <button onclick="downloadInvoice('<%= order._id %>')"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-md transition no-print mt-4">
-                            Download Invoice
-                        </button>
-                        <a href="/user/myOrders"
-                            class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 rounded-md transition text-center no-print">
-                            View All Orders
-                        </a>
-                        <a href="/"
-                            class="block w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-md transition text-center no-print">
-                            Continue Shopping
-                        </a>
+                        <%if (order.status !=='pending' ) {%>
+                            <button onclick="downloadInvoice('<%= order._id %>')"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-md transition no-print mt-4">
+                                Download Invoice
+                            </button>
+                            <% } %>
+                                <a href="/user/myOrders"
+                                    class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 rounded-md transition text-center no-print">
+                                    View All Orders
+                                </a>
+                                <a href="/"
+                                    class="block w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-md transition text-center no-print">
+                                    Continue Shopping
+                                </a>
                     </div>
                 </div>
             </div>
