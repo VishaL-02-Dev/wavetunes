@@ -976,8 +976,8 @@ const generateInvoice = async (req, res) => {
             });
         }
 
-        // Create a new PDF document
-        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        // Create a new PDF document with left and right margins
+        const doc = new PDFDocument({ margin: { left: 50, right: 50 }, size: 'A4' });
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=invoice_${order.orderId}.pdf`);
         doc.pipe(res);
@@ -1005,7 +1005,6 @@ const generateInvoice = async (req, res) => {
         doc.text(`Order Date: ${new Date(order.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, rightColumnX, doc.y);
         doc.text(`Payment Method: ${order.paymentMethod}`, rightColumnX, doc.y);
         doc.text(`Order Status: ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}`, rightColumnX, doc.y);
-        // Add Refund Status
         doc.text(`Refund Status: ${order.refundStatus.charAt(0).toUpperCase() + order.refundStatus.slice(1)}`, rightColumnX, doc.y);
         doc.moveDown(3);
 
@@ -1015,9 +1014,8 @@ const generateInvoice = async (req, res) => {
 
         // Table Setup
         const tableLeft = 50;
-        const colWidths = { image: 50, product: 150, qty: 50, unitPrice: 70, discount: 70, total: 70, status: 70, refund: 70 };
+        const colWidths = { image: 50, product: 120, qty: 50, unitPrice: 60, discount: 60, total: 60, status: 50, refund: 60 };
         const tableWidth = Object.values(colWidths).reduce((sum, w) => sum + w, 0);
-        const rowHeight = 50;
         const headerHeight = 20;
 
         // Table Header
@@ -1062,6 +1060,13 @@ const generateInvoice = async (req, res) => {
             if (item.refunded && item.refundAmount > 0) {
                 totalRefunded += item.refundAmount;
             }
+
+            // Calculate row height based on wrapped product name
+            const productName = item.productId ? item.productId.name : 'Unknown Product';
+            const textOptions = { width: colWidths.product - 10, align: 'left' };
+            const productTextHeight = doc.heightOfString(productName, textOptions);
+            const rowHeight = Math.max(50, productTextHeight + 20); // Minimum 50 or enough for text + padding
+
             const rowTop = currentY;
 
             // Image (if available)
@@ -1071,7 +1076,7 @@ const generateInvoice = async (req, res) => {
                     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
                     if (response.status === 200) {
                         const imageBuffer = Buffer.from(response.data);
-                        doc.image(imageBuffer, tableLeft + 5, rowTop + 5, { width: colWidths.image - 10, height: 40 });
+                        doc.image(imageBuffer, tableLeft + 5, rowTop + 5, { width: colWidths.image - 10, height: rowHeight - 10 });
                     } else {
                         console.error(`Failed to fetch image from ${imageUrl}: Status ${response.status}`);
                     }
@@ -1083,7 +1088,7 @@ const generateInvoice = async (req, res) => {
             // Text Columns
             const rowData = [
                 { text: '', x: tableLeft, width: colWidths.image, align: 'center' },
-                { text: item.productId ? item.productId.name : 'Unknown Product', x: tableLeft + colWidths.image, width: colWidths.product, align: 'left' },
+                { text: productName, x: tableLeft + colWidths.image, width: colWidths.product, align: 'left' },
                 { text: item.quantity.toString(), x: tableLeft + colWidths.image + colWidths.product, width: colWidths.qty, align: 'right' },
                 { text: originalPrice, x: tableLeft + colWidths.image + colWidths.product + colWidths.qty, width: colWidths.unitPrice, align: 'right' },
                 { text: discount, x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice, width: colWidths.discount, align: 'right' },
@@ -1092,9 +1097,11 @@ const generateInvoice = async (req, res) => {
                 { text: refundAmount, x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount + colWidths.total + colWidths.status, width: colWidths.refund, align: 'right' }
             ];
 
-            rowData.forEach(cell => {
-                if (cell.text) {
-                    doc.text(cell.text, cell.x + 5, rowTop + 15, { width: cell.width - 10, align: cell.align });
+            rowData.forEach((cell, index) => {
+                if (cell.text && index === 1) { // Product column with wrapping
+                    doc.text(cell.text, cell.x + 5, rowTop + 10, { width: cell.width - 10, align: cell.align, continued: false });
+                } else if (cell.text) {
+                    doc.text(cell.text, cell.x + 5, rowTop + 10, { width: cell.width - 10, align: cell.align });
                 }
             });
 
