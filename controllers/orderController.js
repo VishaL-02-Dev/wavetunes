@@ -1054,8 +1054,6 @@ const generateInvoice = async (req, res) => {
         // Draw bottom horizontal line
         doc.moveTo(tableLeft, headerTop - 5 + headerHeight).lineTo(tableLeft + tableWidth, headerTop - 5 + headerHeight).stroke();
 
-        // Move Y pointer to below the header for row drawing
-        currentY = headerTop + headerHeight;
 
 
         doc.font('Helvetica');
@@ -1092,7 +1090,7 @@ const generateInvoice = async (req, res) => {
                     console.error(`Error fetching image from ${imageUrl}:`, err.message);
                 }
             }
-
+            currentY = headerTop + headerHeight;
             const rowData = [
                 { text: '', x: tableLeft, width: colWidths.image, align: 'center' },
                 { text: productName, x: tableLeft + colWidths.image, width: colWidths.product, align: 'left' },
