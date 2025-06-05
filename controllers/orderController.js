@@ -24,7 +24,7 @@ const createOrderItems = (cartItems, currentDate, paymentMethod) => {
                 quantity: item.quantity,
                 price: 0,
                 discount: 0,
-                status: paymentMethod === 'COD' ? 'pending' : 'processing',
+                status: 'pending',
                 refunded: false,
                 refundAmount: 0
             };
@@ -56,7 +56,7 @@ const createOrderItems = (cartItems, currentDate, paymentMethod) => {
             quantity: item.quantity,
             discountApplied: offerPercentage > 0 ? 'offer' : 'none',
             image: item.product.images && item.product.images.length > 0 ? item.product.images[0] : null,
-            status: paymentMethod === 'COD' ? 'pending' : 'processing',
+            status: 'pending',
             refunded: false,
             refundAmount: 0
         };
@@ -64,7 +64,6 @@ const createOrderItems = (cartItems, currentDate, paymentMethod) => {
 
     return { orderItems, subtotal, originalSubtotal };
 };
-
 
 // Load Checkout
 const loadCheckout = async (req, res) => {
@@ -91,7 +90,6 @@ const loadCheckout = async (req, res) => {
             return res.redirect('/user/cart');
         }
 
-        // Update cart with active items only
         if (activeItems.length < cart.items.length) {
             cart.items = activeItems;
             await cart.save();
@@ -124,7 +122,6 @@ const loadCheckout = async (req, res) => {
         res.redirect('/user/cart');
     }
 };
-
 
 // Apply Coupon
 const applyCoupon = async (req, res) => {
@@ -229,7 +226,6 @@ const applyCoupon = async (req, res) => {
     }
 };
 
-
 // Place Order (COD and others)
 const placeOrder = async (req, res) => {
     const token = req.cookies.jwt;
@@ -312,7 +308,6 @@ const placeOrder = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error placing order' });
     }
 };
-
 
 // Wallet Payment Method
 const processWalletPayment = async (req, res) => {
@@ -469,7 +464,6 @@ const processWalletPayment = async (req, res) => {
     }
 };
 
-
 // Razorpay Order
 const razorpayOrder = async (req, res) => {
     try {
@@ -493,7 +487,6 @@ const razorpayOrder = async (req, res) => {
         });
     }
 };
-
 
 // Initiate Razorpay Order
 const initiateRazorpayOrder = async (req, res) => {
@@ -629,7 +622,6 @@ const initiateRazorpayOrder = async (req, res) => {
     }
 };
 
-
 // Verify Razorpay Payment
 const verifyRazorpay = async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, discountType } = req.body;
@@ -641,13 +633,6 @@ const verifyRazorpay = async (req, res) => {
             .update(body)
             .digest('hex');
 
-        if (expectedSignature !== razorpay_signature) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid payment signature'
-            });
-        }
-
         // Fetch Razorpay order details
         const razorpayOrder = await instance.orders.fetch(razorpay_order_id);
         const userId = razorpayOrder.notes.userId;
@@ -657,6 +642,7 @@ const verifyRazorpay = async (req, res) => {
 
         const user = await User.findById(userId);
         if (!user) {
+            await Cart.findOneAndDelete({ user: userId }); // Clear cart on user not found
             return res.status(404).json({
                 success: false,
                 message: 'User not found'
@@ -665,6 +651,7 @@ const verifyRazorpay = async (req, res) => {
 
         const address = await Address.findById(addressId);
         if (!address || address.userId.toString() !== user._id.toString()) {
+            await Cart.findOneAndDelete({ user: userId }); // Clear cart on invalid address
             return res.status(400).json({
                 success: false,
                 message: 'Invalid address selected'
@@ -673,6 +660,7 @@ const verifyRazorpay = async (req, res) => {
 
         const pendingOrder = await Order.findOne({ orderId });
         if (!pendingOrder) {
+            await Cart.findOneAndDelete({ user: userId }); // Clear cart on order not found
             return res.status(400).json({
                 success: false,
                 message: 'Pending order not found'
@@ -685,12 +673,25 @@ const verifyRazorpay = async (req, res) => {
         });
 
         if (!cart || !cart.items || cart.items.length === 0) {
+            await Cart.findOneAndDelete({ user: userId }); // Clear cart if empty
             return res.status(400).json({
                 success: false,
                 message: 'Your cart is empty'
             });
         }
 
+        // Clear the cart regardless of payment outcome
+        await Cart.findOneAndDelete({ user: userId });
+
+        if (expectedSignature !== razorpay_signature) {
+            // Payment failed, keep order and items as pending, cart already cleared
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid payment signature'
+            });
+        }
+
+        // Payment successful, update stock and statuses
         for (const item of cart.items) {
             const product = await Product.findById(item.product._id);
             if (product.stock < item.quantity) {
@@ -718,10 +719,13 @@ const verifyRazorpay = async (req, res) => {
             }
         }
 
+        // Update order and item statuses to processing
         pendingOrder.status = 'processing';
-        // Item statuses are already set to 'processing' in createOrderItems
+        pendingOrder.items.forEach(item => {
+            item.status = 'processing';
+        });
+
         await pendingOrder.save();
-        await Cart.findOneAndDelete({ user: userId });
 
         const completeOrder = await Order.findById(pendingOrder._id)
             .populate('addressId')
@@ -739,6 +743,10 @@ const verifyRazorpay = async (req, res) => {
 
     } catch (error) {
         console.error('Error verifying Razorpay payment:', error);
+        // Clear cart on error
+        await Cart.findOneAndDelete({ user: req.body.userId || (await jwt.verify(req.cookies.jwt, process.env.JWT_SECRET)).id }).catch(err => {
+            console.error('Error clearing cart on payment verification failure:', err);
+        });
         return res.status(500).json({
             success: false,
             message: 'Error verifying payment',
@@ -746,7 +754,6 @@ const verifyRazorpay = async (req, res) => {
         });
     }
 };
-
 
 // Retry Razorpay Payment
 const retryRazorpayPayment = async (req, res) => {
@@ -949,8 +956,7 @@ const loadOrderDetails = async (req, res) => {
     }
 };
 
-
-//Generate Invoice
+// Generate Invoice
 const generateInvoice = async (req, res) => {
     const token = req.cookies.jwt;
     const orderId = req.params.id;
@@ -976,13 +982,11 @@ const generateInvoice = async (req, res) => {
             });
         }
 
-        // Create a new PDF document with left and right margins
         const doc = new PDFDocument({ margin: { left: 50, right: 50 }, size: 'A4' });
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=invoice_${order.orderId}.pdf`);
         doc.pipe(res);
 
-        // Header
         doc.font('Helvetica-Bold').fontSize(20).text('Invoice', 50, 50, { align: 'center' });
         doc.font('Helvetica').fontSize(12);
         doc.text('WaveTunes', 50, 80, { align: 'center' });
@@ -990,7 +994,6 @@ const generateInvoice = async (req, res) => {
         doc.text('Email: support@wavetunes.com', 50, 110, { align: 'center' });
         doc.moveDown(2);
 
-        // Order and Customer Details (Two-column layout)
         doc.fontSize(10);
         const leftColumnX = 50;
         const rightColumnX = 300;
@@ -1008,18 +1011,14 @@ const generateInvoice = async (req, res) => {
         doc.text(`Refund Status: ${order.refundStatus.charAt(0).toUpperCase() + order.refundStatus.slice(1)}`, rightColumnX, doc.y);
         doc.moveDown(3);
 
-        // Items Table
         doc.font('Helvetica-Bold').fontSize(12).text('Order Items', 50);
         doc.moveDown(0.5);
 
-        // Table Setup
         const tableLeft = 50;
         const colWidths = { image: 50, product: 120, qty: 50, unitPrice: 60, discount: 60, total: 60, status: 50, refund: 60 };
         const tableWidth = Object.values(colWidths).reduce((sum, w) => sum + w, 0);
         const headerHeight = 20;
 
-        // Table Header
-        const tableTop = doc.y;
         doc.fontSize(10).font('Helvetica-Bold');
         const headers = [
             { text: 'Image', x: tableLeft, width: colWidths.image, align: 'center' },
@@ -1033,23 +1032,21 @@ const generateInvoice = async (req, res) => {
         ];
 
         headers.forEach(header => {
-            doc.text(header.text, header.x, tableTop, { width: header.width, align: header.align });
+            doc.text(header.text, header.x, doc.y, { width: header.width, align: header.align });
         });
 
-        // Draw Table Header Grid
         doc.lineWidth(0.5);
-        doc.rect(tableLeft, tableTop - 5, tableWidth, headerHeight).stroke();
+        doc.rect(tableLeft, doc.y - 5, tableWidth, headerHeight).stroke();
         headers.forEach((header, i) => {
             if (i < headers.length - 1) {
                 const x = header.x + header.width;
-                doc.moveTo(x, tableTop - 5).lineTo(x, tableTop + headerHeight - 5).stroke();
+                doc.moveTo(x, doc.y - 5).lineTo(x, doc.y + headerHeight - 5).stroke();
             }
         });
-        doc.moveTo(tableLeft, tableTop + headerHeight - 5).lineTo(tableLeft + tableWidth, tableTop + headerHeight - 5).stroke();
+        doc.moveTo(tableLeft, doc.y + headerHeight - 5).lineTo(tableLeft + tableWidth, doc.y + headerHeight - 5).stroke();
 
-        // Table Rows
         doc.font('Helvetica');
-        let currentY = tableTop + headerHeight;
+        let currentY = doc.y + headerHeight;
         let totalRefunded = 0;
         for (const item of order.items) {
             const originalPrice = (item.price + (item.discount || 0)).toFixed(2);
@@ -1061,15 +1058,13 @@ const generateInvoice = async (req, res) => {
                 totalRefunded += item.refundAmount;
             }
 
-            // Calculate row height based on wrapped product name
             const productName = item.productId ? item.productId.name : 'Unknown Product';
             const textOptions = { width: colWidths.product - 10, align: 'left' };
             const productTextHeight = doc.heightOfString(productName, textOptions);
-            const rowHeight = Math.max(50, productTextHeight + 20); // Minimum 50 or enough for text + padding
+            const rowHeight = Math.max(50, productTextHeight + 20);
 
             const rowTop = currentY;
 
-            // Image (if available)
             if (item.productId && item.productId.images && item.productId.images.length > 0) {
                 const imageUrl = item.productId.images[0].url;
                 try {
@@ -1085,7 +1080,6 @@ const generateInvoice = async (req, res) => {
                 }
             }
 
-            // Text Columns
             const rowData = [
                 { text: '', x: tableLeft, width: colWidths.image, align: 'center' },
                 { text: productName, x: tableLeft + colWidths.image, width: colWidths.product, align: 'left' },
@@ -1098,14 +1092,13 @@ const generateInvoice = async (req, res) => {
             ];
 
             rowData.forEach((cell, index) => {
-                if (cell.text && index === 1) { // Product column with wrapping
+                if (cell.text && index === 1) {
                     doc.text(cell.text, cell.x + 5, rowTop + 10, { width: cell.width - 10, align: cell.align, continued: false });
                 } else if (cell.text) {
                     doc.text(cell.text, cell.x + 5, rowTop + 10, { width: cell.width - 10, align: cell.align });
                 }
             });
 
-            // Draw Row Grid
             doc.rect(tableLeft, rowTop, tableWidth, rowHeight).stroke();
             headers.forEach((header, i) => {
                 if (i < headers.length - 1) {
@@ -1119,7 +1112,6 @@ const generateInvoice = async (req, res) => {
             doc.y = currentY;
         }
 
-        // Total Amount and Refund Information
         doc.moveDown(2);
         doc.font('Helvetica-Bold').fontSize(12);
         doc.text(`Total Amount: Rs${order.totalAmount.toFixed(2)}`, 50, doc.y, { align: 'right' });
@@ -1127,13 +1119,11 @@ const generateInvoice = async (req, res) => {
             doc.text(`Total Refunded: Rs${totalRefunded.toFixed(2)}`, 50, doc.y, { align: 'right' });
         }
 
-        // Footer
         doc.moveDown(2);
         doc.font('Helvetica').fontSize(10);
         doc.text('Thank you for shopping with WaveTunes!', 50, doc.y, { align: 'center', lineBreak: false });
         doc.text('For any queries, please contact us at support@wavetunes.com', 50, doc.y + 15, { align: 'center', lineBreak: false });
 
-        // Finalize PDF
         doc.end();
 
     } catch (error) {
@@ -1170,17 +1160,19 @@ const cancelOrder = async (req, res) => {
 
         if (order.items && order.items.length > 0) {
             for (const item of order.items) {
-                await Product.findByIdAndUpdate(
-                    item.productId,
-                    { $inc: { stock: item.quantity || 0 } },
-                    { new: true }
-                );
-                item.status = 'cancelled';
+                if (item.status !== 'cancelled') {
+                    await Product.findByIdAndUpdate(
+                        item.productId,
+                        { $inc: { stock: item.quantity || 0 } },
+                        { new: true }
+                    );
+                    item.status = 'cancelled';
+                }
             }
         }
 
         order.status = 'cancelled';
-        if (order.paymentMethod !== 'COD' && order.status !=='pending') {
+        if (order.status !== 'pending' && order.paymentMethod !== 'COD') {
             order.refundStatus = 'full';
             await refundToWallet(
                 userId,
@@ -1188,6 +1180,8 @@ const cancelOrder = async (req, res) => {
                 order._id,
                 `Refund for cancelled order #${order.orderId}`
             );
+        } else {
+            order.refundStatus = 'none';
         }
 
         await order.save();
@@ -1230,7 +1224,7 @@ const cancelOrderItem = async (req, res) => {
         }
 
         const item = order.items.find(
-            item => item._id.toString() === itemId || item.productId.toString() === itemId
+            item => item._id.toString() === itemId || itemId === String(order.items.indexOf(item))
         );
 
         if (!item || !['pending', 'processing'].includes(item.status)) {
@@ -1247,31 +1241,30 @@ const cancelOrderItem = async (req, res) => {
         );
 
         const itemSubtotal = Number(item.price) * Number(item.quantity);
-        let refundAmount;
+        let refundAmount = 0;
 
-        if (order.items.length === 1) {
-            refundAmount = Number(order.totalAmount);
-        } else if (order.discount > 0) {
-            const totalSubtotal = order.items.reduce(
-                (sum, i) => sum + (Number(i.price) * Number(i.quantity)),
-                0
-            );
-            if (totalSubtotal === 0) {
-                throw new Error('Invalid total subtotal for discount calculation');
+        if (item.status !== 'pending' && order.paymentMethod !== 'COD') {
+            if (order.items.length === 1) {
+                refundAmount = Number(order.totalAmount);
+            } else if (order.discount > 0) {
+                const totalSubtotal = order.items.reduce(
+                    (sum, i) => sum + (Number(i.price) * Number(i.quantity)),
+                    0
+                );
+                if (totalSubtotal === 0) {
+                    throw new Error('Invalid total subtotal for discount calculation');
+                }
+                const discountRatio = Number(order.discount) / totalSubtotal;
+                refundAmount = itemSubtotal * (1 - discountRatio);
+            } else {
+                refundAmount = itemSubtotal;
             }
-            const discountRatio = Number(order.discount) / totalSubtotal;
-            refundAmount = itemSubtotal * (1 - discountRatio);
-        } else {
-            refundAmount = itemSubtotal;
-        }
 
-        refundAmount = Math.max(0, Number(refundAmount.toFixed(2)));
-
-        item.status = 'cancelled';
-        if (order.paymentMethod !== 'COD') {
+            refundAmount = Math.max(0, Number(refundAmount.toFixed(2)));
             item.refunded = true;
             item.refundAmount = refundAmount;
             item.refundDate = new Date();
+
             await refundToWallet(
                 userId,
                 refundAmount,
@@ -1280,10 +1273,12 @@ const cancelOrderItem = async (req, res) => {
             );
         }
 
+        item.status = 'cancelled';
+
         const activeItems = order.items.filter(i => i.status !== 'cancelled');
         if (activeItems.length === 0) {
             order.status = 'cancelled';
-            order.refundStatus = order.paymentMethod !== 'COD' ? 'full' : 'none';
+            order.refundStatus = order.paymentMethod !== 'COD' && order.status !== 'pending' ? 'full' : 'none';
             order.totalAmount = 0;
         } else {
             order.totalAmount = activeItems.reduce(
@@ -1293,7 +1288,7 @@ const cancelOrderItem = async (req, res) => {
             order.totalAmount += 10;
             order.totalAmount -= Number(order.discount || 0);
             order.totalAmount = Math.max(0, Number(order.totalAmount.toFixed(2)));
-            order.refundStatus = order.paymentMethod !== 'COD' ? 'partial' : 'none';
+            order.refundStatus = order.paymentMethod !== 'COD' && order.status !== 'pending' ? 'partial' : 'none';
         }
 
         await order.save();
@@ -1443,12 +1438,10 @@ const returnOrderItem = async (req, res) => {
         item.status = 'return_requested';
         item.returnReason = reason || 'Not specified';
 
-        // Check if all items are either 'returned', 'return_requested', or 'cancelled'
         const allItemsProcessed = order.items.every(i =>
             i.status === 'returned' || i.status === 'cancelled' || i.status === 'return_requested'
         );
 
-        // If all items are processed, set order status to 'return_requested'
         if (allItemsProcessed) {
             order.status = 'return_requested';
         }
@@ -1483,13 +1476,11 @@ const adminGetOrders = async (req, res) => {
         let query = {};
 
         if (search) {
-            // Find users with matching email
             const matchingUsers = await User.find({
                 email: { $regex: search, $options: 'i' }
             }).select('_id');
             const userIds = matchingUsers.map(user => user._id);
 
-            // Search by orderId or userId (from matching emails)
             query.$or = [
                 { orderId: { $regex: search, $options: 'i' } },
                 { userId: { $in: userIds } }
@@ -1616,31 +1607,27 @@ const adminUpdateOrderStatus = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
 
-        // order.status = status;
-    if(order.items && order.items.length>0){
-        for(const item of order.items){
-            if(item.status!=='cancelled'){
-                if(status==='cancelled' && item.status !=='cancelled' ){
-                    await Product.findByIdAndUpdate(
-                        item.productId,
-                        {$inc: {stock:item.quantity || 0}},
-                        {new:true}
-                    );
+        if (order.items && order.items.length > 0) {
+            for (const item of order.items) {
+                if (item.status !== 'cancelled') {
+                    if (status === 'cancelled' && item.status !== 'cancelled') {
+                        await Product.findByIdAndUpdate(
+                            item.productId,
+                            { $inc: { stock: item.quantity || 0 } },
+                            { new: true }
+                        );
+                    }
                 }
             }
         }
-    }
 
-    const itemStatuses= order.items.map(item=>item.status);
-    const uniqueStatuses = [...new Set(itemStatuses)];
-    if (uniqueStatuses.length === 1) {
-            // All items have the same status
+        const itemStatuses = order.items.map(item => item.status);
+        const uniqueStatuses = [...new Set(itemStatuses)];
+        if (uniqueStatuses.length === 1) {
             order.status = uniqueStatuses[0];
         } else if (uniqueStatuses.includes('cancelled') && uniqueStatuses.length === 2 && itemStatuses.every(s => s === 'cancelled' || s === status)) {
-            // All items are either cancelled or the new status
             order.status = status;
         } else {
-            // Mixed statuses, set order to 'processing' unless all cancelled
             order.status = itemStatuses.every(s => s === 'cancelled') ? 'cancelled' : 'processing';
         }
 
@@ -1812,7 +1799,7 @@ const adminApproveReturn = async (req, res) => {
 
             item.status = 'returned';
 
-            if (!item.refunded && order.paymentMethod !== 'COD') {
+            if (!item.refunded && order.paymentMethod !== 'COD' && order.status !== 'pending' && item.status !== 'pending') {
                 let refundAmount;
                 const itemSubtotal = Number(item.price) * Number(item.quantity);
 
@@ -1851,13 +1838,12 @@ const adminApproveReturn = async (req, res) => {
                 );
             }
 
-            // Check if all items are returned or cancelled
             const allItemsProcessed = order.items.every(i => i.status === 'returned' || i.status === 'cancelled');
             if (allItemsProcessed) {
                 order.status = 'returned';
-                order.refundStatus = order.paymentMethod !== 'COD' ? 'full' : 'none';
+                order.refundStatus = order.paymentMethod !== 'COD' && order.status !== 'pending' ? 'full' : 'none';
             } else {
-                order.refundStatus = order.paymentMethod !== 'COD' ? 'partial' : 'none';
+                order.refundStatus = order.paymentMethod !== 'COD' && order.status !== 'pending' ? 'partial' : 'none';
             }
         } else {
             if (order.status !== 'return_requested') {
@@ -1871,7 +1857,7 @@ const adminApproveReturn = async (req, res) => {
             let totalRefund = 0;
 
             for (const item of order.items) {
-                if (item.status === 'return_requested' && !item.refunded && order.paymentMethod !== 'COD') {
+                if (item.status === 'return_requested' && !item.refunded && order.paymentMethod !== 'COD' && order.status !== 'pending') {
                     const product = await Product.findById(item.productId);
                     if (!product || !item.price) {
                         console.error(`Invalid price data for item ${item._id} in order ${orderId}`);
@@ -1895,7 +1881,7 @@ const adminApproveReturn = async (req, res) => {
                 }
             }
 
-            if (totalRefund > 0 && order.paymentMethod !== 'COD') {
+            if (totalRefund > 0 && order.paymentMethod !== 'COD' && order.status !== 'pending') {
                 totalRefund = Math.max(0, Number(totalRefund.toFixed(2)));
                 await refundToWallet(
                     order.userId,
@@ -1904,6 +1890,8 @@ const adminApproveReturn = async (req, res) => {
                     `Refund for returned order #${order.orderId}`
                 );
                 order.refundStatus = 'full';
+            } else {
+                order.refundStatus = 'none';
             }
         }
 

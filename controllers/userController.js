@@ -5,7 +5,52 @@ const jwt = require("jsonwebtoken");
 const WalletService = require('./walletService');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const Product = require('../model/productModel');
+const Category = require('../model/categoryModel');
 require('dotenv').config();
+
+
+//Load landing page
+const loadLanding = async (req, res) => {
+  try {
+    // Fetch listed categories
+    const listedCategories = await Category.find({ status: "Listed" }).select('_id');
+    const listedCategoryIds = listedCategories.map(category => category._id);
+
+    // Fetch products with stock > 1, in listed categories, sorted by newest, limited to 8
+    let products = await Product.find({
+      stock: { $gt: 1 },
+      isActive:true,
+      category: { $in: listedCategoryIds },
+      $or: [
+        { offerEndDate: { $gte: new Date() } }, // Offers that are still valid
+        { offerEndDate: null }, // Offers without an end date
+        { offerPercentage: 0 } // Products without offers
+      ]
+    })
+      .sort({ createdAt: -1 })
+      .limit(8);
+
+    // Add offerPrice to each product
+    const productsWithOfferPrice = products.map(product => {
+      const productObj = product.toObject();
+      if (product.offerPercentage && product.offerPercentage > 0 && (product.offerEndDate === null || product.offerEndDate >= new Date())) {
+        productObj.offerPrice = Math.round(product.price * (1 - product.offerPercentage / 100));
+      }
+      return productObj;
+    });
+
+    res.render('home', {
+      products: productsWithOfferPrice,
+      user: req.user || res.locals.user
+    });
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.render('home', { products: [], user: req.user || res.locals.user });
+  }
+};
+
+
 
 // Password hashing
 const sPass = async (password) => {
@@ -709,6 +754,7 @@ const logout = async (req, res) => {
 
 module.exports = {
     loadLogin,
+    loadLanding,
     login,
     loadHome,
     logout,

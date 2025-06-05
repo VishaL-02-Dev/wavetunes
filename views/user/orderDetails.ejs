@@ -185,7 +185,7 @@
                                                     <p class="text-sm text-gray-500">
                                                         ₹<%= item.price.toFixed(2) %> each
                                                     </p>
-                                                    <% if (item.status==='pending' && item.status !='delivered' &&
+                                                    <% if (item.status !='delivered' &&
                                                         item.status !='returned' && item.status !='cancelled' &&
                                                         order.status !='delivered' && order.status !='returned' &&
                                                         order.status !='cancelled' ) { %>

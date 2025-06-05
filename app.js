@@ -9,8 +9,7 @@ const db = require('./config/db');
 // const { checkSession }=require('./middleware/userAuth');
 const passport = require('./config/passport');
 const nocache = require('nocache');
-const Product = require('./model/productModel');
-const Category = require('./model/categoryModel');
+const {loadLanding} = require('./controllers/userController')
 db();
 const cookieParser = require('cookie-parser');
 app.use(express.static('node_modules/xlsx/dist'));
@@ -65,44 +64,7 @@ app.set('view engine', 'ejs');
 app.set('views', [path.join(__dirname, 'views'), path.join(__dirname, 'views/admin')]);
 
 
-app.get('/', async (req, res) => {
-  try {
-    // Fetch listed categories
-    const listedCategories = await Category.find({ status: "Listed" }).select('_id');
-    const listedCategoryIds = listedCategories.map(category => category._id);
-
-    // Fetch products with stock > 1, in listed categories, sorted by newest, limited to 8
-    let products = await Product.find({
-      stock: { $gt: 1 },
-      isActive:true,
-      category: { $in: listedCategoryIds },
-      $or: [
-        { offerEndDate: { $gte: new Date() } }, // Offers that are still valid
-        { offerEndDate: null }, // Offers without an end date
-        { offerPercentage: 0 } // Products without offers
-      ]
-    })
-      .sort({ createdAt: -1 })
-      .limit(8);
-
-    // Add offerPrice to each product
-    const productsWithOfferPrice = products.map(product => {
-      const productObj = product.toObject();
-      if (product.offerPercentage && product.offerPercentage > 0 && (product.offerEndDate === null || product.offerEndDate >= new Date())) {
-        productObj.offerPrice = Math.round(product.price * (1 - product.offerPercentage / 100));
-      }
-      return productObj;
-    });
-
-    res.render('home', {
-      products: productsWithOfferPrice,
-      user: req.user || res.locals.user
-    });
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    res.render('home', { products: [], user: req.user || res.locals.user });
-  }
-});
+app.get('/', loadLanding);
 
 
 const userRoute = require('./routes/userRoutes');
