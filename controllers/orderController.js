@@ -1014,12 +1014,21 @@ const generateInvoice = async (req, res) => {
         doc.font('Helvetica-Bold').fontSize(12).text('Order Items', 50);
         doc.moveDown(0.5);
 
+        // === Table Configuration ===
         const tableLeft = 50;
-        const colWidths = { image: 50, product: 120, qty: 50, unitPrice: 60, discount: 60, total: 60, status: 50, refund: 60 };
+        const colWidths = {
+            image: 60,
+            product: 140,
+            qty: 40,
+            unitPrice: 70,
+            discount: 60,
+            total: 60,
+            status: 60,
+            refund: 60
+        };
         const tableWidth = Object.values(colWidths).reduce((sum, w) => sum + w, 0);
-        const headerHeight = 20;
+        const headerHeight = 25;
 
-        doc.fontSize(10).font('Helvetica-Bold');
         const headers = [
             { text: 'Image', x: tableLeft, width: colWidths.image, align: 'center' },
             { text: 'Product', x: tableLeft + colWidths.image, width: colWidths.product, align: 'left' },
@@ -1031,34 +1040,34 @@ const generateInvoice = async (req, res) => {
             { text: 'Refund (Rs)', x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount + colWidths.total + colWidths.status, width: colWidths.refund, align: 'right' }
         ];
 
+        // === Draw Table Header ===
+        doc.moveDown(1.5);
+        doc.font('Helvetica-Bold').fontSize(10);
         const headerTop = doc.y;
+
         headers.forEach(header => {
-            doc.text(header.text, header.x, headerTop, {
-                width: header.width,
-                align: header.align,
+            doc.text(header.text, header.x + 5, headerTop + 5, {
+                width: header.width - 10,
+                align: header.align
             });
         });
 
-        // Draw outer rectangle for header
+        // Draw header borders
         doc.lineWidth(0.5);
-        doc.rect(tableLeft, headerTop - 5, tableWidth, headerHeight).stroke();
-
-        // Draw vertical column separators
+        doc.rect(tableLeft, headerTop, tableWidth, headerHeight).stroke();
         headers.forEach((header, i) => {
             if (i < headers.length - 1) {
                 const x = header.x + header.width;
-                doc.moveTo(x, headerTop - 5).lineTo(x, headerTop - 5 + headerHeight).stroke();
+                doc.moveTo(x, headerTop).lineTo(x, headerTop + headerHeight).stroke();
             }
         });
+        doc.moveTo(tableLeft, headerTop + headerHeight).lineTo(tableLeft + tableWidth, headerTop + headerHeight).stroke();
 
-        // Draw bottom horizontal line
-        doc.moveTo(tableLeft, headerTop - 5 + headerHeight).lineTo(tableLeft + tableWidth, headerTop - 5 + headerHeight).stroke();
-
-
-
-        doc.font('Helvetica');
-        let currentY = doc.y + headerHeight;
+        // === Render Table Rows ===
+        doc.font('Helvetica').fontSize(10);
+        let currentY = headerTop + headerHeight;
         let totalRefunded = 0;
+
         for (const item of order.items) {
             const originalPrice = (item.price + (item.discount || 0)).toFixed(2);
             const discount = (item.discount || 0).toFixed(2);
@@ -1073,24 +1082,26 @@ const generateInvoice = async (req, res) => {
             const textOptions = { width: colWidths.product - 10, align: 'left' };
             const productTextHeight = doc.heightOfString(productName, textOptions);
             const rowHeight = Math.max(50, productTextHeight + 20);
-
             const rowTop = currentY;
 
+            // === Draw Image ===
             if (item.productId && item.productId.images && item.productId.images.length > 0) {
                 const imageUrl = item.productId.images[0].url;
                 try {
                     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
                     if (response.status === 200) {
                         const imageBuffer = Buffer.from(response.data);
-                        doc.image(imageBuffer, tableLeft + 5, rowTop + 5, { width: colWidths.image - 10, height: rowHeight - 10 });
-                    } else {
-                        console.error(`Failed to fetch image from ${imageUrl}: Status ${response.status}`);
+                        doc.image(imageBuffer, tableLeft + 5, rowTop + 5, {
+                            width: colWidths.image - 10,
+                            height: rowHeight - 10
+                        });
                     }
                 } catch (err) {
                     console.error(`Error fetching image from ${imageUrl}:`, err.message);
                 }
             }
-            currentY = headerTop + headerHeight;
+
+            // === Draw Row Content ===
             const rowData = [
                 { text: '', x: tableLeft, width: colWidths.image, align: 'center' },
                 { text: productName, x: tableLeft + colWidths.image, width: colWidths.product, align: 'left' },
@@ -1103,13 +1114,15 @@ const generateInvoice = async (req, res) => {
             ];
 
             rowData.forEach((cell, index) => {
-                if (cell.text && index === 1) {
-                    doc.text(cell.text, cell.x + 5, rowTop + 10, { width: cell.width - 10, align: cell.align, continued: false });
-                } else if (cell.text) {
-                    doc.text(cell.text, cell.x + 5, rowTop + 10, { width: cell.width - 10, align: cell.align });
+                if (cell.text) {
+                    doc.text(cell.text, cell.x + 5, rowTop + 10, {
+                        width: cell.width - 10,
+                        align: cell.align
+                    });
                 }
             });
 
+            // Draw row borders
             doc.rect(tableLeft, rowTop, tableWidth, rowHeight).stroke();
             headers.forEach((header, i) => {
                 if (i < headers.length - 1) {
@@ -1122,6 +1135,7 @@ const generateInvoice = async (req, res) => {
             currentY += rowHeight;
             doc.y = currentY;
         }
+
 
         doc.moveDown(2);
         doc.font('Helvetica-Bold').fontSize(12);
