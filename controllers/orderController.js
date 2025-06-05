@@ -1031,19 +1031,32 @@ const generateInvoice = async (req, res) => {
             { text: 'Refund (Rs)', x: tableLeft + colWidths.image + colWidths.product + colWidths.qty + colWidths.unitPrice + colWidths.discount + colWidths.total + colWidths.status, width: colWidths.refund, align: 'right' }
         ];
 
+        const headerTop = doc.y;
         headers.forEach(header => {
-            doc.text(header.text, header.x, doc.y, { width: header.width, align: header.align });
+            doc.text(header.text, header.x, headerTop, {
+                width: header.width,
+                align: header.align,
+            });
         });
 
+        // Draw outer rectangle for header
         doc.lineWidth(0.5);
-        doc.rect(tableLeft, doc.y - 5, tableWidth, headerHeight).stroke();
+        doc.rect(tableLeft, headerTop - 5, tableWidth, headerHeight).stroke();
+
+        // Draw vertical column separators
         headers.forEach((header, i) => {
             if (i < headers.length - 1) {
                 const x = header.x + header.width;
-                doc.moveTo(x, doc.y - 5).lineTo(x, doc.y + headerHeight - 5).stroke();
+                doc.moveTo(x, headerTop - 5).lineTo(x, headerTop - 5 + headerHeight).stroke();
             }
         });
-        doc.moveTo(tableLeft, doc.y + headerHeight - 5).lineTo(tableLeft + tableWidth, doc.y + headerHeight - 5).stroke();
+
+        // Draw bottom horizontal line
+        doc.moveTo(tableLeft, headerTop - 5 + headerHeight).lineTo(tableLeft + tableWidth, headerTop - 5 + headerHeight).stroke();
+
+        // Move Y pointer to below the header for row drawing
+        currentY = headerTop + headerHeight;
+
 
         doc.font('Helvetica');
         let currentY = doc.y + headerHeight;
